@@ -1,0 +1,123 @@
+import { toPaginationMeta } from '../../common/utils/pagination.utils';
+import { type Product } from './entities/product.entity';
+import {
+  type CreateProductDto,
+  type ProductResponseDto,
+  type PaginatedProductsResponseDto,
+} from './dto';
+
+interface PaginatedResult {
+  data: Product[];
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+}
+
+/**
+ * Builder class for converting between Product entities and DTOs
+ */
+export class ProductBuilder {
+  /**
+   * Converts a Product entity to a ProductResponseDto
+   */
+  static toResponseDto(product: Product): ProductResponseDto {
+    const dto: ProductResponseDto = {
+      id: product.id,
+      sku: product.sku,
+      name: product.name,
+      description: product.description,
+      category_id: product.category_id,
+      brand_id: product.brand_id,
+      volume_ml: product.volume_ml,
+      weight_kg: product.weight_kg,
+      dimensions_cm: product.dimensions_cm,
+      standard_cost: product.standard_cost,
+      standard_price: product.standard_price,
+      markup_percentage: product.markup_percentage,
+      reorder_point: product.reorder_point,
+      primary_supplier_id: product.primary_supplier_id,
+      supplier_sku: product.supplier_sku,
+      barcode: product.barcode,
+      unit: product.unit,
+      is_active: product.is_active,
+      is_perishable: product.is_perishable,
+      notes: product.notes,
+      created_at: product.created_at,
+      updated_at: product.updated_at,
+      deleted_at: product.deleted_at,
+      created_by: product.created_by,
+      updated_by: product.updated_by,
+      deleted_by: product.deleted_by,
+    };
+
+    // Add nested category if loaded
+    if (product.category) {
+      dto.category = {
+        id: product.category.id,
+        name: product.category.name,
+        parent_id: product.category.parent_id,
+      };
+    }
+
+    // Add nested supplier if loaded
+    if (product.primary_supplier) {
+      dto.primary_supplier = {
+        id: product.primary_supplier.id,
+        name: product.primary_supplier.name,
+      };
+    }
+
+    return dto;
+  }
+
+  /**
+   * Converts multiple Product entities to ProductResponseDtos
+   */
+  static toResponseDtoList(products: Product[]): ProductResponseDto[] {
+    return products.map((p) => ProductBuilder.toResponseDto(p));
+  }
+
+  /**
+   * Converts a paginated result to PaginatedProductsResponseDto
+   */
+  static toPaginatedResponse(
+    result: PaginatedResult,
+  ): PaginatedProductsResponseDto {
+    return {
+      data: ProductBuilder.toResponseDtoList(result.data),
+      meta: toPaginationMeta(result.total, result.page, result.limit),
+    };
+  }
+
+  /**
+   * Converts a CreateProductDto to entity data for creation
+   * Handles nullable fields by converting undefined to null
+   */
+  static toCreateEntity(
+    dto: CreateProductDto,
+    userId?: string,
+  ): Partial<Product> {
+    return {
+      sku: dto.sku,
+      name: dto.name,
+      category_id: dto.category_id,
+      reorder_point: dto.reorder_point,
+      is_active: dto.is_active,
+      is_perishable: dto.is_perishable,
+      description: dto.description ?? null,
+      brand_id: dto.brand_id ?? null,
+      volume_ml: dto.volume_ml ?? null,
+      weight_kg: dto.weight_kg ?? null,
+      dimensions_cm: dto.dimensions_cm ?? null,
+      standard_cost: dto.standard_cost ?? null,
+      standard_price: dto.standard_price ?? null,
+      markup_percentage: dto.markup_percentage ?? null,
+      primary_supplier_id: dto.primary_supplier_id ?? null,
+      supplier_sku: dto.supplier_sku ?? null,
+      notes: dto.notes ?? null,
+      created_by: userId ?? null,
+      updated_by: userId ?? null,
+    };
+  }
+}

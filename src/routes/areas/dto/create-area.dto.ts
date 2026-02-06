@@ -1,0 +1,56 @@
+import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsUUID,
+  IsString,
+  IsOptional,
+  IsBoolean,
+  MaxLength,
+} from 'class-validator';
+import type { CreateAreaDto as CreateAreaDtoShape } from '@librestock/types';
+
+export class CreateAreaDto implements CreateAreaDtoShape {
+  @ApiProperty({ description: 'Location ID', format: 'uuid' })
+  @IsUUID()
+  location_id: string;
+
+  @ApiProperty({
+    description: 'Parent area ID (for nested areas)',
+    format: 'uuid',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID()
+  parent_id?: string;
+
+  @ApiProperty({ description: 'Area name', example: 'Zone A' })
+  @IsString()
+  @MaxLength(100)
+  name: string;
+
+  @ApiProperty({
+    description: 'Area code (short identifier)',
+    example: 'A1',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  code?: string;
+
+  @ApiProperty({
+    description: 'Area description',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiProperty({
+    description: 'Whether the area is active',
+    default: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  is_active?: boolean;
+}
