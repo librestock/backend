@@ -149,7 +149,8 @@ export class AuditInterceptor implements NestInterceptor {
     request: AuthRequest,
   ): string | null {
     if (metadata.entityIdParam && request.params[metadata.entityIdParam]) {
-      return request.params[metadata.entityIdParam];
+      const value = request.params[metadata.entityIdParam];
+      return typeof value === 'string' ? value : null;
     }
     return null;
   }
@@ -179,7 +180,8 @@ export class AuditInterceptor implements NestInterceptor {
     response: unknown,
   ): string | null {
     if (request.params.id) {
-      return request.params.id;
+      const value = request.params.id;
+      return typeof value === 'string' ? value : null;
     }
 
     if (response && typeof response === 'object' && 'id' in response) {

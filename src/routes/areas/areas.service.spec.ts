@@ -280,12 +280,6 @@ describe('AreasService', () => {
 
     it('should throw BadRequestException when update would create circular reference', async () => {
       // area-001 -> area-002 (child), trying to set area-001's parent to area-002
-      const grandchild: Area = {
-        ...mockArea,
-        id: 'area-003',
-        parent_id: 'area-002',
-      };
-
       areaRepository.findById
         .mockResolvedValueOnce(mockArea) // existing area
         .mockResolvedValueOnce({ ...mockChildArea, location_id: 'location-001' }) // parent area (area-002)

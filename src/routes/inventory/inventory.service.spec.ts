@@ -372,7 +372,6 @@ describe('InventoryService', () => {
 
       const result = await service.adjustQuantity('inventory-001', {
         adjustment: 10,
-        reason: 'Restock',
       });
 
       expect(result.quantity).toBe(60);
@@ -387,7 +386,6 @@ describe('InventoryService', () => {
 
       const result = await service.adjustQuantity('inventory-001', {
         adjustment: -10,
-        reason: 'Sold',
       });
 
       expect(result.quantity).toBe(40);
@@ -399,7 +397,6 @@ describe('InventoryService', () => {
       await expect(
         service.adjustQuantity('non-existent-id', {
           adjustment: 10,
-          reason: 'Test',
         }),
       ).rejects.toThrow(NotFoundException);
     });
@@ -410,7 +407,6 @@ describe('InventoryService', () => {
       await expect(
         service.adjustQuantity('inventory-001', {
           adjustment: -100,
-          reason: 'Too much',
         }),
       ).rejects.toThrow(BadRequestException);
     });
@@ -422,7 +418,6 @@ describe('InventoryService', () => {
       await expect(
         service.adjustQuantity('inventory-001', {
           adjustment: -10,
-          reason: 'Race condition',
         }),
       ).rejects.toThrow(BadRequestException);
     });

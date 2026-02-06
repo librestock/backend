@@ -14,10 +14,10 @@ COPY packages/types/package.json ./packages/types/
 COPY packages/types/tsconfig.build.json packages/types/tsconfig.build.cjs.json ./packages/types/
 COPY packages/types/scripts/ ./packages/types/scripts/
 COPY packages/types/src/ ./packages/types/src/
-COPY modules/api/package.json ./modules/api/
+COPY backend/package.json ./backend/
 RUN pnpm install --frozen-lockfile
-COPY modules/api/ ./modules/api/
-WORKDIR /app/modules/api
+COPY backend/ ./backend/
+WORKDIR /app/backend
 CMD ["pnpm", "start:dev"]
 
 # Build stage
@@ -28,9 +28,9 @@ COPY packages/types/package.json ./packages/types/
 COPY packages/types/tsconfig.build.json packages/types/tsconfig.build.cjs.json ./packages/types/
 COPY packages/types/scripts/ ./packages/types/scripts/
 COPY packages/types/src/ ./packages/types/src/
-COPY modules/api/package.json ./modules/api/
+COPY backend/package.json ./backend/
 RUN pnpm install --frozen-lockfile
-COPY modules/api/ ./modules/api/
+COPY backend/ ./backend/
 RUN pnpm --filter @librestock/api build
 
 # Production stage
@@ -41,11 +41,11 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/tsconfig/ ./packages/tsconfig/
 COPY packages/types/package.json ./packages/types/
 COPY packages/types/dist/ ./packages/types/dist/
-COPY modules/api/package.json ./modules/api/
+COPY backend/package.json ./backend/
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
-COPY --from=builder /app/modules/api/dist ./modules/api/dist
+COPY --from=builder /app/backend/dist ./backend/dist
 
 EXPOSE 8080
-WORKDIR /app/modules/api
+WORKDIR /app/backend
 CMD ["node", "dist/main"]

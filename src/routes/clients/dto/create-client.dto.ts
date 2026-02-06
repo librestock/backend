@@ -7,8 +7,8 @@ import {
   IsNumber,
   Min,
   MaxLength,
-  Transform,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ClientStatus } from '@librestock/types';
 import type { CreateClientDto as CreateClientDtoShape } from '@librestock/types';
 

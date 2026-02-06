@@ -71,8 +71,8 @@ describe('TransactionInterceptor', () => {
 
     it('should wrap handler in transaction when method is transactional', async () => {
       reflector.get.mockReturnValue(true);
-      dataSource.transaction.mockImplementation(async (cb: Function) => {
-        return cb();
+      dataSource.transaction.mockImplementation(async (cb: unknown) => {
+        return (cb as Function)();
       });
 
       const result$ = interceptor.intercept(
@@ -93,8 +93,8 @@ describe('TransactionInterceptor', () => {
           .mockReturnValue(throwError(() => new Error('DB error'))),
       };
 
-      dataSource.transaction.mockImplementation(async (cb: Function) => {
-        return cb();
+      dataSource.transaction.mockImplementation(async (cb: unknown) => {
+        return (cb as Function)();
       });
 
       const result$ = interceptor.intercept(

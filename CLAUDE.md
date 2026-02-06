@@ -9,7 +9,7 @@ NestJS 11 · TypeORM 0.3 · PostgreSQL 16 · Better Auth · class-validator · S
 ## Directory Structure
 
 ```
-modules/api/src/
+src/
 ├── main.ts                 # Bootstrap, global prefix /api/v1
 ├── app.module.ts           # Root module
 ├── app.routes.ts           # Route registration

@@ -8,8 +8,6 @@ import {
 } from '../../test-utils/execution-context';
 import { RolesGuard } from './roles.guard';
 import { UserRole } from '../enums';
-import { ROLES_KEY } from '../decorators/roles.decorator';
-
 describe('RolesGuard', () => {
   let guard: RolesGuard;
   let reflector: jest.Mocked<Reflector>;

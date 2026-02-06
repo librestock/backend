@@ -105,8 +105,8 @@
     "testEnvironment": "node",
     "moduleNameMapper": {
       "^src/(.*)$": "<rootDir>/$1",
-      "^@librestock/types$": "<rootDir>/../../../packages/types/dist/cjs/index.js",
-      "^@librestock/types/(.*)$": "<rootDir>/../../../packages/types/dist/cjs/$1/index.js"
+      "^@librestock/types$": "<rootDir>/../../packages/types/dist/cjs/index.js",
+      "^@librestock/types/(.*)$": "<rootDir>/../../packages/types/dist/cjs/$1/index.js"
     }
   }
 }
