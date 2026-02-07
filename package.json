@@ -6,7 +6,7 @@
   "private": true,
   "license": "AGPL-3.0",
   "scripts": {
-    "build": "pnpm --filter @librestock/types build && nest build",
+    "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -26,7 +26,7 @@
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/typeorm-cli.config.ts"
   },
   "dependencies": {
-    "@librestock/types": "workspace:*",
+    "@librestock/types": "^0.1.0",
     "@nestjs/common": "^11.1.10",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.10",
@@ -50,7 +50,8 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^10.1.0",
-    "@librestock/eslint-config": "workspace:*",
+    "@librestock/eslint-config": "^0.1.0",
+    "@librestock/tsconfig": "^0.1.0",
     "@nestjs/cli": "^11.0.14",
     "@nestjs/schematics": "^11.0.9",
     "@nestjs/testing": "^11.1.10",
@@ -67,6 +68,12 @@
     "ts-loader": "^9.5.4",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "import-in-the-middle": "1.15.0",
+      "require-in-the-middle": "7.5.2"
+    }
   },
   "jest": {
     "moduleFileExtensions": [
@@ -104,9 +111,7 @@
     },
     "testEnvironment": "node",
     "moduleNameMapper": {
-      "^src/(.*)$": "<rootDir>/$1",
-      "^@librestock/types$": "<rootDir>/../../packages/types/dist/cjs/index.js",
-      "^@librestock/types/(.*)$": "<rootDir>/../../packages/types/dist/cjs/$1/index.js"
+      "^src/(.*)$": "<rootDir>/$1"
     }
   }
 }

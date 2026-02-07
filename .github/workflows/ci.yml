@@ -11,40 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: backend
-
-      - uses: actions/checkout@v4
-        with:
-          repository: librestock/packages
-          path: packages
-
-      - name: Create workspace root
-        run: |
-          cat > package.json << 'EOF'
-          {
-            "private": true,
-            "name": "librestock-workspace",
-            "devDependencies": {
-              "@types/node": "^20.19.27",
-              "eslint": "^9.39.1",
-              "globals": "^15.15.0",
-              "typescript": "^5.9.3",
-              "typescript-eslint": "^8.50.1"
-            },
-            "pnpm": {
-              "overrides": {
-                "import-in-the-middle": "1.15.0",
-                "require-in-the-middle": "7.5.2"
-              }
-            }
-          }
-          EOF
-          cat > pnpm-workspace.yaml << 'EOF'
-          packages:
-            - 'packages/*'
-            - 'backend'
-          EOF
 
       - uses: pnpm/action-setup@v4
         with:
@@ -54,54 +20,18 @@ jobs:
         with:
           node-version: 20
 
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
       - name: Lint
-        working-directory: backend
         run: pnpm lint
 
       - name: Type check
-        working-directory: backend
         run: pnpm type-check
 
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: backend
-
-      - uses: actions/checkout@v4
-        with:
-          repository: librestock/packages
-          path: packages
-
-      - name: Create workspace root
-        run: |
-          cat > package.json << 'EOF'
-          {
-            "private": true,
-            "name": "librestock-workspace",
-            "devDependencies": {
-              "@types/node": "^20.19.27",
-              "eslint": "^9.39.1",
-              "globals": "^15.15.0",
-              "typescript": "^5.9.3",
-              "typescript-eslint": "^8.50.1"
-            },
-            "pnpm": {
-              "overrides": {
-                "import-in-the-middle": "1.15.0",
-                "require-in-the-middle": "7.5.2"
-              }
-            }
-          }
-          EOF
-          cat > pnpm-workspace.yaml << 'EOF'
-          packages:
-            - 'packages/*'
-            - 'backend'
-          EOF
 
       - uses: pnpm/action-setup@v4
         with:
@@ -111,50 +41,15 @@ jobs:
         with:
           node-version: 20
 
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        working-directory: backend
         run: pnpm test
 
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: backend
-
-      - uses: actions/checkout@v4
-        with:
-          repository: librestock/packages
-          path: packages
-
-      - name: Create workspace root
-        run: |
-          cat > package.json << 'EOF'
-          {
-            "private": true,
-            "name": "librestock-workspace",
-            "devDependencies": {
-              "@types/node": "^20.19.27",
-              "eslint": "^9.39.1",
-              "globals": "^15.15.0",
-              "typescript": "^5.9.3",
-              "typescript-eslint": "^8.50.1"
-            },
-            "pnpm": {
-              "overrides": {
-                "import-in-the-middle": "1.15.0",
-                "require-in-the-middle": "7.5.2"
-              }
-            }
-          }
-          EOF
-          cat > pnpm-workspace.yaml << 'EOF'
-          packages:
-            - 'packages/*'
-            - 'backend'
-          EOF
 
       - uses: pnpm/action-setup@v4
         with:
@@ -164,8 +59,7 @@ jobs:
         with:
           node-version: 20
 
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
       - name: Build
-        working-directory: backend
         run: pnpm build
