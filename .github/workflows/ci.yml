@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: librestock/packages
+          token: ${{ secrets.PACKAGES_TOKEN }}
           path: packages
 
       - name: Create workspace root
@@ -49,7 +50,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
 
       - run: pnpm install --no-frozen-lockfile
 
@@ -71,6 +71,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: librestock/packages
+          token: ${{ secrets.PACKAGES_TOKEN }}
           path: packages
 
       - name: Create workspace root
@@ -103,7 +104,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
 
       - run: pnpm install --no-frozen-lockfile
 
@@ -121,6 +121,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: librestock/packages
+          token: ${{ secrets.PACKAGES_TOKEN }}
           path: packages
 
       - name: Create workspace root
@@ -153,7 +154,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
 
       - run: pnpm install --no-frozen-lockfile
 
