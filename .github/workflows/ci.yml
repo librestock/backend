@@ -26,7 +26,11 @@ jobs:
             "private": true,
             "name": "librestock-workspace",
             "devDependencies": {
-              "typescript": "^5.9.3"
+              "@types/node": "^20.19.27",
+              "eslint": "^9.39.1",
+              "globals": "^15.15.0",
+              "typescript": "^5.9.3",
+              "typescript-eslint": "^8.50.1"
             },
             "pnpm": {
               "overrides": {
@@ -79,7 +83,11 @@ jobs:
             "private": true,
             "name": "librestock-workspace",
             "devDependencies": {
-              "typescript": "^5.9.3"
+              "@types/node": "^20.19.27",
+              "eslint": "^9.39.1",
+              "globals": "^15.15.0",
+              "typescript": "^5.9.3",
+              "typescript-eslint": "^8.50.1"
             },
             "pnpm": {
               "overrides": {
@@ -128,7 +136,11 @@ jobs:
             "private": true,
             "name": "librestock-workspace",
             "devDependencies": {
-              "typescript": "^5.9.3"
+              "@types/node": "^20.19.27",
+              "eslint": "^9.39.1",
+              "globals": "^15.15.0",
+              "typescript": "^5.9.3",
+              "typescript-eslint": "^8.50.1"
             },
             "pnpm": {
               "overrides": {
