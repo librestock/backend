@@ -1,0 +1,162 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: backend
+
+      - uses: actions/checkout@v4
+        with:
+          repository: librestock/packages
+          path: packages
+
+      - name: Create workspace root
+        run: |
+          cat > package.json << 'EOF'
+          {
+            "private": true,
+            "name": "librestock-workspace",
+            "devDependencies": {
+              "typescript": "^5.9.3"
+            },
+            "pnpm": {
+              "overrides": {
+                "import-in-the-middle": "1.15.0",
+                "require-in-the-middle": "7.5.2"
+              }
+            }
+          }
+          EOF
+          cat > pnpm-workspace.yaml << 'EOF'
+          packages:
+            - 'packages/*'
+            - 'backend'
+          EOF
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Lint
+        working-directory: backend
+        run: pnpm lint
+
+      - name: Type check
+        working-directory: backend
+        run: pnpm type-check
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: backend
+
+      - uses: actions/checkout@v4
+        with:
+          repository: librestock/packages
+          path: packages
+
+      - name: Create workspace root
+        run: |
+          cat > package.json << 'EOF'
+          {
+            "private": true,
+            "name": "librestock-workspace",
+            "devDependencies": {
+              "typescript": "^5.9.3"
+            },
+            "pnpm": {
+              "overrides": {
+                "import-in-the-middle": "1.15.0",
+                "require-in-the-middle": "7.5.2"
+              }
+            }
+          }
+          EOF
+          cat > pnpm-workspace.yaml << 'EOF'
+          packages:
+            - 'packages/*'
+            - 'backend'
+          EOF
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Run tests
+        working-directory: backend
+        run: pnpm test
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: backend
+
+      - uses: actions/checkout@v4
+        with:
+          repository: librestock/packages
+          path: packages
+
+      - name: Create workspace root
+        run: |
+          cat > package.json << 'EOF'
+          {
+            "private": true,
+            "name": "librestock-workspace",
+            "devDependencies": {
+              "typescript": "^5.9.3"
+            },
+            "pnpm": {
+              "overrides": {
+                "import-in-the-middle": "1.15.0",
+                "require-in-the-middle": "7.5.2"
+              }
+            }
+          }
+          EOF
+          cat > pnpm-workspace.yaml << 'EOF'
+          packages:
+            - 'packages/*'
+            - 'backend'
+          EOF
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Build
+        working-directory: backend
+        run: pnpm build
