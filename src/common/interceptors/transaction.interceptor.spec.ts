@@ -71,8 +71,9 @@ describe('TransactionInterceptor', () => {
 
     it('should wrap handler in transaction when method is transactional', async () => {
       reflector.get.mockReturnValue(true);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
-      dataSource.transaction.mockImplementation((...args: unknown[]) => (args[args.length - 1] as () => unknown)());
+      (dataSource.transaction as jest.Mock).mockImplementation(
+        (cb: (em: unknown) => unknown) => cb({}),
+      );
 
       const result$ = interceptor.intercept(
         mockExecutionContext,
@@ -92,8 +93,9 @@ describe('TransactionInterceptor', () => {
           .mockReturnValue(throwError(() => new Error('DB error'))),
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
-      dataSource.transaction.mockImplementation((...args: unknown[]) => (args[args.length - 1] as () => unknown)());
+      (dataSource.transaction as jest.Mock).mockImplementation(
+        (cb: (em: unknown) => unknown) => cb({}),
+      );
 
       const result$ = interceptor.intercept(
         mockExecutionContext,
