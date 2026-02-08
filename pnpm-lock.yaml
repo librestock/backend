@@ -13,8 +13,8 @@ importers:
   .:
     dependencies:
       '@librestock/types':
-        specifier: ^0.1.0
-        version: 0.1.0
+        specifier: link:../packages/types
+        version: link:../packages/types
       '@nestjs/common':
         specifier: ^11.1.10
         version: 11.1.13(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -708,9 +708,6 @@ packages:
 
   '@librestock/tsconfig@0.1.0':
     resolution: {integrity: sha512-3eFtthVOGDNwKOYnrsS+YbperSs6/DCuQosAj7pKRZd33RBA0ncOWegegGvWxS6W4i1ZmS8cCw6oZ3+4Aitp4g==}
-
-  '@librestock/types@0.1.0':
-    resolution: {integrity: sha512-6Uv9b8FTTfBDSc+Zy4mwtMNZ+ypML5TKMu1bxhko/c7Xwv9KApYpJdOrtuetwoRwfjMl6qcyAcaTRd+R6PAn5w==}
 
   '@lukeed/csprng@1.1.0':
     resolution: {integrity: sha512-Z7C/xXCiGWsg0KuKsHTKJxbWhpI3Vs5GwLfOean7MGyVFGqdRgBbAjOCh6u4bbjPc/8MJ2pZmK/0DLdCbivLDA==}
@@ -4707,8 +4704,6 @@ snapshots:
       - supports-color
 
   '@librestock/tsconfig@0.1.0': {}
-
-  '@librestock/types@0.1.0': {}
 
   '@lukeed/csprng@1.1.0': {}
 

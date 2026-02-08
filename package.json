@@ -26,7 +26,7 @@
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/typeorm-cli.config.ts"
   },
   "dependencies": {
-    "@librestock/types": "^0.1.0",
+    "@librestock/types": "link:../packages/types",
     "@nestjs/common": "^11.1.10",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.10",
