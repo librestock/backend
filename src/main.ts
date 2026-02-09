@@ -5,6 +5,7 @@ import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import * as express from 'express';
+import { toNodeHandler } from 'better-auth/node';
 import { AppModule } from './app.module';
 import { auth } from './auth';
 import { Client } from './routes/clients/entities/client.entity';
@@ -42,9 +43,6 @@ async function bootstrap() {
     contentSecurityPolicy: isProduction ? undefined : false,
   }));
 
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
   const corsOrigin = configService.get<string>('CORS_ORIGIN');
   if (isProduction && (!corsOrigin || corsOrigin === '*')) {
     throw new Error(
@@ -55,6 +53,14 @@ async function bootstrap() {
     origin: corsOrigin ?? false,
     credentials: true,
   });
+
+  // Mount Better Auth handler before body parsing — it handles its own parsing
+  // and needs the raw request body. NestJS middleware forRoutes() doesn't apply
+  // to paths without registered controllers, so we mount it at the Express level.
+  app.use('/api/auth', toNodeHandler(auth));
+
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // Set global prefix for all routes
   app.setGlobalPrefix('api/v1', {
