@@ -1,14 +1,14 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { StockMovementReason } from '@librestock/types';
+import { ProductsService } from '../products/products.service';
+import { LocationsService } from '../locations/locations.service';
 import { StockMovementsService } from './stock-movements.service';
 import {
   StockMovementRepository,
   type PaginatedResult,
 } from './stock-movement.repository';
 import { type StockMovement } from './entities/stock-movement.entity';
-import { ProductsService } from '../products/products.service';
-import { LocationsService } from '../locations/locations.service';
-import { StockMovementReason } from '@librestock/types';
 
 describe('StockMovementsService', () => {
   let service: StockMovementsService;

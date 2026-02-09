@@ -1,11 +1,11 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { LocationType } from 'src/common/enums';
+import { LocationsService } from '../locations/locations.service';
+import { type Location } from '../locations/entities/location.entity';
 import { AreasService } from './areas.service';
 import { AreaRepository } from './area.repository';
-import { LocationsService } from '../locations/locations.service';
 import { type Area } from './entities/area.entity';
-import { type Location } from '../locations/entities/location.entity';
-import { LocationType } from 'src/common/enums';
 
 describe('AreasService', () => {
   let service: AreasService;

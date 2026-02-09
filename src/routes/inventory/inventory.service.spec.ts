@@ -1,12 +1,12 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { InventoryService } from './inventory.service';
-import { InventoryRepository, type PaginatedResult } from './inventory.repository';
+import { LocationType } from 'src/common/enums';
 import { ProductsService } from '../products/products.service';
 import { LocationsService } from '../locations/locations.service';
 import { AreasService } from '../areas/areas.service';
+import { InventoryService } from './inventory.service';
+import { InventoryRepository, type PaginatedResult } from './inventory.repository';
 import { type Inventory } from './entities/inventory.entity';
-import { LocationType } from 'src/common/enums';
 
 describe('InventoryService', () => {
   let service: InventoryService;

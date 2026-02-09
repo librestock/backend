@@ -7,8 +7,8 @@ import {
   type MockRequest,
   createExecutionContext,
 } from '../../test-utils/execution-context';
-import { TransactionInterceptor } from './transaction.interceptor';
 import { TRANSACTIONAL_KEY } from '../decorators/transactional.decorator';
+import { TransactionInterceptor } from './transaction.interceptor';
 
 describe('TransactionInterceptor', () => {
   let interceptor: TransactionInterceptor;

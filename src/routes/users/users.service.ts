@@ -1,7 +1,7 @@
+import type { IncomingHttpHeaders } from 'node:http';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import type { IncomingHttpHeaders } from 'http';
 import { UserRole } from 'src/common/enums';
 import { auth } from '../../auth';
 import { UserRoleEntity } from './entities/user-role.entity';
@@ -58,7 +58,7 @@ export class UsersService {
       },
     });
 
-    let users = result.users ?? [];
+    const users = result.users ?? [];
     const total = result.total ?? users.length;
 
     const userIds = users.map((u: { id: string }) => u.id);

@@ -1,9 +1,9 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { LocationType } from 'src/common/enums';
 import { LocationsService } from './locations.service';
 import { LocationRepository, type PaginatedResult } from './location.repository';
 import { type Location } from './entities/location.entity';
-import { LocationType } from 'src/common/enums';
 
 describe('LocationsService', () => {
   let service: LocationsService;

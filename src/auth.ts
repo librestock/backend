@@ -1,7 +1,12 @@
 import { betterAuth } from 'better-auth';
 import { admin } from 'better-auth/plugins';
 import { Pool } from 'pg';
-import { getSSLConfig, getPoolMax, IDLE_TIMEOUT_MS, getDbConnectionParams } from './config/db-connection.utils';
+import {
+  getSSLConfig,
+  getPoolMax,
+  IDLE_TIMEOUT_MS,
+  getDbConnectionParams,
+} from './config/db-connection.utils';
 
 if (!process.env.BETTER_AUTH_SECRET) {
   throw new Error('BETTER_AUTH_SECRET environment variable is required');
@@ -11,20 +16,28 @@ const ssl = getSSLConfig();
 const poolMax = getPoolMax();
 const params = getDbConnectionParams();
 
-const pool = 'url' in params
-  ? new Pool({ connectionString: params.url, ssl, max: poolMax, idleTimeoutMillis: IDLE_TIMEOUT_MS })
-  : new Pool({
-      host: params.host,
-      ...(params.port !== undefined ? { port: params.port } : {}),
-      user: params.user,
-      password: params.password,
-      database: params.database,
-      ssl,
-      max: poolMax,
-      idleTimeoutMillis: IDLE_TIMEOUT_MS,
-    });
+const pool =
+  'url' in params
+    ? new Pool({
+        connectionString: params.url,
+        ssl,
+        max: poolMax,
+        idleTimeoutMillis: IDLE_TIMEOUT_MS,
+      })
+    : new Pool({
+        host: params.host,
+        ...(params.port !== undefined ? { port: params.port } : {}),
+        user: params.user,
+        password: params.password,
+        database: params.database,
+        ssl,
+        max: poolMax,
+        idleTimeoutMillis: IDLE_TIMEOUT_MS,
+      });
 
-const trustedOrigins = process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [];
+const trustedOrigins = process.env.FRONTEND_URL
+  ? [process.env.FRONTEND_URL]
+  : [];
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,

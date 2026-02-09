@@ -1,11 +1,11 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { OrderStatus } from '@librestock/types';
+import { ClientsService } from '../clients/clients.service';
+import { ProductsService } from '../products/products.service';
 import { OrdersService } from './orders.service';
 import { OrderRepository, type PaginatedResult } from './orders.repository';
 import { OrderItemRepository } from './order-items.repository';
-import { ClientsService } from '../clients/clients.service';
-import { ProductsService } from '../products/products.service';
 import { type Order } from './entities/order.entity';
 import { type OrderItem } from './entities/order-item.entity';
 

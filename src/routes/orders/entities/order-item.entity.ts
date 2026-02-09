@@ -9,8 +9,8 @@ import {
   Index,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { Order } from './order.entity';
 import { Product } from '../../products/entities/product.entity';
+import { Order } from './order.entity';
 
 @Entity('order_items')
 @Index(['order_id'])

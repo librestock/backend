@@ -6,8 +6,9 @@ import {
   type MockRequest,
   createExecutionContext,
 } from '../../test-utils/execution-context';
-import { RolesGuard } from './roles.guard';
 import { UserRole } from '../enums';
+import { RolesGuard } from './roles.guard';
+
 describe('RolesGuard', () => {
   let guard: RolesGuard;
   let reflector: jest.Mocked<Reflector>;

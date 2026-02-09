@@ -1,9 +1,9 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException, ConflictException } from '@nestjs/common';
+import { ClientStatus } from '@librestock/types';
 import { ClientsService } from './clients.service';
 import { ClientRepository, type PaginatedResult } from './client.repository';
 import { type Client } from './entities/client.entity';
-import { ClientStatus } from '@librestock/types';
 
 describe('ClientsService', () => {
   let service: ClientsService;
