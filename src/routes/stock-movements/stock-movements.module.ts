@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { PermissionGuard } from '../../common/guards/permission.guard';
 import { ProductsModule } from '../products/products.module';
 import { LocationsModule } from '../locations/locations.module';
 import { StockMovement } from './entities/stock-movement.entity';
@@ -14,7 +15,7 @@ import { StockMovementRepository } from './stock-movement.repository';
     LocationsModule,
   ],
   controllers: [StockMovementsController],
-  providers: [StockMovementsService, StockMovementRepository],
+  providers: [StockMovementsService, StockMovementRepository, PermissionGuard],
   exports: [StockMovementsService],
 })
 export class StockMovementsModule {}

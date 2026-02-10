@@ -15,11 +15,10 @@ import {
   ApiTags,
   ApiParam,
 } from '@nestjs/swagger';
-import { AuditEntityType } from 'src/common/enums';
+import { AuditEntityType, Resource, Permission } from '@librestock/types';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
-import { Roles } from '../../common/decorators';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { UserRole } from '../../common/enums';
+import { RequirePermission } from '../../common/decorators';
+import { PermissionGuard } from '../../common/guards/permission.guard';
 import { AuditLogService } from './audit-log.service';
 import {
   AuditLogQueryDto,
@@ -29,8 +28,8 @@ import {
 
 @ApiTags('Audit Logs')
 @ApiBearerAuth()
-@UseGuards(RolesGuard)
-@Roles(UserRole.ADMIN)
+@UseGuards(PermissionGuard)
+@RequirePermission(Resource.AUDIT_LOGS, Permission.READ)
 @Controller()
 export class AuditLogsController {
   constructor(private readonly auditLogService: AuditLogService) {}

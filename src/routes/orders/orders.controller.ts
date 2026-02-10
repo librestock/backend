@@ -9,6 +9,7 @@ import {
   Param,
   Query,
   ParseUUIDPipe,
+  UseGuards,
   UseInterceptors,
   Req,
 } from '@nestjs/common';
@@ -19,6 +20,8 @@ import {
   ApiTags,
   ApiParam,
 } from '@nestjs/swagger';
+import { Permission, Resource } from '@librestock/types';
+import { RequirePermission } from '../../common/decorators';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { MessageResponseDto } from '../../common/dto/message-response.dto';
 import {
@@ -26,6 +29,7 @@ import {
   getUserSession,
   type AuthRequest,
 } from '../../common/auth/session';
+import { PermissionGuard } from '../../common/guards/permission.guard';
 import { HateoasInterceptor } from '../../common/hateoas/hateoas.interceptor';
 import { AuditInterceptor } from '../../common/interceptors/audit.interceptor';
 import { Auditable } from '../../common/decorators/auditable.decorator';
@@ -45,6 +49,8 @@ import { OrderHateoas, DeleteOrderHateoas } from './orders.hateoas';
 @ApiTags('Orders')
 @ApiBearerAuth()
 @StandardThrottle()
+@UseGuards(PermissionGuard)
+@RequirePermission(Resource.STOCK, Permission.READ)
 @Controller()
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
@@ -80,6 +86,7 @@ export class OrdersController {
   }
 
   @Post()
+  @RequirePermission(Resource.STOCK, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @OrderHateoas()
   @Auditable({
@@ -100,6 +107,7 @@ export class OrdersController {
   }
 
   @Put(':id')
+  @RequirePermission(Resource.STOCK, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @OrderHateoas()
   @Auditable({
@@ -121,6 +129,7 @@ export class OrdersController {
   }
 
   @Patch(':id/status')
+  @RequirePermission(Resource.STOCK, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @OrderHateoas()
   @Auditable({
@@ -145,6 +154,7 @@ export class OrdersController {
   }
 
   @Delete(':id')
+  @RequirePermission(Resource.STOCK, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @DeleteOrderHateoas()
   @Auditable({

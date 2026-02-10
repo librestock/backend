@@ -20,10 +20,10 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import type { Request } from 'express';
+import { Resource, Permission } from '@librestock/types';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
-import { Roles } from '../../common/decorators';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { UserRole } from '../../common/enums';
+import { RequirePermission } from '../../common/decorators';
+import { PermissionGuard } from '../../common/guards/permission.guard';
 import { toPaginationMeta } from '../../common/utils/pagination.utils';
 import { UsersService } from './users.service';
 import { UserQueryDto } from './dto/user-query.dto';
@@ -33,8 +33,8 @@ import { BanUserDto } from './dto/ban-user.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
-@UseGuards(RolesGuard)
-@Roles(UserRole.ADMIN)
+@UseGuards(PermissionGuard)
+@RequirePermission(Resource.USERS, Permission.READ)
 @Controller()
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -64,6 +64,7 @@ export class UsersController {
   }
 
   @Put(':id/roles')
+  @RequirePermission(Resource.USERS, Permission.WRITE)
   @ApiOperation({ summary: 'Set user roles', operationId: 'updateUserRoles' })
   @ApiParam({ name: 'id', description: 'User ID', type: String })
   @ApiResponse({ status: 200, type: UserResponseDto })
@@ -79,6 +80,7 @@ export class UsersController {
   }
 
   @Patch(':id/ban')
+  @RequirePermission(Resource.USERS, Permission.WRITE)
   @ApiOperation({ summary: 'Ban a user', operationId: 'banUser' })
   @ApiParam({ name: 'id', description: 'User ID', type: String })
   @ApiResponse({ status: 200, type: UserResponseDto })
@@ -94,6 +96,7 @@ export class UsersController {
   }
 
   @Patch(':id/unban')
+  @RequirePermission(Resource.USERS, Permission.WRITE)
   @ApiOperation({ summary: 'Unban a user', operationId: 'unbanUser' })
   @ApiParam({ name: 'id', description: 'User ID', type: String })
   @ApiResponse({ status: 200, type: UserResponseDto })
@@ -105,6 +108,7 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @RequirePermission(Resource.USERS, Permission.WRITE)
   @ApiOperation({ summary: 'Delete a user', operationId: 'deleteUser' })
   @ApiParam({ name: 'id', description: 'User ID', type: String })
   @ApiResponse({ status: 200, description: 'User deleted' })
@@ -116,6 +120,7 @@ export class UsersController {
   }
 
   @Post(':id/revoke-sessions')
+  @RequirePermission(Resource.USERS, Permission.WRITE)
   @ApiOperation({ summary: 'Revoke all sessions for a user', operationId: 'revokeUserSessions' })
   @ApiParam({ name: 'id', description: 'User ID', type: String })
   @ApiResponse({ status: 200, description: 'Sessions revoked' })

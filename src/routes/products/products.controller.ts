@@ -9,6 +9,7 @@ import {
   Param,
   Query,
   ParseUUIDPipe,
+  UseGuards,
   UseInterceptors,
   Req,
 } from '@nestjs/common';
@@ -20,6 +21,8 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
+import { Permission, Resource } from '@librestock/types';
+import { RequirePermission } from '../../common/decorators';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { MessageResponseDto } from '../../common/dto/message-response.dto';
 import {
@@ -27,6 +30,7 @@ import {
   getUserSession,
   type AuthRequest,
 } from '../../common/auth/session';
+import { PermissionGuard } from '../../common/guards/permission.guard';
 import { HateoasInterceptor } from '../../common/hateoas/hateoas.interceptor';
 import { AuditInterceptor } from '../../common/interceptors/audit.interceptor';
 import { Auditable } from '../../common/decorators/auditable.decorator';
@@ -56,6 +60,8 @@ import {
 @ApiTags('Products')
 @ApiBearerAuth()
 @StandardThrottle()
+@UseGuards(PermissionGuard)
+@RequirePermission(Resource.PRODUCTS, Permission.READ)
 @Controller()
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
@@ -148,6 +154,7 @@ export class ProductsController {
   }
 
   @Post()
+  @RequirePermission(Resource.PRODUCTS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @ProductHateoas()
   @Auditable({
@@ -168,6 +175,7 @@ export class ProductsController {
   }
 
   @Post('bulk')
+  @RequirePermission(Resource.PRODUCTS, Permission.WRITE)
   @BulkThrottle()
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @BulkOperationHateoas()
@@ -192,6 +200,7 @@ export class ProductsController {
   }
 
   @Put(':id')
+  @RequirePermission(Resource.PRODUCTS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @ProductHateoas()
   @Auditable({
@@ -215,6 +224,7 @@ export class ProductsController {
   }
 
   @Patch('bulk/status')
+  @RequirePermission(Resource.PRODUCTS, Permission.WRITE)
   @BulkThrottle()
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @BulkOperationHateoas()
@@ -239,6 +249,7 @@ export class ProductsController {
   }
 
   @Delete(':id')
+  @RequirePermission(Resource.PRODUCTS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @DeleteProductHateoas()
   @Auditable({
@@ -273,6 +284,7 @@ export class ProductsController {
   }
 
   @Delete('bulk')
+  @RequirePermission(Resource.PRODUCTS, Permission.WRITE)
   @BulkThrottle()
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @BulkDeleteHateoas()
@@ -297,6 +309,7 @@ export class ProductsController {
   }
 
   @Patch(':id/restore')
+  @RequirePermission(Resource.PRODUCTS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @ProductHateoas()
   @Auditable({
@@ -320,6 +333,7 @@ export class ProductsController {
   }
 
   @Patch('bulk/restore')
+  @RequirePermission(Resource.PRODUCTS, Permission.WRITE)
   @BulkThrottle()
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @BulkRestoreHateoas()

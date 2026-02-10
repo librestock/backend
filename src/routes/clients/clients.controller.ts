@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   ParseUUIDPipe,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import {
@@ -17,8 +18,11 @@ import {
   ApiTags,
   ApiParam,
 } from '@nestjs/swagger';
+import { Permission, Resource } from '@librestock/types';
+import { RequirePermission } from '../../common/decorators';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { MessageResponseDto } from '../../common/dto/message-response.dto';
+import { PermissionGuard } from '../../common/guards/permission.guard';
 import { HateoasInterceptor } from '../../common/hateoas/hateoas.interceptor';
 import { AuditInterceptor } from '../../common/interceptors/audit.interceptor';
 import { Auditable } from '../../common/decorators/auditable.decorator';
@@ -37,6 +41,8 @@ import { ClientHateoas, DeleteClientHateoas } from './clients.hateoas';
 @ApiTags('Clients')
 @ApiBearerAuth()
 @StandardThrottle()
+@UseGuards(PermissionGuard)
+@RequirePermission(Resource.STOCK, Permission.READ)
 @Controller()
 export class ClientsController {
   constructor(private readonly clientsService: ClientsService) {}
@@ -72,6 +78,7 @@ export class ClientsController {
   }
 
   @Post()
+  @RequirePermission(Resource.STOCK, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @ClientHateoas()
   @Auditable({
@@ -91,6 +98,7 @@ export class ClientsController {
   }
 
   @Put(':id')
+  @RequirePermission(Resource.STOCK, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @ClientHateoas()
   @Auditable({
@@ -113,6 +121,7 @@ export class ClientsController {
   }
 
   @Delete(':id')
+  @RequirePermission(Resource.STOCK, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @DeleteClientHateoas()
   @Auditable({

@@ -9,6 +9,7 @@ import {
   Param,
   Query,
   ParseUUIDPipe,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import {
@@ -18,8 +19,11 @@ import {
   ApiTags,
   ApiParam,
 } from '@nestjs/swagger';
+import { Permission, Resource } from '@librestock/types';
+import { RequirePermission } from '../../common/decorators';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { MessageResponseDto } from '../../common/dto/message-response.dto';
+import { PermissionGuard } from '../../common/guards/permission.guard';
 import { HateoasInterceptor } from '../../common/hateoas/hateoas.interceptor';
 import { AuditInterceptor } from '../../common/interceptors/audit.interceptor';
 import { Auditable } from '../../common/decorators/auditable.decorator';
@@ -39,6 +43,8 @@ import { InventoryHateoas, DeleteInventoryHateoas } from './inventory.hateoas';
 @ApiTags('Inventory')
 @ApiBearerAuth()
 @StandardThrottle()
+@UseGuards(PermissionGuard)
+@RequirePermission(Resource.INVENTORY, Permission.READ)
 @Controller()
 export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
@@ -126,6 +132,7 @@ export class InventoryController {
   }
 
   @Post()
+  @RequirePermission(Resource.INVENTORY, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @InventoryHateoas()
   @Auditable({
@@ -147,6 +154,7 @@ export class InventoryController {
   }
 
   @Put(':id')
+  @RequirePermission(Resource.INVENTORY, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @InventoryHateoas()
   @Auditable({
@@ -171,6 +179,7 @@ export class InventoryController {
   }
 
   @Patch(':id/adjust')
+  @RequirePermission(Resource.INVENTORY, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @InventoryHateoas()
   @Auditable({
@@ -195,6 +204,7 @@ export class InventoryController {
   }
 
   @Delete(':id')
+  @RequirePermission(Resource.INVENTORY, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @DeleteInventoryHateoas()
   @Auditable({

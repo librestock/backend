@@ -9,6 +9,7 @@ import {
   Query,
   UseInterceptors,
   ParseUUIDPipe,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,12 +18,15 @@ import {
   ApiBearerAuth,
   ApiParam,
 } from '@nestjs/swagger';
+import { Permission, Resource } from '@librestock/types';
 import { HateoasInterceptor } from '../../common/hateoas/hateoas.interceptor';
 import { AuditInterceptor } from '../../common/interceptors/audit.interceptor';
 import { Auditable } from '../../common/decorators/auditable.decorator';
+import { RequirePermission } from '../../common/decorators';
 import { AuditAction, AuditEntityType } from '../../common/enums';
 import { StandardThrottle } from '../../common/decorators/throttle.decorator';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
+import { PermissionGuard } from '../../common/guards/permission.guard';
 import { AreasService } from './areas.service';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
@@ -33,11 +37,14 @@ import { AreaHateoas, AreaListHateoas } from './areas.hateoas';
 @ApiTags('Areas')
 @ApiBearerAuth('BearerAuth')
 @StandardThrottle()
+@UseGuards(PermissionGuard)
+@RequirePermission(Resource.LOCATIONS, Permission.READ)
 @Controller()
 export class AreasController {
   constructor(private readonly areasService: AreasService) {}
 
   @Post()
+  @RequirePermission(Resource.LOCATIONS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @AreaHateoas()
   @Auditable({
@@ -124,6 +131,7 @@ export class AreasController {
   }
 
   @Put(':id')
+  @RequirePermission(Resource.LOCATIONS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @AreaHateoas()
   @Auditable({
@@ -158,6 +166,7 @@ export class AreasController {
   }
 
   @Delete(':id')
+  @RequirePermission(Resource.LOCATIONS, Permission.WRITE)
   @UseInterceptors(AuditInterceptor)
   @Auditable({
     action: AuditAction.DELETE,

@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   ParseUUIDPipe,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import {
@@ -17,8 +18,11 @@ import {
   ApiTags,
   ApiParam,
 } from '@nestjs/swagger';
+import { Permission, Resource } from '@librestock/types';
+import { RequirePermission } from '../../common/decorators';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { MessageResponseDto } from '../../common/dto/message-response.dto';
+import { PermissionGuard } from '../../common/guards/permission.guard';
 import { HateoasInterceptor } from '../../common/hateoas/hateoas.interceptor';
 import { AuditInterceptor } from '../../common/interceptors/audit.interceptor';
 import { Auditable } from '../../common/decorators/auditable.decorator';
@@ -37,6 +41,8 @@ import { LocationHateoas, DeleteLocationHateoas } from './locations.hateoas';
 @ApiTags('Locations')
 @ApiBearerAuth()
 @StandardThrottle()
+@UseGuards(PermissionGuard)
+@RequirePermission(Resource.LOCATIONS, Permission.READ)
 @Controller()
 export class LocationsController {
   constructor(private readonly locationsService: LocationsService) {}
@@ -85,6 +91,7 @@ export class LocationsController {
   }
 
   @Post()
+  @RequirePermission(Resource.LOCATIONS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @LocationHateoas()
   @Auditable({
@@ -103,6 +110,7 @@ export class LocationsController {
   }
 
   @Put(':id')
+  @RequirePermission(Resource.LOCATIONS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @LocationHateoas()
   @Auditable({
@@ -124,6 +132,7 @@ export class LocationsController {
   }
 
   @Delete(':id')
+  @RequirePermission(Resource.LOCATIONS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @DeleteLocationHateoas()
   @Auditable({

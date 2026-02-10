@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   ParseUUIDPipe,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import {
@@ -16,8 +17,11 @@ import {
   ApiTags,
   ApiParam,
 } from '@nestjs/swagger';
+import { Permission, Resource } from '@librestock/types';
+import { RequirePermission } from '../../common/decorators';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { MessageResponseDto } from '../../common/dto/message-response.dto';
+import { PermissionGuard } from '../../common/guards/permission.guard';
 import { HateoasInterceptor } from '../../common/hateoas/hateoas.interceptor';
 import { AuditInterceptor } from '../../common/interceptors/audit.interceptor';
 import { Auditable } from '../../common/decorators/auditable.decorator';
@@ -33,6 +37,8 @@ import { CategoryHateoas, DeleteCategoryHateoas } from './categories.hateoas';
 @ApiTags('Categories')
 @ApiBearerAuth()
 @StandardThrottle()
+@UseGuards(PermissionGuard)
+@RequirePermission(Resource.PRODUCTS, Permission.READ)
 @Controller()
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
@@ -65,6 +71,7 @@ export class CategoriesController {
   }
 
   @Post()
+  @RequirePermission(Resource.PRODUCTS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @CategoryHateoas()
   @Auditable({
@@ -104,6 +111,7 @@ export class CategoriesController {
   }
 
   @Put(':id')
+  @RequirePermission(Resource.PRODUCTS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @CategoryHateoas()
   @Auditable({
@@ -154,6 +162,7 @@ export class CategoriesController {
   }
 
   @Delete(':id')
+  @RequirePermission(Resource.PRODUCTS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @DeleteCategoryHateoas()
   @Auditable({

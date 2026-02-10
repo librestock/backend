@@ -7,6 +7,7 @@ import {
   Query,
   Req,
   ParseUUIDPipe,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import {
@@ -16,7 +17,10 @@ import {
   ApiTags,
   ApiParam,
 } from '@nestjs/swagger';
+import { Permission, Resource } from '@librestock/types';
+import { RequirePermission } from '../../common/decorators';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
+import { PermissionGuard } from '../../common/guards/permission.guard';
 import { HateoasInterceptor } from '../../common/hateoas/hateoas.interceptor';
 import { AuditInterceptor } from '../../common/interceptors/audit.interceptor';
 import { Auditable } from '../../common/decorators/auditable.decorator';
@@ -39,6 +43,8 @@ import { StockMovementHateoas } from './stock-movements.hateoas';
 @ApiTags('Stock Movements')
 @ApiBearerAuth()
 @StandardThrottle()
+@UseGuards(PermissionGuard)
+@RequirePermission(Resource.STOCK, Permission.READ)
 @Controller()
 export class StockMovementsController {
   constructor(
@@ -119,6 +125,7 @@ export class StockMovementsController {
   }
 
   @Post()
+  @RequirePermission(Resource.STOCK, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @StockMovementHateoas()
   @Auditable({

@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { PermissionGuard } from '../../common/guards/permission.guard';
 import { ProductsModule } from '../products/products.module';
 import { LocationsModule } from '../locations/locations.module';
 import { AreasModule } from '../areas/areas.module';
@@ -16,7 +17,7 @@ import { InventoryRepository } from './inventory.repository';
     forwardRef(() => AreasModule),
   ],
   controllers: [InventoryController],
-  providers: [InventoryService, InventoryRepository],
+  providers: [InventoryService, InventoryRepository, PermissionGuard],
   exports: [InventoryService],
 })
 export class InventoryModule {}

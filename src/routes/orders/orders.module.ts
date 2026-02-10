@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { PermissionGuard } from '../../common/guards/permission.guard';
 import { ClientsModule } from '../clients/clients.module';
 import { ProductsModule } from '../products/products.module';
 import { Order } from './entities/order.entity';
@@ -16,7 +17,12 @@ import { OrderItemRepository } from './order-items.repository';
     ProductsModule,
   ],
   controllers: [OrdersController],
-  providers: [OrdersService, OrderRepository, OrderItemRepository],
+  providers: [
+    OrdersService,
+    OrderRepository,
+    OrderItemRepository,
+    PermissionGuard,
+  ],
   exports: [OrdersService],
 })
 export class OrdersModule {}
