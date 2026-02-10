@@ -1,8 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  UserRole,
-  type UserResponseDto as UserResponseDtoShape,
-} from '@librestock/types';
+import type { UserResponseDto as UserResponseDtoShape } from '@librestock/types';
 
 export class UserResponseDto implements UserResponseDtoShape {
   @ApiProperty({ description: 'User ID', format: 'uuid' })
@@ -17,8 +14,8 @@ export class UserResponseDto implements UserResponseDtoShape {
   @ApiProperty({ description: 'User avatar URL', nullable: true })
   image: string | null;
 
-  @ApiProperty({ description: 'Assigned roles', enum: UserRole, isArray: true })
-  roles: UserRole[];
+  @ApiProperty({ description: 'Assigned role names', type: [String] })
+  roles: string[];
 
   @ApiProperty({ description: 'Whether user is banned' })
   banned: boolean;

@@ -4,12 +4,14 @@ import {
   Column,
   Unique,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { UserRole } from 'src/common/enums';
+import { RoleEntity } from '../../roles/entities/role.entity';
 
 @Entity('user_roles')
-@Unique(['user_id', 'role'])
+@Unique(['user_id', 'role_id'])
 export class UserRoleEntity {
   @ApiProperty({ description: 'Unique identifier', format: 'uuid' })
   @PrimaryGeneratedColumn('uuid')
@@ -17,13 +19,14 @@ export class UserRoleEntity {
 
   @ApiProperty({ description: 'User ID', format: 'uuid' })
   @Index()
-  @Column({ type: 'varchar' })
+  @Column({ type: 'uuid' })
   user_id: string;
 
-  @ApiProperty({ description: 'Assigned role', enum: UserRole })
-  @Column({
-    type: 'enum',
-    enum: UserRole,
-  })
-  role: UserRole;
+  @ApiProperty({ description: 'Role ID', format: 'uuid' })
+  @Column({ type: 'uuid' })
+  role_id: string;
+
+  @ManyToOne(() => RoleEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'role_id' })
+  role: RoleEntity;
 }

@@ -1,14 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsOptional,
-  IsEnum,
   IsNumber,
   IsString,
   Min,
   Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { UserRole, type UserQueryDto as UserQueryDtoShape } from '@librestock/types';
+import type { UserQueryDto as UserQueryDtoShape } from '@librestock/types';
 
 export class UserQueryDto implements UserQueryDtoShape {
   @ApiProperty({
@@ -46,11 +45,10 @@ export class UserQueryDto implements UserQueryDtoShape {
   search?: string;
 
   @ApiProperty({
-    description: 'Filter by role',
-    enum: UserRole,
+    description: 'Filter by role name',
     required: false,
   })
   @IsOptional()
-  @IsEnum(UserRole)
-  role?: UserRole;
+  @IsString()
+  role?: string;
 }

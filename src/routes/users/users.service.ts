@@ -2,7 +2,6 @@ import type { IncomingHttpHeaders } from 'node:http';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { UserRole } from 'src/common/enums';
 import { auth } from '../../auth';
 import { UserRoleEntity } from './entities/user-role.entity';
 import type { UserQueryDto } from './dto/user-query.dto';
@@ -63,13 +62,16 @@ export class UsersService {
 
     const userIds = users.map((u: { id: string }) => u.id);
     const roleEntities = userIds.length > 0
-      ? await this.userRoleRepository.find({ where: { user_id: In(userIds) } })
+      ? await this.userRoleRepository.find({
+          where: { user_id: In(userIds) },
+          relations: ['role'],
+        })
       : [];
 
-    const rolesByUserId = new Map<string, UserRole[]>();
+    const rolesByUserId = new Map<string, string[]>();
     for (const re of roleEntities) {
       const arr = rolesByUserId.get(re.user_id) ?? [];
-      arr.push(re.role);
+      arr.push(re.role.name);
       rolesByUserId.set(re.user_id, arr);
     }
 
@@ -118,6 +120,7 @@ export class UsersService {
 
     const roleEntities = await this.userRoleRepository.find({
       where: { user_id: id },
+      relations: ['role'],
     });
 
     return {
@@ -125,7 +128,7 @@ export class UsersService {
       name: user.name ?? '',
       email: user.email ?? '',
       image: user.image ?? null,
-      roles: roleEntities.map((re) => re.role),
+      roles: roleEntities.map((re) => re.role.name),
       banned: user.banned ?? false,
       banReason: user.banReason ?? null,
       banExpires: user.banExpires ?? null,
@@ -133,16 +136,16 @@ export class UsersService {
     };
   }
 
-  async updateRoles(userId: string, roles: UserRole[], headers: IncomingHttpHeaders): Promise<UserResponseDto> {
+  async updateRoles(userId: string, roleIds: string[], headers: IncomingHttpHeaders): Promise<UserResponseDto> {
     // Verify user exists
     await this.getUser(userId, headers);
 
-    // Replace all roles
+    // Replace all role assignments
     await this.userRoleRepository.delete({ user_id: userId });
 
-    if (roles.length > 0) {
-      const entities = roles.map((role) =>
-        this.userRoleRepository.create({ user_id: userId, role }),
+    if (roleIds.length > 0) {
+      const entities = roleIds.map((roleId) =>
+        this.userRoleRepository.create({ user_id: userId, role_id: roleId }),
       );
       await this.userRoleRepository.save(entities);
     }
@@ -184,12 +187,5 @@ export class UsersService {
   async revokeSessions(userId: string, headers: IncomingHttpHeaders): Promise<void> {
     await this.getUser(userId, headers);
     await auth.api.revokeUserSessions({ headers: toHeaders(headers), body: { userId } as any });
-  }
-
-  async getRolesForUser(userId: string): Promise<UserRole[]> {
-    const entities = await this.userRoleRepository.find({
-      where: { user_id: userId },
-    });
-    return entities.map((e) => e.role);
   }
 }
