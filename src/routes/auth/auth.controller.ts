@@ -13,6 +13,8 @@ import {
   getSessionTimingFromSession,
   getUserIdFromSession,
 } from 'src/common/auth/session';
+import { RolesService } from '../roles/roles.service';
+import { CurrentUserResponseDto } from './dto/current-user-response.dto';
 import { SessionClaimsResponseDto } from './dto/session-claims-response.dto';
 import { ProfileResponseDto } from './dto/profile-response.dto';
 
@@ -21,6 +23,40 @@ import { ProfileResponseDto } from './dto/profile-response.dto';
 @AuthThrottle()
 @Controller('auth')
 export class AuthController {
+  constructor(private readonly rolesService: RolesService) {}
+
+  @Get('me')
+  @ApiOperation({
+    summary: 'Get current user with roles and permissions',
+    description: 'Retrieves the current user profile including assigned roles and resolved permissions',
+    operationId: 'getCurrentUser',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user retrieved successfully',
+    type: CurrentUserResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+    type: ErrorResponseDto,
+  })
+  async me(
+    @Session() session: UserSession,
+  ): Promise<CurrentUserResponseDto> {
+    const { id, name, email, image } = session.user;
+    const { roleNames, permissions } =
+      await this.rolesService.getPermissionsForUser(id);
+    return {
+      id,
+      name,
+      email,
+      image: image ?? undefined,
+      roles: roleNames,
+      permissions,
+    };
+  }
+
   @Get('profile')
   @ApiOperation({
     summary: 'Get user profile',
