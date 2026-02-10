@@ -5,5 +5,14 @@
   "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "setupFiles": ["<rootDir>/setup-env.ts"],
+  "moduleNameMapper": {
+    "^src/(.*)$": "<rootDir>/../src/$1",
+    "^src/auth$": "<rootDir>/mocks/auth.mock.ts",
+    "^better-auth$": "<rootDir>/mocks/better-auth.mock.ts",
+    "^better-auth/plugins$": "<rootDir>/mocks/better-auth-plugins.mock.ts",
+    "^uuid$": "<rootDir>/mocks/uuid.mock.ts",
+    "^@thallesp/nestjs-better-auth$": "<rootDir>/mocks/nestjs-better-auth.mock.ts"
   }
 }
