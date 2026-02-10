@@ -8,6 +8,7 @@ import * as express from 'express';
 import { toNodeHandler } from 'better-auth/node';
 import { AppModule } from './app.module';
 import { auth } from './auth';
+import { createAuthRateLimitMiddleware } from './common/middleware/auth-rate-limit.middleware';
 import { Client } from './routes/clients/entities/client.entity';
 import { HateoasInterceptor } from './common/hateoas';
 import { AuditLog } from './routes/audit-logs/entities/audit-log.entity';
@@ -57,6 +58,10 @@ async function bootstrap() {
   // Mount Better Auth handler before body parsing — it handles its own parsing
   // and needs the raw request body. NestJS middleware forRoutes() doesn't apply
   // to paths without registered controllers, so we mount it at the Express level.
+  app.use(
+    '/api/auth',
+    createAuthRateLimitMiddleware({ windowMs: 60_000, maxRequests: 10 }),
+  );
   app.use('/api/auth', toNodeHandler(auth));
 
   app.use(express.json({ limit: '10mb' }));
