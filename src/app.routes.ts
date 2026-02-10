@@ -8,6 +8,7 @@ import { AreasModule } from './routes/areas/areas.module';
 import { InventoryModule } from './routes/inventory/inventory.module';
 import { AuditLogsModule } from './routes/audit-logs/audit-logs.module';
 import { BrandingModule } from './routes/branding/branding.module';
+import { RolesModule } from './routes/roles/roles.module';
 import { UsersModule } from './routes/users/users.module';
 import { ClientsModule } from './routes/clients/clients.module';
 import { StockMovementsModule } from './routes/stock-movements/stock-movements.module';
@@ -54,6 +55,10 @@ export const routes: Routes = [
   {
     path: 'branding',
     module: BrandingModule,
+  },
+  {
+    path: 'roles',
+    module: RolesModule,
   },
   {
     path: 'users',
