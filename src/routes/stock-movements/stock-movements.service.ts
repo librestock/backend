@@ -26,8 +26,7 @@ export class StockMovementsService {
   async findAllPaginated(
     query: StockMovementQueryDto,
   ): Promise<PaginatedStockMovementsResponseDto> {
-    const result =
-      await this.stockMovementRepository.findAllPaginated(query);
+    const result = await this.stockMovementRepository.findAllPaginated(query);
 
     return {
       data: result.data.map((sm) => this.toResponseDto(sm)),
@@ -43,9 +42,7 @@ export class StockMovementsService {
     return this.toResponseDto(movement);
   }
 
-  async findByProduct(
-    productId: string,
-  ): Promise<StockMovementResponseDto[]> {
+  async findByProduct(productId: string): Promise<StockMovementResponseDto[]> {
     const exists = await this.productsService.existsById(productId);
     if (!exists) {
       throw new NotFoundException('Product not found');

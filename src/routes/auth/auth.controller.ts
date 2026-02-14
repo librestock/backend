@@ -21,7 +21,7 @@ import { ProfileResponseDto } from './dto/profile-response.dto';
 @ApiTags('Auth')
 @ApiBearerAuth()
 @AuthThrottle()
-@Controller('auth')
+@Controller()
 export class AuthController {
   constructor(private readonly rolesService: RolesService) {}
 
