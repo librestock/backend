@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrderStatus } from '@librestock/types';
 import { toPaginationMeta } from '../../common/utils/pagination.utils';
 import { ClientsService } from '../clients/clients.service';
@@ -11,6 +12,11 @@ import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { OrderRepository } from './orders.repository';
 import { OrderItemRepository } from './order-items.repository';
+import { getOrderState } from './state/order-state';
+import {
+  ORDER_STATUS_CHANGED,
+  OrderStatusChangedEvent,
+} from './events/order-status-changed.event';
 import {
   CreateOrderDto,
   UpdateOrderDto,
@@ -21,40 +27,6 @@ import {
   PaginatedOrdersResponseDto,
 } from './dto';
 
-const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  [OrderStatus.DRAFT]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
-  [OrderStatus.CONFIRMED]: [
-    OrderStatus.SOURCING,
-    OrderStatus.ON_HOLD,
-    OrderStatus.CANCELLED,
-  ],
-  [OrderStatus.SOURCING]: [
-    OrderStatus.PICKING,
-    OrderStatus.ON_HOLD,
-    OrderStatus.CANCELLED,
-  ],
-  [OrderStatus.PICKING]: [
-    OrderStatus.PACKED,
-    OrderStatus.ON_HOLD,
-    OrderStatus.CANCELLED,
-  ],
-  [OrderStatus.PACKED]: [
-    OrderStatus.SHIPPED,
-    OrderStatus.ON_HOLD,
-    OrderStatus.CANCELLED,
-  ],
-  [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED],
-  [OrderStatus.DELIVERED]: [],
-  [OrderStatus.CANCELLED]: [],
-  [OrderStatus.ON_HOLD]: [
-    OrderStatus.CONFIRMED,
-    OrderStatus.SOURCING,
-    OrderStatus.PICKING,
-    OrderStatus.PACKED,
-    OrderStatus.CANCELLED,
-  ],
-};
-
 @Injectable()
 export class OrdersService {
   constructor(
@@ -62,6 +34,7 @@ export class OrdersService {
     private readonly orderItemRepository: OrderItemRepository,
     private readonly clientsService: ClientsService,
     private readonly productsService: ProductsService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async findAllPaginated(
@@ -174,17 +147,24 @@ export class OrdersService {
   ): Promise<OrderResponseDto> {
     const order = await this.getOrderOrFail(id);
 
-    this.validateStatusTransition(order.status, dto.status);
+    const currentState = getOrderState(order.status);
+    const targetState = getOrderState(dto.status);
 
-    const updateData: Partial<Order> = { status: dto.status };
-    if (dto.status === OrderStatus.CONFIRMED)
-      updateData.confirmed_at = new Date();
-    if (dto.status === OrderStatus.SHIPPED)
-      updateData.shipped_at = new Date();
-    if (dto.status === OrderStatus.DELIVERED)
-      updateData.delivered_at = new Date();
+    currentState.validateTransition(dto.status);
+    targetState.validateEntry(order);
 
-    await this.orderRepository.update(id, updateData);
+    await this.orderRepository.update(id, { status: dto.status });
+
+    await this.eventEmitter.emitAsync(
+      ORDER_STATUS_CHANGED,
+      new OrderStatusChangedEvent(
+        id,
+        order.status,
+        dto.status,
+        order,
+        new Date(),
+      ),
+    );
 
     const updated = await this.orderRepository.findById(id);
     return this.toResponseDto(updated!);
@@ -201,17 +181,6 @@ export class OrdersService {
 
   async existsById(id: string): Promise<boolean> {
     return this.orderRepository.existsById(id);
-  }
-
-  private validateStatusTransition(
-    current: OrderStatus,
-    next: OrderStatus,
-  ): void {
-    if (!VALID_TRANSITIONS[current]?.includes(next)) {
-      throw new BadRequestException(
-        `Cannot transition from ${current} to ${next}`,
-      );
-    }
   }
 
   private async generateOrderNumber(): Promise<string> {

@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, RouterModule } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AuthModule as BetterAuthModule } from '@thallesp/nestjs-better-auth';
 import { AuthModule as AuthRoutesModule } from './routes/auth/auth.module';
 import { CategoriesModule } from './routes/categories/categories.module';
@@ -50,6 +51,7 @@ import { auth } from './auth';
         limit: 100, // 100 requests per minute (global default)
       },
     ]),
+    EventEmitterModule.forRoot(),
     BetterAuthModule.forRoot({
       auth,
       disableGlobalAuthGuard: false,

@@ -9,6 +9,7 @@ import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { OrderRepository } from './orders.repository';
 import { OrderItemRepository } from './order-items.repository';
+import { OrderTimestampHandler } from './events/order-timestamp.handler';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { OrderItemRepository } from './order-items.repository';
     OrdersService,
     OrderRepository,
     OrderItemRepository,
+    OrderTimestampHandler,
     PermissionGuard,
   ],
   exports: [OrdersService],

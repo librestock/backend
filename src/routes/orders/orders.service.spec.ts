@@ -1,11 +1,13 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrderStatus } from '@librestock/types';
 import { ClientsService } from '../clients/clients.service';
 import { ProductsService } from '../products/products.service';
 import { OrdersService } from './orders.service';
 import { OrderRepository, type PaginatedResult } from './orders.repository';
 import { OrderItemRepository } from './order-items.repository';
+import { ORDER_STATUS_CHANGED } from './events/order-status-changed.event';
 import { type Order } from './entities/order.entity';
 import { type OrderItem } from './entities/order-item.entity';
 
@@ -15,6 +17,7 @@ describe('OrdersService', () => {
   let orderItemRepository: jest.Mocked<OrderItemRepository>;
   let clientsService: jest.Mocked<ClientsService>;
   let productsService: jest.Mocked<ProductsService>;
+  let eventEmitter: jest.Mocked<Pick<EventEmitter2, 'emitAsync'>>;
 
   const mockOrder: Order = {
     id: 'order-001',
@@ -103,6 +106,10 @@ describe('OrdersService', () => {
       existsById: jest.fn(),
     };
 
+    const mockEventEmitter = {
+      emitAsync: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrdersService,
@@ -110,6 +117,7 @@ describe('OrdersService', () => {
         { provide: OrderItemRepository, useValue: mockOrderItemRepository },
         { provide: ClientsService, useValue: mockClientsService },
         { provide: ProductsService, useValue: mockProductsService },
+        { provide: EventEmitter2, useValue: mockEventEmitter },
       ],
     }).compile();
 
@@ -118,6 +126,7 @@ describe('OrdersService', () => {
     orderItemRepository = module.get(OrderItemRepository);
     clientsService = module.get(ClientsService);
     productsService = module.get(ProductsService);
+    eventEmitter = module.get(EventEmitter2);
   });
 
   it('should be defined', () => {
@@ -292,11 +301,15 @@ describe('OrdersService', () => {
       });
 
       expect(result.status).toBe(OrderStatus.CONFIRMED);
-      expect(orderRepository.update).toHaveBeenCalledWith(
-        'order-001',
+      expect(orderRepository.update).toHaveBeenCalledWith('order-001', {
+        status: OrderStatus.CONFIRMED,
+      });
+      expect(eventEmitter.emitAsync).toHaveBeenCalledWith(
+        ORDER_STATUS_CHANGED,
         expect.objectContaining({
-          status: OrderStatus.CONFIRMED,
-          confirmed_at: expect.any(Date),
+          orderId: 'order-001',
+          previousStatus: OrderStatus.DRAFT,
+          newStatus: OrderStatus.CONFIRMED,
         }),
       );
     });
@@ -319,16 +332,20 @@ describe('OrdersService', () => {
       });
 
       expect(result.status).toBe(OrderStatus.SHIPPED);
-      expect(orderRepository.update).toHaveBeenCalledWith(
-        'order-001',
+      expect(orderRepository.update).toHaveBeenCalledWith('order-001', {
+        status: OrderStatus.SHIPPED,
+      });
+      expect(eventEmitter.emitAsync).toHaveBeenCalledWith(
+        ORDER_STATUS_CHANGED,
         expect.objectContaining({
-          status: OrderStatus.SHIPPED,
-          shipped_at: expect.any(Date),
+          orderId: 'order-001',
+          previousStatus: OrderStatus.PACKED,
+          newStatus: OrderStatus.SHIPPED,
         }),
       );
     });
 
-    it('should set delivered_at when transitioning to DELIVERED', async () => {
+    it('should emit event when transitioning to DELIVERED', async () => {
       const shippedOrder = {
         ...mockOrderWithItems,
         status: OrderStatus.SHIPPED,
@@ -345,11 +362,15 @@ describe('OrdersService', () => {
         status: OrderStatus.DELIVERED,
       });
 
-      expect(orderRepository.update).toHaveBeenCalledWith(
-        'order-001',
+      expect(orderRepository.update).toHaveBeenCalledWith('order-001', {
+        status: OrderStatus.DELIVERED,
+      });
+      expect(eventEmitter.emitAsync).toHaveBeenCalledWith(
+        ORDER_STATUS_CHANGED,
         expect.objectContaining({
-          status: OrderStatus.DELIVERED,
-          delivered_at: expect.any(Date),
+          orderId: 'order-001',
+          previousStatus: OrderStatus.SHIPPED,
+          newStatus: OrderStatus.DELIVERED,
         }),
       );
     });
