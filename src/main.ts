@@ -60,7 +60,7 @@ async function bootstrap() {
   // to paths without registered controllers, so we mount it at the Express level.
   app.use(
     '/api/auth',
-    createAuthRateLimitMiddleware({ windowMs: 60_000, maxRequests: 10 }),
+    createAuthRateLimitMiddleware({ windowMs: 60_000, maxRequests: 100 }),
   );
   app.use('/api/auth', toNodeHandler(auth));
 

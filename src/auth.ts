@@ -73,6 +73,11 @@ async function assignFirstAdminRole(userId: string): Promise<void> {
          ON CONFLICT (user_id, role_id) DO NOTHING`,
         [userId, adminRoleId],
       );
+      // Also set Better Auth's own role column so admin APIs (listUsers, etc.) work
+      await client.query(
+        `UPDATE "user" SET role = 'admin' WHERE id = $1`,
+        [userId],
+      );
     }
 
     await client.query('COMMIT');

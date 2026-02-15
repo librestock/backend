@@ -1,9 +1,10 @@
 import type { IncomingHttpHeaders } from 'node:http';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { DataSource, Repository, In } from 'typeorm';
 import { auth } from '../../auth';
 import { UserRoleEntity } from './entities/user-role.entity';
+import { RoleEntity } from '../roles/entities/role.entity';
 import type { UserQueryDto } from './dto/user-query.dto';
 import type { UserResponseDto } from './dto/user-response.dto';
 import type { BanUserDto } from './dto/ban-user.dto';
@@ -34,6 +35,7 @@ export class UsersService {
   constructor(
     @InjectRepository(UserRoleEntity)
     private readonly userRoleRepository: Repository<UserRoleEntity>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async listUsers(query: UserQueryDto, headers: IncomingHttpHeaders): Promise<PaginatedUsers> {
@@ -149,6 +151,19 @@ export class UsersService {
       );
       await this.userRoleRepository.save(entities);
     }
+
+    // Sync Better Auth's user.role column so admin APIs (listUsers, etc.) work
+    const hasAdminRole = roleIds.length > 0
+      ? (await this.dataSource.getRepository(RoleEntity)
+          .createQueryBuilder('r')
+          .where('r.id IN (:...roleIds)', { roleIds })
+          .andWhere('LOWER(r.name) = LOWER(:name)', { name: 'Admin' })
+          .getCount()) > 0
+      : false;
+    await this.dataSource.query(
+      `UPDATE "user" SET role = $1 WHERE id = $2`,
+      [hasAdminRole ? 'admin' : 'user', userId],
+    );
 
     return this.getUser(userId, headers);
   }
