@@ -13,6 +13,8 @@ import { UsersModule } from './routes/users/users.module';
 import { ClientsModule } from './routes/clients/clients.module';
 import { StockMovementsModule } from './routes/stock-movements/stock-movements.module';
 import { OrdersModule } from './routes/orders/orders.module';
+import { PhotosModule } from './routes/photos/photos.module';
+import { SuppliersModule } from './routes/suppliers/suppliers.module';
 
 /**
  * Application routes configuration
@@ -75,5 +77,13 @@ export const routes: Routes = [
   {
     path: 'orders',
     module: OrdersModule,
+  },
+  {
+    path: 'suppliers',
+    module: SuppliersModule,
+  },
+  {
+    path: '',
+    module: PhotosModule,
   },
 ];

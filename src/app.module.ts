@@ -18,6 +18,8 @@ import { UsersModule } from './routes/users/users.module';
 import { ClientsModule } from './routes/clients/clients.module';
 import { StockMovementsModule } from './routes/stock-movements/stock-movements.module';
 import { OrdersModule } from './routes/orders/orders.module';
+import { PhotosModule } from './routes/photos/photos.module';
+import { SuppliersModule } from './routes/suppliers/suppliers.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TransactionInterceptor } from './common/interceptors/transaction.interceptor';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
@@ -70,6 +72,8 @@ import { auth } from './auth';
     ClientsModule,
     StockMovementsModule,
     OrdersModule,
+    PhotosModule,
+    SuppliersModule,
     RouterModule.register(routes),
   ],
   providers: [
