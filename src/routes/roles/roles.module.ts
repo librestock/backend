@@ -1,16 +1,16 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Global, Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RoleEntity } from './entities/role.entity';
 import { RolePermissionEntity } from './entities/role-permission.entity';
 import { RolesRepository } from './roles.repository';
 import { RolesService } from './roles.service';
 import { RolesController } from './roles.controller';
 
+@Global()
 @Module({
   imports: [TypeOrmModule.forFeature([RoleEntity, RolePermissionEntity])],
   controllers: [RolesController],
-  providers: [RolesService, RolesRepository, PermissionGuard],
+  providers: [RolesService, RolesRepository],
   exports: [RolesService],
 })
 export class RolesModule implements OnModuleInit {

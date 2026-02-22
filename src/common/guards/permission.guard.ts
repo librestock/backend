@@ -7,13 +7,12 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Permission, Resource } from '@librestock/types';
-import { DataSource } from 'typeorm';
 import {
   PERMISSION_KEY,
   type RequiredPermission,
 } from '../decorators/require-permission.decorator';
 import { getUserSession } from '../auth/session';
+import { RolesService } from '../../routes/roles/roles.service';
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
@@ -21,7 +20,7 @@ export class PermissionGuard implements CanActivate {
 
   constructor(
     private reflector: Reflector,
-    private dataSource: DataSource,
+    private rolesService: RolesService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -44,31 +43,13 @@ export class PermissionGuard implements CanActivate {
     }
 
     try {
-      const rows: { resource: string; permission: string }[] =
-        await this.dataSource.query(
-          `SELECT rp.resource, rp.permission
-           FROM user_roles ur
-           JOIN role_permissions rp ON rp.role_id = ur.role_id
-           WHERE ur.user_id = $1`,
-          [userId],
-        );
+      const { permissions } =
+        await this.rolesService.getPermissionsForUser(userId);
 
-      const resources = new Set(Object.values(Resource));
-      const permissions = new Set(Object.values(Permission));
-
-      const typedRows = rows.filter(
-        (
-          row,
-        ): row is { resource: Resource; permission: Permission } =>
-          resources.has(row.resource as Resource) &&
-          permissions.has(row.permission as Permission),
-      );
-
-      const hasPermission = typedRows.some(
-        (row) =>
-          row.resource === required.resource &&
-          row.permission === required.permission,
-      );
+      const resourcePerms = permissions[required.resource];
+      const hasPermission =
+        resourcePerms !== undefined &&
+        resourcePerms.includes(required.permission);
 
       if (!hasPermission) {
         throw new ForbiddenException('Insufficient permissions');
@@ -80,7 +61,7 @@ export class PermissionGuard implements CanActivate {
         throw error;
       }
 
-      this.logger.error('Failed to resolve permissions from database', error);
+      this.logger.error('Failed to resolve permissions', error);
       throw new InternalServerErrorException(
         'Failed to resolve user permissions',
       );

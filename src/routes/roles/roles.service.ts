@@ -13,14 +13,21 @@ import type { CreateRoleDto } from './dto/create-role.dto';
 import type { UpdateRoleDto } from './dto/update-role.dto';
 import type { RoleResponseDto } from './dto/role-response.dto';
 
-interface UserPermissions {
+export interface UserPermissions {
   roleNames: string[];
   permissions: Partial<Record<Resource, Permission[]>>;
+}
+
+interface CacheEntry {
+  permissions: UserPermissions;
+  expiresAt: number;
 }
 
 @Injectable()
 export class RolesService {
   private readonly logger = new Logger(RolesService.name);
+  private readonly CACHE_TTL_MS = 60_000;
+  private cache = new Map<string, CacheEntry>();
 
   constructor(
     private readonly rolesRepository: RolesRepository,
@@ -98,6 +105,7 @@ export class RolesService {
 
     if (dto.permissions !== undefined) {
       await this.rolesRepository.replacePermissions(id, dto.permissions);
+      this.clearAllCache();
     }
 
     return this.findById(id);
@@ -112,9 +120,24 @@ export class RolesService {
       throw new BadRequestException('System roles cannot be deleted');
     }
     await this.rolesRepository.delete(id);
+    this.clearAllCache();
   }
 
   async getPermissionsForUser(userId: string): Promise<UserPermissions> {
+    const cached = this.cache.get(userId);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.permissions;
+    }
+
+    const permissions = await this.fetchPermissionsFromDb(userId);
+    this.cache.set(userId, {
+      permissions,
+      expiresAt: Date.now() + this.CACHE_TTL_MS,
+    });
+    return permissions;
+  }
+
+  private async fetchPermissionsFromDb(userId: string): Promise<UserPermissions> {
     const rows: { role_name: string; resource: string; permission: string }[] =
       await this.dataSource.query(
         `SELECT r.name AS role_name, rp.resource, rp.permission
@@ -139,6 +162,14 @@ export class RolesService {
     }
 
     return { roleNames, permissions };
+  }
+
+  clearCacheForUser(userId: string): void {
+    this.cache.delete(userId);
+  }
+
+  clearAllCache(): void {
+    this.cache.clear();
   }
 
   async seed(): Promise<void> {

@@ -5,6 +5,7 @@ import { DataSource, Repository, In } from 'typeorm';
 import { auth } from '../../auth';
 import { UserRoleEntity } from './entities/user-role.entity';
 import { RoleEntity } from '../roles/entities/role.entity';
+import { RolesService } from '../roles/roles.service';
 import type { UserQueryDto } from './dto/user-query.dto';
 import type { UserResponseDto } from './dto/user-response.dto';
 import type { BanUserDto } from './dto/ban-user.dto';
@@ -36,6 +37,7 @@ export class UsersService {
     @InjectRepository(UserRoleEntity)
     private readonly userRoleRepository: Repository<UserRoleEntity>,
     private readonly dataSource: DataSource,
+    private readonly rolesService: RolesService,
   ) {}
 
   async listUsers(query: UserQueryDto, headers: IncomingHttpHeaders): Promise<PaginatedUsers> {
@@ -164,6 +166,8 @@ export class UsersService {
       `UPDATE "user" SET role = $1 WHERE id = $2`,
       [hasAdminRole ? 'admin' : 'user', userId],
     );
+
+    this.rolesService.clearCacheForUser(userId);
 
     return this.getUser(userId, headers);
   }
