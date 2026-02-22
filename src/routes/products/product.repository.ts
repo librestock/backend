@@ -27,7 +27,6 @@ export class ProductRepository {
       limit = 20,
       search,
       category_id,
-      brand_id,
       primary_supplier_id,
       is_active,
       is_perishable,
@@ -60,11 +59,6 @@ export class ProductRepository {
       queryBuilder.andWhere('product.category_id = :category_id', {
         category_id,
       });
-    }
-
-    // Brand filter
-    if (brand_id) {
-      queryBuilder.andWhere('product.brand_id = :brand_id', { brand_id });
     }
 
     // Supplier filter

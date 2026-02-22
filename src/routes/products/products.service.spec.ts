@@ -29,7 +29,6 @@ describe('ProductsService', () => {
     name: 'Test Product',
     description: 'A test product',
     category_id: mockCategory.id,
-    brand_id: null,
     volume_ml: null,
     weight_kg: null,
     dimensions_cm: null,
@@ -52,6 +51,7 @@ describe('ProductsService', () => {
     deleted_by: null,
     category: mockCategory,
     primary_supplier: null,
+    photos: [],
   };
 
   beforeEach(async () => {

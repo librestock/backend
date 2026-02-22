@@ -3,11 +3,13 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  OneToMany,
   JoinColumn,
   Index,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Category } from '../../categories/entities/category.entity';
+import { Photo } from '../../photos/entities/photo.entity';
 import { Supplier } from '../../suppliers/entities/supplier.entity';
 import { BaseAuditEntity } from '../../../common/entities/base-audit.entity';
 
@@ -51,14 +53,6 @@ export class Product extends BaseAuditEntity {
   })
   @Column({ type: 'uuid' })
   category_id: string;
-
-  @ApiProperty({
-    description: 'Brand ID',
-    format: 'uuid',
-    nullable: true,
-  })
-  @Column({ type: 'uuid', nullable: true })
-  brand_id: string | null;
 
   @ApiProperty({
     description: 'Volume in milliliters',
@@ -169,4 +163,7 @@ export class Product extends BaseAuditEntity {
   })
   @JoinColumn({ name: 'category_id' })
   category: Category;
+
+  @OneToMany(() => Photo, (photo) => photo.product)
+  photos: Photo[];
 }

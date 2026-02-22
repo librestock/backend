@@ -40,7 +40,6 @@ export function buildProduct(
     name: faker.commerce.productName(),
     description: faker.helpers.maybe(() => faker.commerce.productDescription(), { probability: 0.7 }),
     category_id: categoryId,
-    brand_id: faker.helpers.maybe(() => faker.string.uuid(), { probability: 0.6 }),
     volume_ml: faker.helpers.maybe(() => faker.number.int({ min: 100, max: 5000 }), { probability: 0.5 }),
     weight_kg: faker.helpers.maybe(
       () => faker.number.float({ min: 0.1, max: 50, fractionDigits: 3 }),

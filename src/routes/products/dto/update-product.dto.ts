@@ -93,16 +93,6 @@ export class UpdateProductDto
   category_id?: string;
 
   @ApiProperty({
-    description: 'Brand ID',
-    format: 'uuid',
-    nullable: true,
-    required: false,
-  })
-  @IsOptional()
-  @IsUUID()
-  brand_id?: string | null;
-
-  @ApiProperty({
     description: 'Volume in milliliters',
     nullable: true,
     required: false,

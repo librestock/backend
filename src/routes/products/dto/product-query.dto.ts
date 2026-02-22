@@ -64,15 +64,6 @@ export class ProductQueryDto implements ProductQueryDtoShape {
   category_id?: string;
 
   @ApiProperty({
-    description: 'Filter by brand ID',
-    format: 'uuid',
-    required: false,
-  })
-  @IsOptional()
-  @IsUUID()
-  brand_id?: string;
-
-  @ApiProperty({
     description: 'Filter by primary supplier ID',
     format: 'uuid',
     required: false,

@@ -112,13 +112,6 @@ export class ProductResponseDto
   category?: CategorySummaryDto | null;
 
   @ApiProperty({
-    description: 'Brand ID',
-    format: 'uuid',
-    nullable: true,
-  })
-  brand_id: string | null;
-
-  @ApiProperty({
     description: 'Volume in milliliters',
     nullable: true,
   })

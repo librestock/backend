@@ -24,7 +24,6 @@ describe('InventoryService', () => {
       name: 'Test Product',
       description: 'A test product',
       category_id: 'cat-001',
-      brand_id: null,
       volume_ml: null,
       weight_kg: null,
       dimensions_cm: null,
@@ -47,6 +46,7 @@ describe('InventoryService', () => {
       deleted_by: null,
       category: null as any,
       primary_supplier: null,
+      photos: [],
     },
     location_id: 'location-001',
     location: {
