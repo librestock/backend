@@ -6,7 +6,7 @@ import {
   Index,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { AuditAction, AuditEntityType } from 'src/common/enums';
+import { AuditAction, AuditEntityType } from '../../../common/enums';
 
 export interface AuditChanges {
   before?: Record<string, unknown>;

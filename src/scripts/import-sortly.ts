@@ -391,11 +391,11 @@ async function importSortlyData(
 async function main() {
   console.log('🔄 Starting Sortly CSV import...\n');
 
-  const csvFilePath = '../../sortly.csv';
+  const csvFilePath = process.argv[2];
 
   if (!csvFilePath) {
-    console.error('❌ Please provide a CSV file path as an argument');
-    console.log('Usage: npm run import:sortly <path-to-csv-file>');
+    console.error('Please provide a CSV file path as an argument');
+    console.error('Usage: pnpm import:sortly <path-to-csv-file>');
     process.exit(1);
   }
 
