@@ -49,24 +49,34 @@ src/
 ├── app.routes.ts            # Route registration
 ├── config/                  # DB config
 ├── common/
-│   ├── decorators/          # @Transactional, @StandardThrottle, @Roles
+│   ├── auth/                # Auth utilities
+│   ├── decorators/          # @RequirePermission, @Auditable, @Transactional, @StandardThrottle
 │   ├── dto/                 # BaseResponseDto, ErrorResponseDto
 │   ├── entities/            # BaseEntity, BaseAuditEntity
-│   ├── guards/              # RolesGuard
+│   ├── enums/               # Shared enums
+│   ├── filters/             # Exception filters
+│   ├── guards/              # PermissionGuard
 │   ├── hateoas/             # HATEOAS link system
 │   ├── interceptors/        # Logging, Transaction, Audit
-│   └── middleware/          # RequestIdMiddleware
+│   ├── middleware/          # RequestIdMiddleware
+│   └── utils/               # Shared utilities
 └── routes/
-    ├── auth/                # /api/v1/auth/*
-    ├── categories/          # /api/v1/categories/*
-    ├── products/            # /api/v1/products/*
-    ├── locations/           # /api/v1/locations/*
     ├── areas/               # /api/v1/areas/*
-    ├── inventory/           # /api/v1/inventory/*
     ├── audit-logs/          # /api/v1/audit-logs/* (admin only)
-    ├── users/               # /api/v1/users/* (admin only)
+    ├── auth/                # /api/v1/auth/*
     ├── branding/            # /api/v1/branding/*
-    └── health/              # /health-check (no auth)
+    ├── categories/          # /api/v1/categories/*
+    ├── clients/             # /api/v1/clients/*
+    ├── health/              # /health-check (no auth)
+    ├── inventory/           # /api/v1/inventory/*
+    ├── locations/           # /api/v1/locations/*
+    ├── orders/              # /api/v1/orders/*
+    ├── photos/              # /api/v1/photos/*
+    ├── products/            # /api/v1/products/*
+    ├── roles/               # /api/v1/roles/* (admin only)
+    ├── stock-movements/     # /api/v1/stock-movements/*
+    ├── suppliers/           # /api/v1/suppliers/*
+    └── users/               # /api/v1/users/* (admin only)
 ```
 
 ## Commands
