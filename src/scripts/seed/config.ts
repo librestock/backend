@@ -8,6 +8,7 @@ import { Inventory } from '../../routes/inventory/entities/inventory.entity';
 import { Location } from '../../routes/locations/entities/location.entity';
 import { OrderItem } from '../../routes/orders/entities/order-item.entity';
 import { Order } from '../../routes/orders/entities/order.entity';
+import { Photo } from '../../routes/photos/entities/photo.entity';
 import { Product } from '../../routes/products/entities/product.entity';
 import { StockMovement } from '../../routes/stock-movements/entities/stock-movement.entity';
 import { SupplierProduct } from '../../routes/suppliers/entities/supplier-product.entity';
@@ -90,7 +91,7 @@ export async function createDataSource(): Promise<DataSource> {
   const dataSourceConfig: any = {
     type: 'postgres',
     entities: [
-      Category, Supplier, SupplierProduct, Product, Location, Area,
+      Category, Supplier, SupplierProduct, Product, Photo, Location, Area,
       Inventory, Client, Order, OrderItem, StockMovement, AuditLog,
     ],
     synchronize: false,
