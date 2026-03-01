@@ -25,6 +25,10 @@
 - **Async fire-and-forget:** Use `await flushPromises()` (via `new Promise(r => process.nextTick(r))`) instead of `setTimeout` with `done()` callbacks
 - **E2E:** Override `AuthGuard` with mock, clean DB in `beforeEach` with raw SQL deletes
 
+## Issue tracking
+
+Before starting work on any issue, ensure it is added to the **[LibreStock Improvements Tracker](https://github.com/orgs/librestock/projects/2)** GitHub Project. Move the issue to "In Progress" when starting and "Done" when complete.
+
 ## Adding a new entity
 
 Follow existing module patterns, but don't forget these easy-to-miss steps:
