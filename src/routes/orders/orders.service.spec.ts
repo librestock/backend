@@ -283,6 +283,53 @@ describe('OrdersService', () => {
         'Product product-001 not found',
       );
     });
+
+    it('should retry on duplicate order number and succeed', async () => {
+      const duplicateError = Object.assign(new Error('duplicate key'), {
+        code: '23505',
+      });
+      clientsService.existsById.mockResolvedValue(true);
+      productsService.existsById.mockResolvedValue(true);
+      orderRepository.countByPrefix.mockResolvedValue(0);
+      orderRepository.create
+        .mockRejectedValueOnce(duplicateError)
+        .mockResolvedValueOnce({ ...mockOrder, id: 'new-order' });
+      orderItemRepository.createMany.mockResolvedValue([mockOrderItem]);
+      orderRepository.findById.mockResolvedValue(mockOrderWithItems);
+
+      const result = await service.create(createDto, 'user-001');
+
+      expect(result.id).toBe('order-001');
+      expect(orderRepository.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('should throw after exhausting retries on duplicate order number', async () => {
+      const duplicateError = Object.assign(new Error('duplicate key'), {
+        code: '23505',
+      });
+      clientsService.existsById.mockResolvedValue(true);
+      productsService.existsById.mockResolvedValue(true);
+      orderRepository.countByPrefix.mockResolvedValue(0);
+      orderRepository.create.mockRejectedValue(duplicateError);
+
+      await expect(service.create(createDto, 'user-001')).rejects.toThrow(
+        duplicateError,
+      );
+      expect(orderRepository.create).toHaveBeenCalledTimes(4);
+    });
+
+    it('should not retry on non-duplicate errors', async () => {
+      const otherError = new Error('connection lost');
+      clientsService.existsById.mockResolvedValue(true);
+      productsService.existsById.mockResolvedValue(true);
+      orderRepository.countByPrefix.mockResolvedValue(0);
+      orderRepository.create.mockRejectedValue(otherError);
+
+      await expect(service.create(createDto, 'user-001')).rejects.toThrow(
+        'connection lost',
+      );
+      expect(orderRepository.create).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('updateStatus', () => {

@@ -81,10 +81,7 @@ export class OrdersService {
       0,
     );
 
-    const order_number = await this.generateOrderNumber();
-
-    const order = await this.orderRepository.create({
-      order_number,
+    const order = await this.createOrderWithUniqueNumber({
       client_id: dto.client_id,
       delivery_address: dto.delivery_address,
       delivery_deadline: dto.delivery_deadline
@@ -109,6 +106,27 @@ export class OrdersService {
 
     const orderWithRelations = await this.orderRepository.findById(order.id);
     return this.toResponseDto(orderWithRelations!);
+  }
+
+  private async createOrderWithUniqueNumber(
+    data: Partial<Order>,
+    maxRetries = 3,
+  ): Promise<Order> {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const order_number = await this.generateOrderNumber();
+      try {
+        return await this.orderRepository.create({ ...data, order_number });
+      } catch (error: unknown) {
+        const isUniqueViolation =
+          error instanceof Error &&
+          'code' in error &&
+          (error as { code: string }).code === '23505';
+        if (!isUniqueViolation || attempt === maxRetries) {
+          throw error;
+        }
+      }
+    }
+    throw new BadRequestException('Failed to generate unique order number');
   }
 
   async update(
