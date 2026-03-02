@@ -1,3 +1,5 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import {
   Injectable,
   NotFoundException,
@@ -5,8 +7,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as fs from 'fs';
-import * as path from 'path';
 import { Photo } from './entities/photo.entity';
 import { PhotoResponseDto } from './dto';
 import { PhotoRepository } from './photos.repository';
@@ -30,7 +30,7 @@ export class PhotosService {
     private readonly configService: ConfigService,
   ) {
     this.uploadsDir =
-      this.configService.get<string>('UPLOADS_DIR') ||
+      this.configService.get<string>('UPLOADS_DIR') ??
       path.join(process.cwd(), 'uploads', 'photos');
 
     // Ensure the uploads directory exists

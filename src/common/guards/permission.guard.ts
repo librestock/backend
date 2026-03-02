@@ -48,8 +48,7 @@ export class PermissionGuard implements CanActivate {
 
       const resourcePerms = permissions[required.resource];
       const hasPermission =
-        resourcePerms !== undefined &&
-        resourcePerms.includes(required.permission);
+        resourcePerms?.includes(required.permission) ?? false;
 
       if (!hasPermission) {
         throw new ForbiddenException('Insufficient permissions');

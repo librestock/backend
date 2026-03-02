@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { Permission, Resource } from '@librestock/types';
-import { RolesService, type UserPermissions } from './roles.service';
+import { RolesService } from './roles.service';
 import { RolesRepository } from './roles.repository';
 import { type RoleEntity } from './entities/role.entity';
 import { type RolePermissionEntity } from './entities/role-permission.entity';
