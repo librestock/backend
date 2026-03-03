@@ -3,10 +3,9 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { toPaginationMeta } from '../../common/utils/pagination.utils';
+import { toPaginatedResponse } from '../../common/utils/pagination.utils';
 import { ProductsService } from '../products/products.service';
 import { LocationsService } from '../locations/locations.service';
-import { StockMovement } from './entities/stock-movement.entity';
 import {
   CreateStockMovementDto,
   StockMovementQueryDto,
@@ -14,6 +13,7 @@ import {
   PaginatedStockMovementsResponseDto,
 } from './dto';
 import { StockMovementRepository } from './stock-movement.repository';
+import { toStockMovementResponseDto } from './stock-movements.utils';
 
 @Injectable()
 export class StockMovementsService {
@@ -28,10 +28,7 @@ export class StockMovementsService {
   ): Promise<PaginatedStockMovementsResponseDto> {
     const result = await this.stockMovementRepository.findAllPaginated(query);
 
-    return {
-      data: result.data.map((sm) => this.toResponseDto(sm)),
-      meta: toPaginationMeta(result.total, result.page, result.limit),
-    };
+    return toPaginatedResponse(result, toStockMovementResponseDto);
   }
 
   async findOne(id: string): Promise<StockMovementResponseDto> {
@@ -39,7 +36,7 @@ export class StockMovementsService {
     if (!movement) {
       throw new NotFoundException('Stock movement not found');
     }
-    return this.toResponseDto(movement);
+    return toStockMovementResponseDto(movement);
   }
 
   async findByProduct(productId: string): Promise<StockMovementResponseDto[]> {
@@ -50,7 +47,7 @@ export class StockMovementsService {
 
     const movements =
       await this.stockMovementRepository.findByProductId(productId);
-    return movements.map((sm) => this.toResponseDto(sm));
+    return movements.map(toStockMovementResponseDto);
   }
 
   async findByLocation(
@@ -63,7 +60,7 @@ export class StockMovementsService {
 
     const movements =
       await this.stockMovementRepository.findByLocationId(locationId);
-    return movements.map((sm) => this.toResponseDto(sm));
+    return movements.map(toStockMovementResponseDto);
   }
 
   async create(
@@ -113,32 +110,6 @@ export class StockMovementsService {
     const movementWithRelations = await this.stockMovementRepository.findById(
       movement.id,
     );
-    return this.toResponseDto(movementWithRelations!);
-  }
-
-  private toResponseDto(sm: StockMovement): StockMovementResponseDto {
-    return {
-      id: sm.id,
-      product_id: sm.product_id,
-      product: sm.product
-        ? { id: sm.product.id, name: sm.product.name, sku: sm.product.sku }
-        : null,
-      from_location_id: sm.from_location_id,
-      from_location: sm.fromLocation
-        ? { id: sm.fromLocation.id, name: sm.fromLocation.name }
-        : null,
-      to_location_id: sm.to_location_id,
-      to_location: sm.toLocation
-        ? { id: sm.toLocation.id, name: sm.toLocation.name }
-        : null,
-      quantity: sm.quantity,
-      reason: sm.reason,
-      order_id: sm.order_id,
-      reference_number: sm.reference_number,
-      cost_per_unit: sm.cost_per_unit,
-      user_id: sm.user_id,
-      notes: sm.notes,
-      created_at: sm.created_at,
-    };
+    return toStockMovementResponseDto(movementWithRelations!);
   }
 }

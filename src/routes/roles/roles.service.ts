@@ -12,6 +12,7 @@ import { RoleEntity } from './entities/role.entity';
 import type { CreateRoleDto } from './dto/create-role.dto';
 import type { UpdateRoleDto } from './dto/update-role.dto';
 import type { RoleResponseDto } from './dto/role-response.dto';
+import { toRoleResponseDto } from './roles.utils';
 
 export interface UserPermissions {
   roleNames: string[];
@@ -34,24 +35,9 @@ export class RolesService {
     private readonly dataSource: DataSource,
   ) {}
 
-  private toResponse(entity: RoleEntity): RoleResponseDto {
-    return {
-      id: entity.id,
-      name: entity.name,
-      description: entity.description,
-      is_system: entity.is_system,
-      permissions: (entity.permissions ?? []).map((p) => ({
-        resource: p.resource as Resource,
-        permission: p.permission as Permission,
-      })),
-      created_at: entity.created_at,
-      updated_at: entity.updated_at,
-    };
-  }
-
   async findAll(): Promise<RoleResponseDto[]> {
     const roles = await this.rolesRepository.findAll();
-    return roles.map((r) => this.toResponse(r));
+    return roles.map(toRoleResponseDto);
   }
 
   async findById(id: string): Promise<RoleResponseDto> {
@@ -59,7 +45,7 @@ export class RolesService {
     if (!role) {
       throw new NotFoundException(`Role with ID ${id} not found`);
     }
-    return this.toResponse(role);
+    return toRoleResponseDto(role);
   }
 
   async create(dto: CreateRoleDto): Promise<RoleResponseDto> {

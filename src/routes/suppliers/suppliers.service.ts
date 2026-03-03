@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { toPaginationMeta } from '../../common/utils/pagination.utils';
+import { toPaginatedResponse } from '../../common/utils/pagination.utils';
 import { Supplier } from './entities/supplier.entity';
 import {
   CreateSupplierDto,
@@ -9,6 +9,7 @@ import {
   PaginatedSuppliersResponseDto,
 } from './dto';
 import { SupplierRepository } from './suppliers.repository';
+import { toSupplierResponseDto } from './suppliers.utils';
 
 @Injectable()
 export class SuppliersService {
@@ -19,10 +20,7 @@ export class SuppliersService {
   ): Promise<PaginatedSuppliersResponseDto> {
     const result = await this.supplierRepository.findAllPaginated(query);
 
-    return {
-      data: result.data.map((supplier) => this.toResponseDto(supplier)),
-      meta: toPaginationMeta(result.total, result.page, result.limit),
-    };
+    return toPaginatedResponse(result, toSupplierResponseDto);
   }
 
   async findOne(id: string): Promise<SupplierResponseDto> {
@@ -30,7 +28,7 @@ export class SuppliersService {
     if (!supplier) {
       throw new NotFoundException('Supplier not found');
     }
-    return this.toResponseDto(supplier);
+    return toSupplierResponseDto(supplier);
   }
 
   async create(
@@ -47,7 +45,7 @@ export class SuppliersService {
       is_active: createSupplierDto.is_active ?? true,
     });
 
-    return this.toResponseDto(supplier);
+    return toSupplierResponseDto(supplier);
   }
 
   async update(
@@ -57,13 +55,13 @@ export class SuppliersService {
     const supplier = await this.getSupplierOrFail(id);
 
     if (Object.keys(updateSupplierDto).length === 0) {
-      return this.toResponseDto(supplier);
+      return toSupplierResponseDto(supplier);
     }
 
     await this.supplierRepository.update(id, updateSupplierDto);
 
     const updated = await this.supplierRepository.findById(id);
-    return this.toResponseDto(updated!);
+    return toSupplierResponseDto(updated!);
   }
 
   async delete(id: string): Promise<void> {
@@ -81,21 +79,5 @@ export class SuppliersService {
       throw new NotFoundException('Supplier not found');
     }
     return supplier;
-  }
-
-  private toResponseDto(supplier: Supplier): SupplierResponseDto {
-    return {
-      id: supplier.id,
-      name: supplier.name,
-      contact_person: supplier.contact_person,
-      email: supplier.email,
-      phone: supplier.phone,
-      address: supplier.address,
-      website: supplier.website,
-      notes: supplier.notes,
-      is_active: supplier.is_active,
-      created_at: supplier.created_at,
-      updated_at: supplier.updated_at,
-    };
   }
 }

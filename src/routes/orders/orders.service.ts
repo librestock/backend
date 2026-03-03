@@ -5,11 +5,10 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrderStatus } from '@librestock/types';
-import { toPaginationMeta } from '../../common/utils/pagination.utils';
+import { toPaginatedResponse } from '../../common/utils/pagination.utils';
 import { ClientsService } from '../clients/clients.service';
 import { ProductsService } from '../products/products.service';
 import { Order } from './entities/order.entity';
-import { OrderItem } from './entities/order-item.entity';
 import { OrderRepository } from './orders.repository';
 import { OrderItemRepository } from './order-items.repository';
 import { getOrderState } from './state/order-state';
@@ -23,9 +22,9 @@ import {
   UpdateOrderStatusDto,
   OrderQueryDto,
   OrderResponseDto,
-  OrderItemResponseDto,
   PaginatedOrdersResponseDto,
 } from './dto';
+import { toOrderResponseDto } from './orders.utils';
 
 @Injectable()
 export class OrdersService {
@@ -42,10 +41,7 @@ export class OrdersService {
   ): Promise<PaginatedOrdersResponseDto> {
     const result = await this.orderRepository.findAllPaginated(query);
 
-    return {
-      data: result.data.map((order) => this.toResponseDto(order)),
-      meta: toPaginationMeta(result.total, result.page, result.limit),
-    };
+    return toPaginatedResponse(result, toOrderResponseDto);
   }
 
   async findOne(id: string): Promise<OrderResponseDto> {
@@ -53,7 +49,7 @@ export class OrdersService {
     if (!order) {
       throw new NotFoundException('Order not found');
     }
-    return this.toResponseDto(order);
+    return toOrderResponseDto(order);
   }
 
   async create(
@@ -105,7 +101,7 @@ export class OrdersService {
     await this.orderItemRepository.createMany(items);
 
     const orderWithRelations = await this.orderRepository.findById(order.id);
-    return this.toResponseDto(orderWithRelations!);
+    return toOrderResponseDto(orderWithRelations!);
   }
 
   private async createOrderWithUniqueNumber(
@@ -137,7 +133,7 @@ export class OrdersService {
 
     if (Object.keys(dto).length === 0) {
       const order = await this.orderRepository.findById(id);
-      return this.toResponseDto(order!);
+      return toOrderResponseDto(order!);
     }
 
     const updateData: Partial<Order> = {};
@@ -156,7 +152,7 @@ export class OrdersService {
     await this.orderRepository.update(id, updateData);
 
     const updated = await this.orderRepository.findById(id);
-    return this.toResponseDto(updated!);
+    return toOrderResponseDto(updated!);
   }
 
   async updateStatus(
@@ -185,7 +181,7 @@ export class OrdersService {
     );
 
     const updated = await this.orderRepository.findById(id);
-    return this.toResponseDto(updated!);
+    return toOrderResponseDto(updated!);
   }
 
   async delete(id: string): Promise<void> {
@@ -214,46 +210,5 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
     return order;
-  }
-
-  private toResponseDto(order: Order): OrderResponseDto {
-    return {
-      id: order.id,
-      order_number: order.order_number,
-      client_id: order.client_id,
-      client_name: order.client?.company_name ?? null,
-      status: order.status,
-      delivery_address: order.delivery_address,
-      delivery_deadline: order.delivery_deadline,
-      yacht_name: order.yacht_name,
-      special_instructions: order.special_instructions,
-      total_amount: Number(order.total_amount),
-      assigned_to: order.assigned_to,
-      created_by: order.created_by,
-      confirmed_at: order.confirmed_at,
-      shipped_at: order.shipped_at,
-      delivered_at: order.delivered_at,
-      kanban_task_id: order.kanban_task_id,
-      items: (order.items ?? []).map((item) => this.toItemResponseDto(item)),
-      created_at: order.created_at,
-      updated_at: order.updated_at,
-    };
-  }
-
-  private toItemResponseDto(item: OrderItem): OrderItemResponseDto {
-    return {
-      id: item.id,
-      product_id: item.product_id,
-      product_name: item.product?.name ?? null,
-      product_sku: item.product?.sku ?? null,
-      quantity: item.quantity,
-      unit_price: Number(item.unit_price),
-      subtotal: Number(item.subtotal),
-      notes: item.notes,
-      quantity_picked: item.quantity_picked,
-      quantity_packed: item.quantity_packed,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-    };
   }
 }

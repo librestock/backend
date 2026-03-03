@@ -3,7 +3,7 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
-import { toPaginationMeta } from '../../common/utils/pagination.utils';
+import { toPaginatedResponse } from '../../common/utils/pagination.utils';
 import { Client } from './entities/client.entity';
 import {
   CreateClientDto,
@@ -13,6 +13,7 @@ import {
   PaginatedClientsResponseDto,
 } from './dto';
 import { ClientRepository } from './client.repository';
+import { toClientResponseDto } from './clients.utils';
 
 @Injectable()
 export class ClientsService {
@@ -23,10 +24,7 @@ export class ClientsService {
   ): Promise<PaginatedClientsResponseDto> {
     const result = await this.clientRepository.findAllPaginated(query);
 
-    return {
-      data: result.data.map((client) => this.toResponseDto(client)),
-      meta: toPaginationMeta(result.total, result.page, result.limit),
-    };
+    return toPaginatedResponse(result, toClientResponseDto);
   }
 
   async findOne(id: string): Promise<ClientResponseDto> {
@@ -34,7 +32,7 @@ export class ClientsService {
     if (!client) {
       throw new NotFoundException('Client not found');
     }
-    return this.toResponseDto(client);
+    return toClientResponseDto(client);
   }
 
   async create(createClientDto: CreateClientDto): Promise<ClientResponseDto> {
@@ -61,7 +59,7 @@ export class ClientsService {
       notes: createClientDto.notes ?? null,
     });
 
-    return this.toResponseDto(client);
+    return toClientResponseDto(client);
   }
 
   async update(
@@ -71,7 +69,7 @@ export class ClientsService {
     const client = await this.getClientOrFail(id);
 
     if (Object.keys(updateClientDto).length === 0) {
-      return this.toResponseDto(client);
+      return toClientResponseDto(client);
     }
 
     // Check email uniqueness if changing email
@@ -87,7 +85,7 @@ export class ClientsService {
     await this.clientRepository.update(id, updateClientDto);
 
     const updated = await this.clientRepository.findById(id);
-    return this.toResponseDto(updated!);
+    return toClientResponseDto(updated!);
   }
 
   async delete(id: string): Promise<void> {
@@ -105,24 +103,5 @@ export class ClientsService {
       throw new NotFoundException('Client not found');
     }
     return client;
-  }
-
-  private toResponseDto(client: Client): ClientResponseDto {
-    return {
-      id: client.id,
-      company_name: client.company_name,
-      contact_person: client.contact_person,
-      email: client.email,
-      yacht_name: client.yacht_name,
-      phone: client.phone,
-      billing_address: client.billing_address,
-      default_delivery_address: client.default_delivery_address,
-      account_status: client.account_status,
-      payment_terms: client.payment_terms,
-      credit_limit: client.credit_limit,
-      notes: client.notes,
-      created_at: client.created_at,
-      updated_at: client.updated_at,
-    };
   }
 }

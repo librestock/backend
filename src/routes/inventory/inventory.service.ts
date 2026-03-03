@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Transactional } from '../../common/decorators/transactional.decorator';
-import { toPaginationMeta } from '../../common/utils/pagination.utils';
+import { toPaginatedResponse } from '../../common/utils/pagination.utils';
 import { ProductsService } from '../products/products.service';
 import { LocationsService } from '../locations/locations.service';
 import { AreasService } from '../areas/areas.service';
@@ -18,6 +18,7 @@ import {
   PaginatedInventoryResponseDto,
 } from './dto';
 import { InventoryRepository } from './inventory.repository';
+import { toInventoryResponseDto } from './inventory.utils';
 
 @Injectable()
 export class InventoryService {
@@ -33,15 +34,12 @@ export class InventoryService {
   ): Promise<PaginatedInventoryResponseDto> {
     const result = await this.inventoryRepository.findAllPaginated(query);
 
-    return {
-      data: result.data.map((inventory) => this.toResponseDto(inventory)),
-      meta: toPaginationMeta(result.total, result.page, result.limit),
-    };
+    return toPaginatedResponse(result, toInventoryResponseDto);
   }
 
   async findAll(): Promise<InventoryResponseDto[]> {
     const items = await this.inventoryRepository.findAll();
-    return items.map((inventory) => this.toResponseDto(inventory));
+    return items.map(toInventoryResponseDto);
   }
 
   async findOne(id: string): Promise<InventoryResponseDto> {
@@ -49,7 +47,7 @@ export class InventoryService {
     if (!inventory) {
       throw new NotFoundException('Inventory item not found');
     }
-    return this.toResponseDto(inventory);
+    return toInventoryResponseDto(inventory);
   }
 
   async findByProduct(productId: string): Promise<InventoryResponseDto[]> {
@@ -59,7 +57,7 @@ export class InventoryService {
     }
 
     const items = await this.inventoryRepository.findByProductId(productId);
-    return items.map((inventory) => this.toResponseDto(inventory));
+    return items.map(toInventoryResponseDto);
   }
 
   async findByLocation(locationId: string): Promise<InventoryResponseDto[]> {
@@ -69,7 +67,7 @@ export class InventoryService {
     }
 
     const items = await this.inventoryRepository.findByLocationId(locationId);
-    return items.map((inventory) => this.toResponseDto(inventory));
+    return items.map(toInventoryResponseDto);
   }
 
   @Transactional()
@@ -136,7 +134,7 @@ export class InventoryService {
     const inventoryWithRelations = await this.inventoryRepository.findById(
       inventory.id,
     );
-    return this.toResponseDto(inventoryWithRelations!);
+    return toInventoryResponseDto(inventoryWithRelations!);
   }
 
   async update(
@@ -194,7 +192,7 @@ export class InventoryService {
     }
 
     if (Object.keys(updateInventoryDto).length === 0) {
-      return this.toResponseDto(inventory);
+      return toInventoryResponseDto(inventory);
     }
 
     const updateData: Partial<Inventory> = {};
@@ -228,7 +226,7 @@ export class InventoryService {
     await this.inventoryRepository.update(id, updateData);
 
     const updated = await this.inventoryRepository.findById(id);
-    return this.toResponseDto(updated!);
+    return toInventoryResponseDto(updated!);
   }
 
   @Transactional()
@@ -257,7 +255,7 @@ export class InventoryService {
     }
 
     const updated = await this.inventoryRepository.findById(id);
-    return this.toResponseDto(updated!);
+    return toInventoryResponseDto(updated!);
   }
 
   async delete(id: string): Promise<void> {
@@ -271,45 +269,5 @@ export class InventoryService {
       throw new NotFoundException('Inventory item not found');
     }
     return inventory;
-  }
-
-  private toResponseDto(inventory: Inventory): InventoryResponseDto {
-    return {
-      id: inventory.id,
-      product_id: inventory.product_id,
-      product: inventory.product
-        ? {
-            id: inventory.product.id,
-            sku: inventory.product.sku,
-            name: inventory.product.name,
-            unit: inventory.product.unit,
-          }
-        : null,
-      location_id: inventory.location_id,
-      location: inventory.location
-        ? {
-            id: inventory.location.id,
-            name: inventory.location.name,
-            type: inventory.location.type,
-          }
-        : null,
-      area_id: inventory.area_id,
-      area: inventory.area
-        ? {
-            id: inventory.area.id,
-            name: inventory.area.name,
-            code: inventory.area.code,
-          }
-        : null,
-      quantity: inventory.quantity,
-      batchNumber: inventory.batchNumber,
-      expiry_date: inventory.expiry_date,
-      cost_per_unit: inventory.cost_per_unit
-        ? Number(inventory.cost_per_unit)
-        : null,
-      received_date: inventory.received_date,
-      created_at: inventory.created_at,
-      updated_at: inventory.updated_at,
-    };
   }
 }

@@ -24,7 +24,7 @@ import { Resource, Permission } from '@librestock/types';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { RequirePermission } from '../../common/decorators';
 import { PermissionGuard } from '../../common/guards/permission.guard';
-import { toPaginationMeta } from '../../common/utils/pagination.utils';
+import { toPaginatedResponse } from '../../common/utils/pagination.utils';
 import { UsersService } from './users.service';
 import { UserQueryDto } from './dto/user-query.dto';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -46,10 +46,7 @@ export class UsersController {
   @ApiResponse({ status: 403, type: ErrorResponseDto })
   async listUsers(@Query() query: UserQueryDto, @Req() req: Request) {
     const result = await this.usersService.listUsers(query, req.headers);
-    return {
-      data: result.data,
-      meta: toPaginationMeta(result.total, result.page, result.limit),
-    };
+    return toPaginatedResponse(result, (user) => user);
   }
 
   @Get(':id')

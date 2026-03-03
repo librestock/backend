@@ -11,6 +11,7 @@ import {
   addBulkSuccess,
   addBulkFailure,
   findDuplicates,
+  toPaginatedResponse,
   partitionByExistence,
   addNotFoundFailures,
 } from '../../common/utils';
@@ -28,7 +29,11 @@ import {
   BulkOperationResultDto,
 } from './dto';
 import { ProductRepository } from './product.repository';
-import { ProductBuilder } from './products.builder';
+import {
+  toCreateProductEntity,
+  toProductResponseDto,
+  toProductResponseDtoList,
+} from './products.utils';
 
 @Injectable()
 export class ProductsService {
@@ -41,12 +46,12 @@ export class ProductsService {
     query: ProductQueryDto,
   ): Promise<PaginatedProductsResponseDto> {
     const result = await this.productRepository.findAllPaginated(query);
-    return ProductBuilder.toPaginatedResponse(result);
+    return toPaginatedResponse(result, toProductResponseDto);
   }
 
   async findAll(): Promise<ProductResponseDto[]> {
     const products = await this.productRepository.findAll();
-    return ProductBuilder.toResponseDtoList(products);
+    return toProductResponseDtoList(products);
   }
 
   async findOne(
@@ -57,13 +62,13 @@ export class ProductsService {
     if (!product) {
       throw new NotFoundException('Product not found');
     }
-    return ProductBuilder.toResponseDto(product);
+    return toProductResponseDto(product);
   }
 
   async findByCategory(categoryId: string): Promise<ProductResponseDto[]> {
     await this.checkCategoryExistence(categoryId, ErrorType.NOT_FOUND);
     const products = await this.productRepository.findByCategoryId(categoryId);
-    return ProductBuilder.toResponseDtoList(products);
+    return toProductResponseDtoList(products);
   }
 
   async findByCategoryTree(categoryId: string): Promise<ProductResponseDto[]> {
@@ -75,7 +80,7 @@ export class ProductsService {
 
     const products =
       await this.productRepository.findByCategoryIds(categoryIds);
-    return ProductBuilder.toResponseDtoList(products);
+    return toProductResponseDtoList(products);
   }
 
   async create(
@@ -106,14 +111,14 @@ export class ProductsService {
       );
     }
 
-    const entityData = ProductBuilder.toCreateEntity(createProductDto, userId);
+    const entityData = toCreateProductEntity(createProductDto, userId);
     const product = await this.productRepository.create(entityData);
 
     // Fetch with relations
     const productWithRelations = await this.productRepository.findById(
       product.id,
     );
-    return ProductBuilder.toResponseDto(productWithRelations!);
+    return toProductResponseDto(productWithRelations!);
   }
 
   @Transactional()
@@ -172,7 +177,7 @@ export class ProductsService {
           continue;
         }
 
-        const entityData = ProductBuilder.toCreateEntity(productDto, userId);
+        const entityData = toCreateProductEntity(productDto, userId);
         const product = await this.productRepository.create(entityData);
         addBulkSuccess(result, product.id);
       } catch (error) {
@@ -221,7 +226,7 @@ export class ProductsService {
     }
 
     if (Object.keys(updateProductDto).length === 0) {
-      return ProductBuilder.toResponseDto(product);
+      return toProductResponseDto(product);
     }
 
     await this.productRepository.update(id, {
@@ -231,7 +236,7 @@ export class ProductsService {
 
     // Fetch with relations
     const productWithRelations = await this.productRepository.findById(id);
-    return ProductBuilder.toResponseDto(productWithRelations!);
+    return toProductResponseDto(productWithRelations!);
   }
 
   async bulkUpdateStatus(
@@ -327,7 +332,7 @@ export class ProductsService {
     await this.productRepository.restore(id);
 
     const restored = await this.productRepository.findById(id);
-    return ProductBuilder.toResponseDto(restored!);
+    return toProductResponseDto(restored!);
   }
 
   async bulkRestore(bulkDto: BulkRestoreDto): Promise<BulkOperationResultDto> {

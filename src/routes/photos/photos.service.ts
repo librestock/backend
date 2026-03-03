@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { Photo } from './entities/photo.entity';
 import { PhotoResponseDto } from './dto';
 import { PhotoRepository } from './photos.repository';
+import { toPhotoResponseDto } from './photos.utils';
 
 const ALLOWED_MIMETYPES = [
   'image/jpeg',
@@ -79,12 +80,12 @@ export class PhotosService {
       uploaded_by: userId ?? null,
     });
 
-    return this.toResponseDto(photo);
+    return toPhotoResponseDto(photo);
   }
 
   async findByProductId(productId: string): Promise<PhotoResponseDto[]> {
     const photos = await this.photoRepository.findByProductId(productId);
-    return photos.map((photo) => this.toResponseDto(photo));
+    return photos.map(toPhotoResponseDto);
   }
 
   async findById(id: string): Promise<Photo> {
@@ -119,20 +120,6 @@ export class PhotosService {
     }
 
     await this.photoRepository.delete(id);
-  }
-
-  private toResponseDto(photo: Photo): PhotoResponseDto {
-    return {
-      id: photo.id,
-      product_id: photo.product_id,
-      filename: photo.filename,
-      mimetype: photo.mimetype,
-      size: photo.size,
-      storage_path: photo.storage_path,
-      uploaded_by: photo.uploaded_by,
-      display_order: photo.display_order,
-      created_at: photo.created_at,
-    };
   }
 
   private getExtFromMime(mimetype: string): string {

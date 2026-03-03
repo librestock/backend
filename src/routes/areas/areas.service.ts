@@ -6,11 +6,11 @@ import {
 import { Transactional } from '../../common/decorators/transactional.decorator';
 import { LocationsService } from '../locations/locations.service';
 import { AreaRepository } from './area.repository';
-import { Area } from './entities/area.entity';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
 import { AreaQueryDto } from './dto/area-query.dto';
 import { AreaResponseDto } from './dto/area-response.dto';
+import { toAreaResponseDto } from './areas.utils';
 
 @Injectable()
 export class AreasService {
@@ -46,7 +46,7 @@ export class AreasService {
     }
 
     const area = await this.areaRepository.create(dto);
-    return this.toResponseDto(area);
+    return toAreaResponseDto(area);
   }
 
   async findAll(query: AreaQueryDto): Promise<AreaResponseDto[]> {
@@ -54,10 +54,10 @@ export class AreasService {
       const areas = await this.areaRepository.findHierarchyByLocationId(
         query.location_id,
       );
-      return areas.map((area) => this.toResponseDto(area));
+      return areas.map(toAreaResponseDto);
     }
     const areas = await this.areaRepository.findAll(query);
-    return areas.map((area) => this.toResponseDto(area));
+    return areas.map(toAreaResponseDto);
   }
 
   async findById(id: string): Promise<AreaResponseDto> {
@@ -65,7 +65,7 @@ export class AreasService {
     if (!area) {
       throw new NotFoundException(`Area with ID ${id} not found`);
     }
-    return this.toResponseDto(area);
+    return toAreaResponseDto(area);
   }
 
   async findByIdWithChildren(id: string): Promise<AreaResponseDto> {
@@ -73,12 +73,12 @@ export class AreasService {
     if (!area) {
       throw new NotFoundException(`Area with ID ${id} not found`);
     }
-    return this.toResponseDto(area);
+    return toAreaResponseDto(area);
   }
 
   async findByLocationId(locationId: string): Promise<AreaResponseDto[]> {
     const areas = await this.areaRepository.findByLocationId(locationId);
-    return areas.map((area) => this.toResponseDto(area));
+    return areas.map(toAreaResponseDto);
   }
 
   async findHierarchyByLocationId(
@@ -87,7 +87,7 @@ export class AreasService {
     const areas = await this.areaRepository.findHierarchyByLocationId(
       locationId,
     );
-    return areas.map((area) => this.toResponseDto(area));
+    return areas.map(toAreaResponseDto);
   }
 
   @Transactional()
@@ -127,7 +127,7 @@ export class AreasService {
     if (!updated) {
       throw new NotFoundException(`Area with ID ${id} not found`);
     }
-    return this.toResponseDto(updated);
+    return toAreaResponseDto(updated);
   }
 
   async delete(id: string): Promise<void> {
@@ -158,20 +158,5 @@ export class AreasService {
     }
 
     return false;
-  }
-
-  private toResponseDto(area: Area): AreaResponseDto {
-    return {
-      id: area.id,
-      location_id: area.location_id,
-      parent_id: area.parent_id,
-      name: area.name,
-      code: area.code,
-      description: area.description,
-      is_active: area.is_active,
-      created_at: area.created_at,
-      updated_at: area.updated_at,
-      children: area.children?.map((child) => this.toResponseDto(child)),
-    };
   }
 }
