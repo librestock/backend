@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { Product } from '../../routes/products/entities/product.entity';
+import { type Product } from '../../routes/products/entities/product.entity';
 import { Supplier } from '../../routes/suppliers/entities/supplier.entity';
 import { SupplierProduct } from '../../routes/suppliers/entities/supplier-product.entity';
 import { SEED_CONFIG } from './config';

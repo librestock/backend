@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
-import { Category } from '../../routes/categories/entities/category.entity';
+import { type Category } from '../../routes/categories/entities/category.entity';
 import { Product } from '../../routes/products/entities/product.entity';
-import { Supplier } from '../../routes/suppliers/entities/supplier.entity';
+import { type Supplier } from '../../routes/suppliers/entities/supplier.entity';
 import { SEED_CONFIG } from './config';
 import { buildProduct } from './factories';
 import { registry } from './registry';

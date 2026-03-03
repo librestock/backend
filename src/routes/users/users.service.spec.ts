@@ -2,8 +2,11 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, type Repository } from 'typeorm';
-import { UserRoleEntity } from './entities/user-role.entity';
 import { RolesService } from '../roles/roles.service';
+import { UserRoleEntity } from './entities/user-role.entity';
+
+// Import after mock is set up
+import { UsersService } from './users.service';
 
 // Mock the auth module — jest.mock is hoisted above imports automatically
 const mockListUsers = jest.fn();
@@ -23,9 +26,6 @@ jest.mock('../../auth', () => ({
     },
   },
 }));
-
-// Import after mock is set up
-import { UsersService } from './users.service';
 
 describe('UsersService', () => {
   let service: UsersService;

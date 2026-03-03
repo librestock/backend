@@ -1,9 +1,9 @@
 import { faker } from '@faker-js/faker';
 import { LocationType } from '@librestock/types';
-import { Area } from '../../routes/areas/entities/area.entity';
+import { type Area } from '../../routes/areas/entities/area.entity';
 import { Inventory } from '../../routes/inventory/entities/inventory.entity';
-import { Location } from '../../routes/locations/entities/location.entity';
-import { Product } from '../../routes/products/entities/product.entity';
+import { type Location } from '../../routes/locations/entities/location.entity';
+import { type Product } from '../../routes/products/entities/product.entity';
 import { SEED_CONFIG } from './config';
 import { buildInventory } from './factories';
 import { registry } from './registry';

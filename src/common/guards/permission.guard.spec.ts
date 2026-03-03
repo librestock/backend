@@ -5,12 +5,12 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Permission, Resource } from '@librestock/types';
-import { PermissionGuard } from './permission.guard';
 import { RolesService, type UserPermissions } from '../../routes/roles/roles.service';
 import {
   type MockRequest,
   createExecutionContext,
 } from '../../test-utils/execution-context';
+import { PermissionGuard } from './permission.guard';
 
 describe('PermissionGuard', () => {
   let guard: PermissionGuard;

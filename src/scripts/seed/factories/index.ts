@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { ClientStatus, LocationType } from '@librestock/types';
+import { ClientStatus, type LocationType } from '@librestock/types';
 import type { DeepPartial } from 'typeorm';
 import type { Client } from '../../../routes/clients/entities/client.entity';
 import type { Inventory } from '../../../routes/inventory/entities/inventory.entity';
