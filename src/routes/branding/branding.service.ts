@@ -1,27 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import { BrandingRepository } from './branding.repository';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { BrandingResponseDto } from './dto/branding-response.dto';
 import { UpdateBrandingDto } from './dto/update-branding.dto';
-
-const DEFAULT_BRANDING = {
-  app_name: 'LibreStock',
-  tagline: 'Inventory management system',
-  logo_url: null,
-  favicon_url: null,
-  primary_color: '#3b82f6',
-};
-
-const POWERED_BY = {
-  name: 'LibreStock',
-  url: 'https://github.com/maximilianpw/librestock',
-};
+import { BrandingSettings } from './entities/branding.entity';
+import {
+  BRANDING_SETTINGS_ID,
+  DEFAULT_BRANDING,
+  POWERED_BY,
+} from './branding.constants';
+import { toBrandingResponse } from './branding.utils';
 
 @Injectable()
 export class BrandingService {
-  constructor(private readonly repository: BrandingRepository) {}
+  constructor(
+    @InjectRepository(BrandingSettings)
+    private readonly repository: Repository<BrandingSettings>,
+  ) {}
 
   async get(): Promise<BrandingResponseDto> {
-    const settings = await this.repository.get();
+    const settings = await this.repository.findOne({
+      where: { id: BRANDING_SETTINGS_ID },
+    });
 
     if (!settings) {
       return {
@@ -31,23 +31,26 @@ export class BrandingService {
       };
     }
 
-    return {
-      app_name: settings.app_name,
-      tagline: settings.tagline,
-      logo_url: settings.logo_url,
-      favicon_url: settings.favicon_url,
-      primary_color: settings.primary_color,
-      powered_by: POWERED_BY,
-      updated_at: settings.updated_at,
-    };
+    return toBrandingResponse(settings);
   }
 
-  async update(dto: UpdateBrandingDto, userId: string): Promise<BrandingResponseDto> {
-    await this.repository.upsert({
-      ...dto,
-      updated_by: userId,
+  async update(
+    dto: UpdateBrandingDto,
+    userId: string,
+  ): Promise<BrandingResponseDto> {
+    await this.repository.upsert(
+      {
+        id: BRANDING_SETTINGS_ID,
+        ...dto,
+        updated_by: userId,
+      },
+      ['id'],
+    );
+
+    const settings = await this.repository.findOneOrFail({
+      where: { id: BRANDING_SETTINGS_ID },
     });
 
-    return this.get();
+    return toBrandingResponse(settings);
   }
 }

@@ -1,25 +1,42 @@
 import { Entity, PrimaryColumn, Column, UpdateDateColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
+import { BRANDING_SETTINGS_ID } from '../branding.constants';
 
 @Entity('branding_settings')
 export class BrandingSettings {
-  @ApiProperty({ description: 'Fixed ID (always 1)', example: 1 })
-  @PrimaryColumn({ type: 'int', default: 1 })
+  @ApiProperty({
+    description: `Fixed ID (always ${BRANDING_SETTINGS_ID})`,
+    example: BRANDING_SETTINGS_ID,
+  })
+  @PrimaryColumn({ type: 'int', default: BRANDING_SETTINGS_ID })
   id: number;
 
   @ApiProperty({ description: 'Application name', example: 'My Inventory' })
   @Column({ type: 'varchar', length: 100, default: 'LibreStock' })
   app_name: string;
 
-  @ApiProperty({ description: 'Application tagline', example: 'Inventory management for your business' })
-  @Column({ type: 'varchar', length: 255, default: 'Inventory management system' })
+  @ApiProperty({
+    description: 'Application tagline',
+    example: 'Inventory management for your business',
+  })
+  @Column({
+    type: 'varchar',
+    length: 255,
+    default: 'Inventory management system',
+  })
   tagline: string;
 
-  @ApiProperty({ description: 'Logo URL (relative or absolute)', nullable: true })
+  @ApiProperty({
+    description: 'Logo URL (relative or absolute)',
+    nullable: true,
+  })
   @Column({ type: 'varchar', length: 500, nullable: true })
   logo_url: string | null;
 
-  @ApiProperty({ description: 'Favicon URL (relative or absolute)', nullable: true })
+  @ApiProperty({
+    description: 'Favicon URL (relative or absolute)',
+    nullable: true,
+  })
   @Column({ type: 'varchar', length: 500, nullable: true })
   favicon_url: string | null;
 

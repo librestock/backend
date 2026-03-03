@@ -1,11 +1,23 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { type InsertResult, type Repository } from 'typeorm';
 import { BrandingService } from './branding.service';
-import { BrandingRepository } from './branding.repository';
-import { type BrandingSettings } from './entities/branding.entity';
+import { BrandingSettings } from './entities/branding.entity';
+import { BRANDING_SETTINGS_ID } from './branding.constants';
+
+type BrandingSettingsRepository = Pick<
+  Repository<BrandingSettings>,
+  'findOne' | 'upsert' | 'findOneOrFail'
+>;
 
 describe('BrandingService', () => {
   let service: BrandingService;
-  let repository: jest.Mocked<BrandingRepository>;
+  let repository: jest.Mocked<BrandingSettingsRepository>;
+  const mockUpsertResult = {
+    identifiers: [],
+    generatedMaps: [],
+    raw: [],
+  } as InsertResult;
 
   const mockBrandingSettings: BrandingSettings = {
     id: 1,
@@ -20,22 +32,23 @@ describe('BrandingService', () => {
 
   beforeEach(async () => {
     const mockRepository = {
-      get: jest.fn(),
+      findOne: jest.fn(),
       upsert: jest.fn(),
+      findOneOrFail: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BrandingService,
         {
-          provide: BrandingRepository,
+          provide: getRepositoryToken(BrandingSettings),
           useValue: mockRepository,
         },
       ],
     }).compile();
 
     service = module.get<BrandingService>(BrandingService);
-    repository = module.get(BrandingRepository);
+    repository = module.get(getRepositoryToken(BrandingSettings));
   });
 
   it('should be defined', () => {
@@ -44,7 +57,7 @@ describe('BrandingService', () => {
 
   describe('get', () => {
     it('should return current branding settings', async () => {
-      repository.get.mockResolvedValue(mockBrandingSettings);
+      repository.findOne.mockResolvedValue(mockBrandingSettings);
 
       const result = await service.get();
 
@@ -57,7 +70,7 @@ describe('BrandingService', () => {
     });
 
     it('should always include powered_by attribution', async () => {
-      repository.get.mockResolvedValue(mockBrandingSettings);
+      repository.findOne.mockResolvedValue(mockBrandingSettings);
 
       const result = await service.get();
 
@@ -68,7 +81,7 @@ describe('BrandingService', () => {
     });
 
     it('should return default branding when no settings exist', async () => {
-      repository.get.mockResolvedValue(null);
+      repository.findOne.mockResolvedValue(null);
 
       const result = await service.get();
 
@@ -87,7 +100,7 @@ describe('BrandingService', () => {
         logo_url: null,
         favicon_url: null,
       };
-      repository.get.mockResolvedValue(settingsWithNulls);
+      repository.findOne.mockResolvedValue(settingsWithNulls);
 
       const result = await service.get();
 
@@ -110,43 +123,56 @@ describe('BrandingService', () => {
         primary_color: '#00ff00',
       };
 
-      repository.upsert.mockResolvedValue(updatedSettings);
-      repository.get.mockResolvedValue(updatedSettings);
+      repository.upsert.mockResolvedValue(mockUpsertResult);
+      repository.findOneOrFail.mockResolvedValue(updatedSettings);
 
       const result = await service.update(updateDto, 'user_456');
 
-      expect(repository.upsert).toHaveBeenCalledWith({
-        app_name: 'Updated App',
-        primary_color: '#00ff00',
-        updated_by: 'user_456',
+      expect(repository.upsert).toHaveBeenCalledWith(
+        {
+          id: BRANDING_SETTINGS_ID,
+          app_name: 'Updated App',
+          primary_color: '#00ff00',
+          updated_by: 'user_456',
+        },
+        ['id'],
+      );
+      expect(repository.findOneOrFail).toHaveBeenCalledWith({
+        where: { id: BRANDING_SETTINGS_ID },
       });
       expect(result.app_name).toBe('Updated App');
       expect(result.primary_color).toBe('#00ff00');
     });
 
     it('should pass userId as updated_by', async () => {
-      repository.upsert.mockResolvedValue(mockBrandingSettings);
-      repository.get.mockResolvedValue(mockBrandingSettings);
+      repository.upsert.mockResolvedValue(mockUpsertResult);
+      repository.findOneOrFail.mockResolvedValue(mockBrandingSettings);
 
       await service.update({ tagline: 'New tagline' }, 'admin-user');
 
       expect(repository.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
+          id: BRANDING_SETTINGS_ID,
           updated_by: 'admin-user',
         }),
+        ['id'],
       );
     });
 
     it('should update only provided fields', async () => {
-      repository.upsert.mockResolvedValue(mockBrandingSettings);
-      repository.get.mockResolvedValue(mockBrandingSettings);
+      repository.upsert.mockResolvedValue(mockUpsertResult);
+      repository.findOneOrFail.mockResolvedValue(mockBrandingSettings);
 
       await service.update({ tagline: 'Only tagline' }, 'user_123');
 
-      expect(repository.upsert).toHaveBeenCalledWith({
-        tagline: 'Only tagline',
-        updated_by: 'user_123',
-      });
+      expect(repository.upsert).toHaveBeenCalledWith(
+        {
+          id: BRANDING_SETTINGS_ID,
+          tagline: 'Only tagline',
+          updated_by: 'user_123',
+        },
+        ['id'],
+      );
     });
 
     it('should allow setting optional fields to null', async () => {
@@ -154,29 +180,30 @@ describe('BrandingService', () => {
         ...mockBrandingSettings,
         logo_url: null,
       };
-      repository.upsert.mockResolvedValue(updatedSettings);
-      repository.get.mockResolvedValue(updatedSettings);
+      repository.upsert.mockResolvedValue(mockUpsertResult);
+      repository.findOneOrFail.mockResolvedValue(updatedSettings);
 
-      const result = await service.update(
-        { logo_url: null },
-        'user_123',
+      const result = await service.update({ logo_url: null }, 'user_123');
+
+      expect(repository.upsert).toHaveBeenCalledWith(
+        {
+          id: BRANDING_SETTINGS_ID,
+          logo_url: null,
+          updated_by: 'user_123',
+        },
+        ['id'],
       );
-
-      expect(repository.upsert).toHaveBeenCalledWith({
-        logo_url: null,
-        updated_by: 'user_123',
-      });
       expect(result.logo_url).toBeNull();
     });
 
-    it('should call get() after upsert to return fresh data', async () => {
-      repository.upsert.mockResolvedValue(mockBrandingSettings);
-      repository.get.mockResolvedValue(mockBrandingSettings);
+    it('should fetch persisted settings after upsert', async () => {
+      repository.upsert.mockResolvedValue(mockUpsertResult);
+      repository.findOneOrFail.mockResolvedValue(mockBrandingSettings);
 
       await service.update({ app_name: 'Test' }, 'user_123');
 
       expect(repository.upsert).toHaveBeenCalledTimes(1);
-      expect(repository.get).toHaveBeenCalledTimes(1);
+      expect(repository.findOneOrFail).toHaveBeenCalledTimes(1);
     });
   });
 });
