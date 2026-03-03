@@ -1,16 +1,57 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  applyQuerySpecs,
+  resolvePaginationWindow,
+  toRepositoryPaginatedResult,
+  type QuerySpec,
+  type RepositoryPaginatedResult,
+} from '../../common/utils/query-spec.utils';
 import { StockMovement } from './entities/stock-movement.entity';
 import { StockMovementQueryDto } from './dto';
 
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  total_pages: number;
-}
+export type PaginatedResult<T> = RepositoryPaginatedResult<T>;
+
+const stockMovementFilterSpec: QuerySpec<StockMovement, StockMovementQueryDto> = (
+  queryBuilder,
+  query,
+) => {
+  if (query.product_id) {
+    queryBuilder.andWhere('sm.product_id = :productId', {
+      productId: query.product_id,
+    });
+  }
+
+  if (query.location_id) {
+    queryBuilder.andWhere(
+      '(sm.from_location_id = :locId OR sm.to_location_id = :locId)',
+      { locId: query.location_id },
+    );
+  }
+
+  if (query.reason) {
+    queryBuilder.andWhere('sm.reason = :reason', { reason: query.reason });
+  }
+
+  if (query.date_from) {
+    queryBuilder.andWhere('sm.created_at >= :dateFrom', {
+      dateFrom: query.date_from,
+    });
+  }
+
+  if (query.date_to) {
+    queryBuilder.andWhere('sm.created_at <= :dateTo', {
+      dateTo: query.date_to,
+    });
+  }
+};
+
+const stockMovementSortSpec: QuerySpec<StockMovement, StockMovementQueryDto> = (
+  queryBuilder,
+) => {
+  queryBuilder.orderBy('sm.created_at', 'DESC');
+};
 
 @Injectable()
 export class StockMovementRepository {
@@ -22,54 +63,24 @@ export class StockMovementRepository {
   async findAllPaginated(
     query: StockMovementQueryDto,
   ): Promise<PaginatedResult<StockMovement>> {
-    const { page = 1, limit = 20 } = query;
+    const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
 
-    const qb = this.repository
-      .createQueryBuilder('sm')
-      .leftJoinAndSelect('sm.product', 'product')
-      .leftJoinAndSelect('sm.fromLocation', 'fromLocation')
-      .leftJoinAndSelect('sm.toLocation', 'toLocation');
-
-    if (query.product_id) {
-      qb.andWhere('sm.product_id = :productId', {
-        productId: query.product_id,
-      });
-    }
-
-    if (query.location_id) {
-      qb.andWhere(
-        '(sm.from_location_id = :locId OR sm.to_location_id = :locId)',
-        { locId: query.location_id },
-      );
-    }
-
-    if (query.reason) {
-      qb.andWhere('sm.reason = :reason', { reason: query.reason });
-    }
-
-    if (query.date_from) {
-      qb.andWhere('sm.created_at >= :dateFrom', { dateFrom: query.date_from });
-    }
-
-    if (query.date_to) {
-      qb.andWhere('sm.created_at <= :dateTo', { dateTo: query.date_to });
-    }
-
-    qb.orderBy('sm.created_at', 'DESC');
+    const qb = applyQuerySpecs(
+      this.repository
+        .createQueryBuilder('sm')
+        .leftJoinAndSelect('sm.product', 'product')
+        .leftJoinAndSelect('sm.fromLocation', 'fromLocation')
+        .leftJoinAndSelect('sm.toLocation', 'toLocation'),
+      query,
+      [stockMovementFilterSpec, stockMovementSortSpec],
+    );
 
     const total = await qb.getCount();
-    const skip = (page - 1) * limit;
     qb.skip(skip).take(limit);
 
     const data = await qb.getMany();
 
-    return {
-      data,
-      total,
-      page,
-      limit,
-      total_pages: Math.ceil(total / limit),
-    };
+    return toRepositoryPaginatedResult(data, total, page, limit);
   }
 
   async findById(id: string): Promise<StockMovement | null> {

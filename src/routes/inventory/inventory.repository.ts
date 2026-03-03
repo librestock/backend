@@ -1,16 +1,80 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  applyQuerySpecs,
+  resolvePaginationWindow,
+  toRepositoryPaginatedResult,
+  type QuerySpec,
+  type RepositoryPaginatedResult,
+} from '../../common/utils/query-spec.utils';
 import { Inventory } from './entities/inventory.entity';
 import { InventoryQueryDto, InventorySortField, SortOrder } from './dto';
 
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  total_pages: number;
-}
+export type PaginatedResult<T> = RepositoryPaginatedResult<T>;
+
+const inventoryFilterSpec: QuerySpec<Inventory, InventoryQueryDto> = (
+  queryBuilder,
+  query,
+) => {
+  if (query.product_id) {
+    queryBuilder.andWhere('inventory.product_id = :product_id', {
+      product_id: query.product_id,
+    });
+  }
+
+  if (query.location_id) {
+    queryBuilder.andWhere('inventory.location_id = :location_id', {
+      location_id: query.location_id,
+    });
+  }
+
+  if (query.area_id) {
+    queryBuilder.andWhere('inventory.area_id = :area_id', {
+      area_id: query.area_id,
+    });
+  }
+
+  if (query.search) {
+    queryBuilder.andWhere('inventory.batch_number ILIKE :search', {
+      search: `%${query.search}%`,
+    });
+  }
+
+  if (query.low_stock) {
+    queryBuilder.andWhere('inventory.quantity <= product.reorder_point');
+  }
+
+  if (query.expiring_soon) {
+    queryBuilder.andWhere(
+      'inventory.expiry_date IS NOT NULL AND inventory.expiry_date <= NOW() + INTERVAL \'30 days\'',
+    );
+  }
+
+  if (query.min_quantity !== undefined && query.max_quantity !== undefined) {
+    queryBuilder.andWhere(
+      'inventory.quantity BETWEEN :min_quantity AND :max_quantity',
+      { min_quantity: query.min_quantity, max_quantity: query.max_quantity },
+    );
+  } else if (query.min_quantity !== undefined) {
+    queryBuilder.andWhere('inventory.quantity >= :min_quantity', {
+      min_quantity: query.min_quantity,
+    });
+  } else if (query.max_quantity !== undefined) {
+    queryBuilder.andWhere('inventory.quantity <= :max_quantity', {
+      max_quantity: query.max_quantity,
+    });
+  }
+};
+
+const inventorySortSpec: QuerySpec<Inventory, InventoryQueryDto> = (
+  queryBuilder,
+  query,
+) => {
+  const sortBy = query.sort_by ?? InventorySortField.UPDATED_AT;
+  const sortOrder = query.sort_order ?? SortOrder.DESC;
+  queryBuilder.orderBy(`inventory.${sortBy}`, sortOrder);
+};
 
 @Injectable()
 export class InventoryRepository {
@@ -22,104 +86,25 @@ export class InventoryRepository {
   async findAllPaginated(
     query: InventoryQueryDto,
   ): Promise<PaginatedResult<Inventory>> {
-    const {
-      page = 1,
-      limit = 20,
-      product_id,
-      location_id,
-      area_id,
-      search,
-      low_stock,
-      expiring_soon,
-      min_quantity,
-      max_quantity,
-      sort_by = InventorySortField.UPDATED_AT,
-      sort_order = SortOrder.DESC,
-    } = query;
+    const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
 
-    const skip = (page - 1) * limit;
+    const queryBuilder = applyQuerySpecs(
+      this.repository
+        .createQueryBuilder('inventory')
+        .leftJoinAndSelect('inventory.product', 'product')
+        .leftJoinAndSelect('inventory.location', 'location')
+        .leftJoinAndSelect('inventory.area', 'area'),
+      query,
+      [inventoryFilterSpec, inventorySortSpec],
+    );
 
-    const queryBuilder = this.repository
-      .createQueryBuilder('inventory')
-      .leftJoinAndSelect('inventory.product', 'product')
-      .leftJoinAndSelect('inventory.location', 'location')
-      .leftJoinAndSelect('inventory.area', 'area');
-
-    // Product filter
-    if (product_id) {
-      queryBuilder.andWhere('inventory.product_id = :product_id', {
-        product_id,
-      });
-    }
-
-    // Location filter
-    if (location_id) {
-      queryBuilder.andWhere('inventory.location_id = :location_id', {
-        location_id,
-      });
-    }
-
-    // Area filter
-    if (area_id) {
-      queryBuilder.andWhere('inventory.area_id = :area_id', {
-        area_id,
-      });
-    }
-
-    // Search in batch number
-    if (search) {
-      queryBuilder.andWhere('inventory.batch_number ILIKE :search', {
-        search: `%${search}%`,
-      });
-    }
-
-    // Low stock filter (quantity <= product's reorder_point)
-    if (low_stock) {
-      queryBuilder.andWhere('inventory.quantity <= product.reorder_point');
-    }
-
-    // Expiring soon filter (within 30 days)
-    if (expiring_soon) {
-      queryBuilder.andWhere(
-        'inventory.expiry_date IS NOT NULL AND inventory.expiry_date <= NOW() + INTERVAL \'30 days\'',
-      );
-    }
-
-    // Quantity range filter
-    if (min_quantity !== undefined && max_quantity !== undefined) {
-      queryBuilder.andWhere(
-        'inventory.quantity BETWEEN :min_quantity AND :max_quantity',
-        { min_quantity, max_quantity },
-      );
-    } else if (min_quantity !== undefined) {
-      queryBuilder.andWhere('inventory.quantity >= :min_quantity', {
-        min_quantity,
-      });
-    } else if (max_quantity !== undefined) {
-      queryBuilder.andWhere('inventory.quantity <= :max_quantity', {
-        max_quantity,
-      });
-    }
-
-    // Sorting
-    const sortColumn = `inventory.${sort_by}`;
-    queryBuilder.orderBy(sortColumn, sort_order);
-
-    // Get total count
     const total = await queryBuilder.getCount();
 
-    // Apply pagination
     queryBuilder.skip(skip).take(limit);
 
     const data = await queryBuilder.getMany();
 
-    return {
-      data,
-      total,
-      page,
-      limit,
-      total_pages: Math.ceil(total / limit),
-    };
+    return toRepositoryPaginatedResult(data, total, page, limit);
   }
 
   async findAll(): Promise<Inventory[]> {

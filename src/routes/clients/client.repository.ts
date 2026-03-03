@@ -1,16 +1,39 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  applyQuerySpecs,
+  resolvePaginationWindow,
+  toRepositoryPaginatedResult,
+  type QuerySpec,
+  type RepositoryPaginatedResult,
+} from '../../common/utils/query-spec.utils';
 import { Client } from './entities/client.entity';
 import { ClientQueryDto } from './dto';
 
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  total_pages: number;
-}
+export type PaginatedResult<T> = RepositoryPaginatedResult<T>;
+
+const clientFilterSpec: QuerySpec<Client, ClientQueryDto> = (
+  queryBuilder,
+  query,
+) => {
+  if (query.q) {
+    queryBuilder.andWhere(
+      '(client.company_name ILIKE :q OR client.email ILIKE :q)',
+      { q: `%${query.q}%` },
+    );
+  }
+
+  if (query.account_status) {
+    queryBuilder.andWhere('client.account_status = :account_status', {
+      account_status: query.account_status,
+    });
+  }
+};
+
+const clientSortSpec: QuerySpec<Client, ClientQueryDto> = (queryBuilder) => {
+  queryBuilder.orderBy('client.company_name', 'ASC');
+};
 
 @Injectable()
 export class ClientRepository {
@@ -22,45 +45,24 @@ export class ClientRepository {
   async findAllPaginated(
     query: ClientQueryDto,
   ): Promise<PaginatedResult<Client>> {
-    const { page = 1, limit = 20, q, account_status } = query;
+    const { page, limit, skip } = resolvePaginationWindow(
+      query.page,
+      query.limit,
+    );
 
-    const skip = (page - 1) * limit;
+    const queryBuilder = applyQuerySpecs(
+      this.repository.createQueryBuilder('client'),
+      query,
+      [clientFilterSpec, clientSortSpec],
+    );
 
-    const queryBuilder = this.repository.createQueryBuilder('client');
-
-    // Search filter (company_name and email)
-    if (q) {
-      queryBuilder.andWhere(
-        '(client.company_name ILIKE :q OR client.email ILIKE :q)',
-        { q: `%${q}%` },
-      );
-    }
-
-    // Account status filter
-    if (account_status) {
-      queryBuilder.andWhere('client.account_status = :account_status', {
-        account_status,
-      });
-    }
-
-    // Sorting
-    queryBuilder.orderBy('client.company_name', 'ASC');
-
-    // Get total count
     const total = await queryBuilder.getCount();
 
-    // Apply pagination
     queryBuilder.skip(skip).take(limit);
 
     const data = await queryBuilder.getMany();
 
-    return {
-      data,
-      total,
-      page,
-      limit,
-      total_pages: Math.ceil(total / limit),
-    };
+    return toRepositoryPaginatedResult(data, total, page, limit);
   }
 
   async findById(id: string): Promise<Client | null> {

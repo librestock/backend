@@ -1,16 +1,40 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  applyQuerySpecs,
+  resolvePaginationWindow,
+  toRepositoryPaginatedResult,
+  type QuerySpec,
+  type RepositoryPaginatedResult,
+} from '../../common/utils/query-spec.utils';
 import { Supplier } from './entities/supplier.entity';
 import { SupplierQueryDto } from './dto';
 
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  total_pages: number;
-}
+export type PaginatedResult<T> = RepositoryPaginatedResult<T>;
+
+const supplierFilterSpec: QuerySpec<Supplier, SupplierQueryDto> = (
+  queryBuilder,
+  query,
+) => {
+  if (query.q) {
+    queryBuilder.andWhere('supplier.name ILIKE :search', {
+      search: `%${query.q}%`,
+    });
+  }
+
+  if (query.is_active !== undefined) {
+    queryBuilder.andWhere('supplier.is_active = :is_active', {
+      is_active: query.is_active,
+    });
+  }
+};
+
+const supplierSortSpec: QuerySpec<Supplier, SupplierQueryDto> = (
+  queryBuilder,
+) => {
+  queryBuilder.orderBy('supplier.name', 'ASC');
+};
 
 @Injectable()
 export class SupplierRepository {
@@ -22,42 +46,21 @@ export class SupplierRepository {
   async findAllPaginated(
     query: SupplierQueryDto,
   ): Promise<PaginatedResult<Supplier>> {
-    const { page = 1, limit = 20, q, is_active } = query;
+    const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
 
-    const skip = (page - 1) * limit;
+    const queryBuilder = applyQuerySpecs(
+      this.repository.createQueryBuilder('supplier'),
+      query,
+      [supplierFilterSpec, supplierSortSpec],
+    );
 
-    const queryBuilder = this.repository.createQueryBuilder('supplier');
-
-    // Search filter
-    if (q) {
-      queryBuilder.andWhere('supplier.name ILIKE :search', {
-        search: `%${q}%`,
-      });
-    }
-
-    // Active status filter
-    if (is_active !== undefined) {
-      queryBuilder.andWhere('supplier.is_active = :is_active', { is_active });
-    }
-
-    // Default sort by name
-    queryBuilder.orderBy('supplier.name', 'ASC');
-
-    // Get total count
     const total = await queryBuilder.getCount();
 
-    // Apply pagination
     queryBuilder.skip(skip).take(limit);
 
     const data = await queryBuilder.getMany();
 
-    return {
-      data,
-      total,
-      page,
-      limit,
-      total_pages: Math.ceil(total / limit),
-    };
+    return toRepositoryPaginatedResult(data, total, page, limit);
   }
 
   async findById(id: string): Promise<Supplier | null> {

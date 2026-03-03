@@ -1,4 +1,4 @@
-import { Permission, Resource } from '@librestock/types';
+import { type Permission, type Resource } from '@librestock/types';
 import type { RoleResponseDto } from './dto';
 import type { RoleEntity } from './entities/role.entity';
 

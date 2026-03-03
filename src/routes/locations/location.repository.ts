@@ -1,16 +1,47 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  applyQuerySpecs,
+  resolvePaginationWindow,
+  toRepositoryPaginatedResult,
+  type QuerySpec,
+  type RepositoryPaginatedResult,
+} from '../../common/utils/query-spec.utils';
 import { Location } from './entities/location.entity';
 import { LocationQueryDto, LocationSortField, SortOrder } from './dto';
 
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  total_pages: number;
-}
+export type PaginatedResult<T> = RepositoryPaginatedResult<T>;
+
+const locationFilterSpec: QuerySpec<Location, LocationQueryDto> = (
+  queryBuilder,
+  query,
+) => {
+  if (query.search) {
+    queryBuilder.andWhere('location.name ILIKE :search', {
+      search: `%${query.search}%`,
+    });
+  }
+
+  if (query.type) {
+    queryBuilder.andWhere('location.type = :type', { type: query.type });
+  }
+
+  if (query.is_active !== undefined) {
+    queryBuilder.andWhere('location.is_active = :is_active', {
+      is_active: query.is_active,
+    });
+  }
+};
+
+const locationSortSpec: QuerySpec<Location, LocationQueryDto> = (
+  queryBuilder,
+  query,
+) => {
+  const sortBy = query.sort_by ?? LocationSortField.NAME;
+  const sortOrder = query.sort_order ?? SortOrder.ASC;
+  queryBuilder.orderBy(`location.${sortBy}`, sortOrder);
+};
 
 @Injectable()
 export class LocationRepository {
@@ -22,56 +53,21 @@ export class LocationRepository {
   async findAllPaginated(
     query: LocationQueryDto,
   ): Promise<PaginatedResult<Location>> {
-    const {
-      page = 1,
-      limit = 20,
-      search,
-      type,
-      is_active,
-      sort_by = LocationSortField.NAME,
-      sort_order = SortOrder.ASC,
-    } = query;
+    const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
 
-    const skip = (page - 1) * limit;
+    const queryBuilder = applyQuerySpecs(
+      this.repository.createQueryBuilder('location'),
+      query,
+      [locationFilterSpec, locationSortSpec],
+    );
 
-    const queryBuilder = this.repository.createQueryBuilder('location');
-
-    // Search filter
-    if (search) {
-      queryBuilder.andWhere('location.name ILIKE :search', {
-        search: `%${search}%`,
-      });
-    }
-
-    // Type filter
-    if (type) {
-      queryBuilder.andWhere('location.type = :type', { type });
-    }
-
-    // Active status filter
-    if (is_active !== undefined) {
-      queryBuilder.andWhere('location.is_active = :is_active', { is_active });
-    }
-
-    // Sorting
-    const sortColumn = `location.${sort_by}`;
-    queryBuilder.orderBy(sortColumn, sort_order);
-
-    // Get total count
     const total = await queryBuilder.getCount();
 
-    // Apply pagination
     queryBuilder.skip(skip).take(limit);
 
     const data = await queryBuilder.getMany();
 
-    return {
-      data,
-      total,
-      page,
-      limit,
-      total_pages: Math.ceil(total / limit),
-    };
+    return toRepositoryPaginatedResult(data, total, page, limit);
   }
 
   async findAll(): Promise<Location[]> {
