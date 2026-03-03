@@ -2,30 +2,30 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, type Repository } from 'typeorm';
+import { auth } from '../../auth';
 import { RolesService } from '../roles/roles.service';
 import { UserRoleEntity } from './entities/user-role.entity';
 
 // Import after mock is set up
 import { UsersService } from './users.service';
 
-// Mock the auth module — jest.mock is hoisted above imports automatically
-const mockListUsers = jest.fn();
-const mockBanUser = jest.fn();
-const mockUnbanUser = jest.fn();
-const mockRemoveUser = jest.fn();
-const mockRevokeUserSessions = jest.fn();
-
 jest.mock('../../auth', () => ({
   auth: {
     api: {
-      listUsers: mockListUsers,
-      banUser: mockBanUser,
-      unbanUser: mockUnbanUser,
-      removeUser: mockRemoveUser,
-      revokeUserSessions: mockRevokeUserSessions,
+      listUsers: jest.fn(),
+      banUser: jest.fn(),
+      unbanUser: jest.fn(),
+      removeUser: jest.fn(),
+      revokeUserSessions: jest.fn(),
     },
   },
 }));
+
+const mockListUsers = auth.api.listUsers as jest.Mock;
+const mockBanUser = auth.api.banUser as jest.Mock;
+const mockUnbanUser = auth.api.unbanUser as jest.Mock;
+const mockRemoveUser = auth.api.removeUser as jest.Mock;
+const mockRevokeUserSessions = auth.api.revokeUserSessions as jest.Mock;
 
 describe('UsersService', () => {
   let service: UsersService;
