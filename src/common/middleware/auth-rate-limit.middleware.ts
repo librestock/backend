@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import { ErrorCode } from '@librestock/types/common'
 
 interface AuthRateLimitOptions {
   windowMs: number;
@@ -55,6 +56,7 @@ export function createAuthRateLimitMiddleware(
       res.status(429).json({
         statusCode: 429,
         error: 'Too Many Requests',
+        code: ErrorCode.RATE_LIMIT_EXCEEDED,
         message: 'Too many authentication attempts. Please try again later.',
         path: req.path,
         timestamp: new Date().toISOString(),

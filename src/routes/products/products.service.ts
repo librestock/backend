@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { ErrorCode } from '@librestock/types/common'
 import { CategoriesService } from '../categories/categories.service';
 import { Transactional } from '../../common/decorators/transactional.decorator';
 import { ErrorType } from '../../common/dto/error-response.dto';
@@ -60,7 +61,10 @@ export class ProductsService {
   ): Promise<ProductResponseDto> {
     const product = await this.productRepository.findById(id, includeDeleted);
     if (!product) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException({
+        code: ErrorCode.PRODUCT_NOT_FOUND,
+        message: 'Product not found',
+      });
     }
     return toProductResponseDto(product);
   }
@@ -97,7 +101,10 @@ export class ProductsService {
     );
 
     if (existingSku) {
-      throw new BadRequestException('A product with this SKU already exists');
+      throw new BadRequestException({
+        code: ErrorCode.PRODUCT_SKU_DUPLICATE,
+        message: 'A product with this SKU already exists',
+      });
     }
 
     const entityData = toCreateProductEntity(createProductDto, userId);
@@ -201,7 +208,10 @@ export class ProductsService {
       );
 
       if (existingSku) {
-        throw new BadRequestException('A product with this SKU already exists');
+        throw new BadRequestException({
+          code: ErrorCode.PRODUCT_SKU_DUPLICATE,
+          message: 'A product with this SKU already exists',
+        });
       }
     }
 
@@ -303,7 +313,10 @@ export class ProductsService {
   async restore(id: string): Promise<ProductResponseDto> {
     const product = await this.productRepository.findById(id, true);
     if (!product) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException({
+        code: ErrorCode.PRODUCT_NOT_FOUND,
+        message: 'Product not found',
+      });
     }
     if (!product.deleted_at) {
       throw new BadRequestException('Product is not deleted');
@@ -354,7 +367,10 @@ export class ProductsService {
   private async getProductOrFail(id: string): Promise<Product> {
     const product = await this.productRepository.findById(id);
     if (!product) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException({
+        code: ErrorCode.PRODUCT_NOT_FOUND,
+        message: 'Product not found',
+      });
     }
     return product;
   }

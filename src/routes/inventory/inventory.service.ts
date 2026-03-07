@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { ErrorCode } from '@librestock/types/common'
 import { Transactional } from '../../common/decorators/transactional.decorator';
 import { toPaginatedResponse } from '../../common/utils/pagination.utils';
 import { ProductsService } from '../products/products.service';
@@ -66,7 +67,10 @@ export class InventoryService {
   async findByProduct(productId: string): Promise<InventoryResponseDto[]> {
     const exists = await this.productsService.existsById(productId);
     if (!exists) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException({
+        code: ErrorCode.PRODUCT_NOT_FOUND,
+        message: 'Product not found',
+      });
     }
 
     const items = await this.inventoryRepository.findByProductId(productId);
@@ -92,7 +96,10 @@ export class InventoryService {
       createInventoryDto.product_id,
     );
     if (!productExists) {
-      throw new BadRequestException('Product not found');
+      throw new BadRequestException({
+        code: ErrorCode.PRODUCT_NOT_FOUND,
+        message: 'Product not found',
+      });
     }
 
     // Validate location exists
@@ -123,9 +130,11 @@ export class InventoryService {
       createInventoryDto.area_id,
     );
     if (existing) {
-      throw new BadRequestException(
-        'Inventory for this product at this location/area already exists. Use the update or adjust endpoint instead.',
-      );
+      throw new BadRequestException({
+        code: ErrorCode.INVENTORY_DUPLICATE_LOCATION,
+        message:
+          'Inventory for this product at this location/area already exists. Use the update or adjust endpoint instead.',
+      });
     }
 
     const inventory = await this.inventoryRepository.create({
@@ -198,9 +207,10 @@ export class InventoryService {
         newAreaId,
       );
       if (existing && existing.id !== id) {
-        throw new BadRequestException(
-          'Inventory for this product at the target location/area already exists',
-        );
+        throw new BadRequestException({
+          code: ErrorCode.INVENTORY_DUPLICATE_LOCATION,
+          message: 'Inventory for this product at the target location/area already exists',
+        });
       }
     }
 
@@ -255,9 +265,10 @@ export class InventoryService {
     );
 
     if (affected === 0) {
-      throw new BadRequestException(
-        'Quantity adjustment failed. The resulting quantity would be negative.',
-      );
+      throw new BadRequestException({
+        code: ErrorCode.INVENTORY_NEGATIVE_QUANTITY,
+        message: 'Quantity adjustment failed. The resulting quantity would be negative.',
+      });
     }
 
     const updated = await this.inventoryRepository.findById(id);
