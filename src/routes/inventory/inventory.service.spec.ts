@@ -401,25 +401,20 @@ describe('InventoryService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw BadRequestException when adjustment would make quantity negative', async () => {
-      inventoryRepository.findById.mockResolvedValue(mockInventory);
-
-      await expect(
-        service.adjustQuantity('inventory-001', {
-          adjustment: -100,
-        }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
     it('should throw BadRequestException when DB constraint prevents negative quantity', async () => {
       inventoryRepository.findById.mockResolvedValue(mockInventory);
       inventoryRepository.adjustQuantity.mockResolvedValue(0);
 
       await expect(
         service.adjustQuantity('inventory-001', {
-          adjustment: -10,
+          adjustment: -100,
         }),
       ).rejects.toThrow(BadRequestException);
+
+      expect(inventoryRepository.adjustQuantity).toHaveBeenCalledWith(
+        'inventory-001',
+        -100,
+      );
     });
   });
 
