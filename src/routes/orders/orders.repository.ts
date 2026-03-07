@@ -99,11 +99,11 @@ export class OrderRepository {
     await this.repository.delete(id);
   }
 
-  async countByPrefix(prefix: string): Promise<number> {
-    return this.repository
-      .createQueryBuilder('order')
-      .where('order.order_number LIKE :prefix', { prefix: `${prefix}%` })
-      .getCount();
+  async getNextOrderNumberSequence(): Promise<number> {
+    const [result] = await this.repository.query(
+      `SELECT nextval('order_number_seq')::bigint AS value`,
+    );
+    return Number(result.value);
   }
 
   async existsById(id: string): Promise<boolean> {
