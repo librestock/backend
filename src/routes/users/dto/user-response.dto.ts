@@ -21,11 +21,11 @@ export class UserResponseDto implements UserResponseDtoShape {
   banned: boolean;
 
   @ApiProperty({ description: 'Ban reason', nullable: true })
-  banReason: string | null;
+  ban_reason: string | null;
 
   @ApiProperty({ description: 'Ban expiry date', nullable: true })
-  banExpires: string | Date | null;
+  ban_expires: string | Date | null;
 
   @ApiProperty({ description: 'Account creation date' })
-  createdAt: string | Date;
+  created_at: string | Date;
 }
