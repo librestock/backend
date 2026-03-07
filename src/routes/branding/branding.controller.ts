@@ -17,7 +17,7 @@ import {
   Session,
   UserSession,
 } from '@thallesp/nestjs-better-auth';
-import { Resource, Permission } from '@librestock/types';
+import { Resource, Permission } from '@librestock/types/auth'
 import { StandardThrottle } from 'src/common/decorators/throttle.decorator';
 import { RequirePermission } from 'src/common/decorators';
 import { PermissionGuard } from 'src/common/guards/permission.guard';

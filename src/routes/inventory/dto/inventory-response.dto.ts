@@ -1,10 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type {
-  AreaSummaryDto as AreaSummaryDtoShape,
-  InventoryResponseDto as InventoryResponseDtoShape,
-  LocationSummaryDto as LocationSummaryDtoShape,
-  ProductSummaryDto as ProductSummaryDtoShape,
-} from '@librestock/types';
+import type { AreaSummaryDto as AreaSummaryDtoShape, InventoryResponseDto as InventoryResponseDtoShape, LocationSummaryDto as LocationSummaryDtoShape, ProductSummaryDto as ProductSummaryDtoShape } from '@librestock/types/inventory'
 import { BaseResponseDto } from '../../../common/dto/base-response.dto';
 
 export class ProductSummaryDto implements ProductSummaryDtoShape {

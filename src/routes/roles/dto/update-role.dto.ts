@@ -7,7 +7,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import type { UpdateRoleDto as UpdateRoleDtoShape } from '@librestock/types';
+import type { UpdateRoleDto as UpdateRoleDtoShape } from '@librestock/types/roles'
 import { RolePermissionDto } from './role-permission.dto';
 
 export class UpdateRoleDto implements UpdateRoleDtoShape {

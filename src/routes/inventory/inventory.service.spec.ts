@@ -89,6 +89,8 @@ describe('InventoryService', () => {
     const mockInventoryRepository = {
       findAllPaginated: jest.fn(),
       findAll: jest.fn(),
+      countLowStock: jest.fn(),
+      countExpiringSoon: jest.fn(),
       findById: jest.fn(),
       findByProductId: jest.fn(),
       findByLocationId: jest.fn(),
@@ -185,6 +187,20 @@ describe('InventoryService', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].product_id).toBe('product-001');
+    });
+  });
+
+  describe('getSummary', () => {
+    it('should return low stock and expiring soon counters', async () => {
+      inventoryRepository.countLowStock.mockResolvedValue(4);
+      inventoryRepository.countExpiringSoon.mockResolvedValue(2);
+
+      const result = await service.getSummary();
+
+      expect(result).toEqual({
+        low_stock_count: 4,
+        expiring_soon_count: 2,
+      });
     });
   });
 

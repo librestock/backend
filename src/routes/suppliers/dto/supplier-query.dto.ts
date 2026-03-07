@@ -8,7 +8,7 @@ import {
   Max,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import type { SupplierQueryDto as SupplierQueryDtoShape } from '@librestock/types';
+import type { SupplierQueryDto as SupplierQueryDtoShape } from '@librestock/types/suppliers'
 
 export class SupplierQueryDto implements SupplierQueryDtoShape {
   @ApiProperty({

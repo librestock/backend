@@ -7,8 +7,8 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import type { UpdateLocationDto as UpdateLocationDtoShape } from '@librestock/types';
-import { LocationType } from '@librestock/types';
+import type { UpdateLocationDto as UpdateLocationDtoShape } from '@librestock/types/locations'
+import { LocationType } from '@librestock/types/locations'
 
 export class UpdateLocationDto implements UpdateLocationDtoShape {
   @ApiProperty({

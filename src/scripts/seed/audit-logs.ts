@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
-import { AuditAction, AuditEntityType, OrderStatus } from '@librestock/types';
+import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs'
+import { OrderStatus } from '@librestock/types/orders'
 import { AuditLog } from '../../routes/audit-logs/entities/audit-log.entity';
 import { type Category } from '../../routes/categories/entities/category.entity';
 import { type Location } from '../../routes/locations/entities/location.entity';

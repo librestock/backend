@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Permission, Resource } from '@librestock/types';
+import { Permission, Resource } from '@librestock/types/auth'
 import { RolesService, type UserPermissions } from '../../routes/roles/roles.service';
 import {
   type MockRequest,

@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { OrderStatus } from '@librestock/types';
+import { OrderStatus } from '@librestock/types/orders'
 import { getOrderState } from './order-state';
 
 describe('OrderState', () => {

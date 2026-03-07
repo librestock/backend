@@ -19,7 +19,7 @@ import {
   ApiTags,
   ApiParam,
 } from '@nestjs/swagger';
-import { Permission, Resource } from '@librestock/types';
+import { Permission, Resource } from '@librestock/types/auth'
 import { RequirePermission } from '../../common/decorators';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { MessageResponseDto } from '../../common/dto/message-response.dto';
@@ -34,6 +34,7 @@ import {
   UpdateInventoryDto,
   AdjustInventoryDto,
   InventoryResponseDto,
+  InventorySummaryDto,
   InventoryQueryDto,
   PaginatedInventoryResponseDto,
 } from './dto';
@@ -75,6 +76,17 @@ export class InventoryController {
   @ApiResponse({ status: 401, type: ErrorResponseDto })
   async listAllInventory(): Promise<InventoryResponseDto[]> {
     return this.inventoryService.findAll();
+  }
+
+  @Get('summary')
+  @ApiOperation({
+    summary: 'Get inventory dashboard summary counters',
+    operationId: 'getInventorySummary',
+  })
+  @ApiResponse({ status: 200, type: InventorySummaryDto })
+  @ApiResponse({ status: 401, type: ErrorResponseDto })
+  async getInventorySummary(): Promise<InventorySummaryDto> {
+    return this.inventoryService.getSummary();
   }
 
   @Get('product/:productId')

@@ -15,6 +15,7 @@ import {
   AdjustInventoryDto,
   InventoryQueryDto,
   InventoryResponseDto,
+  InventorySummaryDto,
   PaginatedInventoryResponseDto,
 } from './dto';
 import { InventoryRepository } from './inventory.repository';
@@ -40,6 +41,18 @@ export class InventoryService {
   async findAll(): Promise<InventoryResponseDto[]> {
     const items = await this.inventoryRepository.findAll();
     return items.map(toInventoryResponseDto);
+  }
+
+  async getSummary(): Promise<InventorySummaryDto> {
+    const [lowStockCount, expiringSoonCount] = await Promise.all([
+      this.inventoryRepository.countLowStock(),
+      this.inventoryRepository.countExpiringSoon(),
+    ]);
+
+    return {
+      low_stock_count: lowStockCount,
+      expiring_soon_count: expiringSoonCount,
+    };
   }
 
   async findOne(id: string): Promise<InventoryResponseDto> {

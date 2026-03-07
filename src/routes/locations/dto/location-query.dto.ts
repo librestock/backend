@@ -9,12 +9,8 @@ import {
   Max,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import {
-  LocationType,
-  LocationSortField,
-  SortOrder,
-  type LocationQueryDto as LocationQueryDtoShape,
-} from '@librestock/types';
+import { SortOrder } from '@librestock/types/common'
+import { LocationType, LocationSortField, type LocationQueryDto as LocationQueryDtoShape } from '@librestock/types/locations'
 
 export { LocationSortField, SortOrder };
 

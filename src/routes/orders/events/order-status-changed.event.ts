@@ -1,4 +1,4 @@
-import { type OrderStatus } from '@librestock/types';
+import type { OrderStatus } from '@librestock/types/orders'
 import { type Order } from '../entities/order.entity';
 
 export const ORDER_STATUS_CHANGED = 'order.status.changed';

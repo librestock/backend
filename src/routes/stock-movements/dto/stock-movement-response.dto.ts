@@ -1,10 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  type StockMovementResponseDto as StockMovementResponseDtoShape,
-  type StockMovementLocationSummary,
-  type StockMovementProductSummary,
-  StockMovementReason,
-} from '@librestock/types';
+import { type StockMovementResponseDto as StockMovementResponseDtoShape, type StockMovementLocationSummary, type StockMovementProductSummary, StockMovementReason } from '@librestock/types/stock-movements'
 
 export class StockMovementResponseDto implements StockMovementResponseDtoShape {
   @ApiProperty({ description: 'Unique identifier', format: 'uuid' })

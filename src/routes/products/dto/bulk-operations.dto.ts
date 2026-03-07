@@ -9,13 +9,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import type {
-  BulkCreateProductsDto as BulkCreateProductsDtoShape,
-  BulkUpdateStatusDto as BulkUpdateStatusDtoShape,
-  BulkDeleteDto as BulkDeleteDtoShape,
-  BulkRestoreDto as BulkRestoreDtoShape,
-  BulkOperationResultDto as BulkOperationResultDtoShape,
-} from '@librestock/types';
+import type { BulkCreateProductsDto as BulkCreateProductsDtoShape, BulkUpdateStatusDto as BulkUpdateStatusDtoShape, BulkDeleteDto as BulkDeleteDtoShape, BulkRestoreDto as BulkRestoreDtoShape, BulkOperationResultDto as BulkOperationResultDtoShape } from '@librestock/types/products'
 import { CreateProductDto } from './create-product.dto';
 
 export class BulkCreateProductsDto implements BulkCreateProductsDtoShape {

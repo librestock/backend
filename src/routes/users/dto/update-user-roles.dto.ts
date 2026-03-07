@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsArray, IsUUID } from 'class-validator';
-import type { UpdateUserRolesDto as UpdateUserRolesDtoShape } from '@librestock/types';
+import type { UpdateUserRolesDto as UpdateUserRolesDtoShape } from '@librestock/types/users'
 
 export class UpdateUserRolesDto implements UpdateUserRolesDtoShape {
   @ApiProperty({

@@ -1,8 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type {
-  BrandingResponseDto as BrandingResponseDtoShape,
-  PoweredByDto as PoweredByDtoShape,
-} from '@librestock/types';
+import type { BrandingResponseDto as BrandingResponseDtoShape, PoweredByDto as PoweredByDtoShape } from '@librestock/types/branding'
 
 class PoweredByDto implements PoweredByDtoShape {
   @ApiProperty({ description: 'Product name', example: 'LibreStock' })

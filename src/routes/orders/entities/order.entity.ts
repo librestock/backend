@@ -10,7 +10,7 @@ import {
   Index,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { OrderStatus } from '@librestock/types';
+import { OrderStatus } from '@librestock/types/orders'
 import { Client } from '../../clients/entities/client.entity';
 import { OrderItem } from './order-item.entity';
 

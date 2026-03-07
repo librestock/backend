@@ -6,7 +6,7 @@ import {
   IsBoolean,
   MaxLength,
 } from 'class-validator';
-import type { CreateAreaDto as CreateAreaDtoShape } from '@librestock/types';
+import type { CreateAreaDto as CreateAreaDtoShape } from '@librestock/types/areas'
 
 export class CreateAreaDto implements CreateAreaDtoShape {
   @ApiProperty({ description: 'Location ID', format: 'uuid' })

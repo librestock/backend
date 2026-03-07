@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { LocationType } from '@librestock/types';
+import { LocationType } from '@librestock/types/locations'
 import { Area } from '../../routes/areas/entities/area.entity';
 import { Location } from '../../routes/locations/entities/location.entity';
 import { AREA_TEMPLATES, LOCATION_NAMES, SEED_CONFIG, SUB_AREA_TEMPLATES } from './config';

@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum } from 'class-validator';
-import { OrderStatus } from '@librestock/types';
-import type { UpdateOrderStatusType as UpdateOrderStatusTypeShape } from '@librestock/types';
+import { OrderStatus } from '@librestock/types/orders'
+import type { UpdateOrderStatusType as UpdateOrderStatusTypeShape } from '@librestock/types/orders'
 
 export class UpdateOrderStatusDto implements UpdateOrderStatusTypeShape {
   @ApiProperty({

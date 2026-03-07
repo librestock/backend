@@ -10,8 +10,8 @@ import {
   Max,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { OrderStatus } from '@librestock/types';
-import type { OrderQueryType as OrderQueryTypeShape } from '@librestock/types';
+import { OrderStatus } from '@librestock/types/orders'
+import type { OrderQueryType as OrderQueryTypeShape } from '@librestock/types/orders'
 
 export class OrderQueryDto implements OrderQueryTypeShape {
   @ApiProperty({

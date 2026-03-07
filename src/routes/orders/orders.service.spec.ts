@@ -1,7 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { OrderStatus } from '@librestock/types';
+import { OrderStatus } from '@librestock/types/orders'
 import { ClientsService } from '../clients/clients.service';
 import { ProductsService } from '../products/products.service';
 import { OrdersService } from './orders.service';
