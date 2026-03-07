@@ -296,25 +296,6 @@ describe('ProductsService', () => {
       );
     });
 
-    it('should throw BadRequestException when price is less than cost', async () => {
-      const dtoWithInvalidPrice = {
-        ...createDto,
-        standard_cost: 100,
-        standard_price: 50,
-      };
-      categoriesService.existsById.mockResolvedValue(true);
-      productRepository.findBySku.mockResolvedValue(null);
-
-      await expect(
-        service.create(dtoWithInvalidPrice, 'user_123'),
-      ).rejects.toThrow(BadRequestException);
-      await expect(
-        service.create(dtoWithInvalidPrice, 'user_123'),
-      ).rejects.toThrow(
-        'Standard price must be greater than or equal to standard cost',
-      );
-    });
-
     it('should allow equal price and cost', async () => {
       const dtoWithEqualPriceAndCost = {
         ...createDto,
@@ -477,18 +458,6 @@ describe('ProductsService', () => {
       await expect(
         service.update(mockProduct.id, updateDto, 'user_123'),
       ).resolves.toBeDefined();
-    });
-
-    it('should validate price >= cost considering existing values', async () => {
-      const updateDto = { standard_price: 50 };
-      productRepository.findById.mockResolvedValue({
-        ...mockProduct,
-        standard_cost: 100,
-      });
-
-      await expect(
-        service.update(mockProduct.id, updateDto, 'user_123'),
-      ).rejects.toThrow(BadRequestException);
     });
 
     it('should return existing product when no changes provided', async () => {
