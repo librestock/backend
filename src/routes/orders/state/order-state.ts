@@ -94,22 +94,18 @@ class OnHoldState extends OrderState {
   ] as const;
 }
 
-const stateRegistry = new Map<OrderStatus, OrderState>([
-  [OrderStatus.DRAFT, new DraftState()],
-  [OrderStatus.CONFIRMED, new ConfirmedState()],
-  [OrderStatus.SOURCING, new SourcingState()],
-  [OrderStatus.PICKING, new PickingState()],
-  [OrderStatus.PACKED, new PackedState()],
-  [OrderStatus.SHIPPED, new ShippedState()],
-  [OrderStatus.DELIVERED, new DeliveredState()],
-  [OrderStatus.CANCELLED, new CancelledState()],
-  [OrderStatus.ON_HOLD, new OnHoldState()],
-]);
+const stateRegistry = {
+  [OrderStatus.DRAFT]: new DraftState(),
+  [OrderStatus.CONFIRMED]: new ConfirmedState(),
+  [OrderStatus.SOURCING]: new SourcingState(),
+  [OrderStatus.PICKING]: new PickingState(),
+  [OrderStatus.PACKED]: new PackedState(),
+  [OrderStatus.SHIPPED]: new ShippedState(),
+  [OrderStatus.DELIVERED]: new DeliveredState(),
+  [OrderStatus.CANCELLED]: new CancelledState(),
+  [OrderStatus.ON_HOLD]: new OnHoldState(),
+} as const satisfies Record<OrderStatus, OrderState>;
 
 export function getOrderState(status: OrderStatus): OrderState {
-  const state = stateRegistry.get(status);
-  if (!state) {
-    throw new BadRequestException(`Unknown order status: ${status}`);
-  }
-  return state;
+  return stateRegistry[status];
 }
