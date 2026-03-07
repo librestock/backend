@@ -20,7 +20,7 @@ export interface AuditChanges {
 export class AuditLog {
   @ApiProperty({ description: 'Unique identifier', format: 'uuid' })
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @ApiProperty({
     description: 'User ID who performed the action',
@@ -28,14 +28,14 @@ export class AuditLog {
     nullable: true,
   })
   @Column({ type: 'uuid', nullable: true })
-  user_id: string | null;
+  user_id!: string | null;
 
   @ApiProperty({ description: 'Action performed', enum: AuditAction })
   @Column({
     type: 'enum',
     enum: AuditAction,
   })
-  action: AuditAction;
+  action!: AuditAction;
 
   @ApiProperty({
     description: 'Type of entity affected',
@@ -45,25 +45,25 @@ export class AuditLog {
     type: 'enum',
     enum: AuditEntityType,
   })
-  entity_type: AuditEntityType;
+  entity_type!: AuditEntityType;
 
   @ApiProperty({ description: 'ID of the affected entity', format: 'uuid' })
   @Column({ type: 'uuid' })
-  entity_id: string;
+  entity_id!: string;
 
   @ApiProperty({ description: 'Changes made (before/after)', nullable: true })
   @Column({ type: 'jsonb', nullable: true })
-  changes: AuditChanges | null;
+  changes!: AuditChanges | null;
 
   @ApiProperty({ description: 'IP address of the requester', nullable: true })
   @Column({ type: 'varchar', nullable: true })
-  ip_address: string | null;
+  ip_address!: string | null;
 
   @ApiProperty({ description: 'User agent of the requester', nullable: true })
   @Column({ type: 'varchar', nullable: true })
-  user_agent: string | null;
+  user_agent!: string | null;
 
   @ApiProperty({ description: 'Creation timestamp' })
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 }
