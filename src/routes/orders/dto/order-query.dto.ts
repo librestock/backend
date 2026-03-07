@@ -10,6 +10,7 @@ import {
   Max,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import type { ClientId } from '@librestock/types/common'
 import { OrderStatus } from '@librestock/types/orders'
 import type { OrderQueryType as OrderQueryTypeShape } from '@librestock/types/orders'
 
@@ -56,7 +57,7 @@ export class OrderQueryDto implements OrderQueryTypeShape {
   })
   @IsOptional()
   @IsUUID()
-  client_id?: string;
+  client_id?: ClientId;
 
   @ApiProperty({
     description: 'Filter by order status',
