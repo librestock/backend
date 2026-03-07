@@ -22,6 +22,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { Permission, Resource } from '@librestock/types/auth'
+import { CreateProductSchema, UpdateProductSchema } from '@librestock/types/products'
 import { RequirePermission } from '../../common/decorators';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { MessageResponseDto } from '../../common/dto/message-response.dto';
@@ -33,6 +34,7 @@ import {
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { HateoasInterceptor } from '../../common/hateoas/hateoas.interceptor';
 import { AuditInterceptor } from '../../common/interceptors/audit.interceptor';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { Auditable } from '../../common/decorators/auditable.decorator';
 import { AuditAction, AuditEntityType } from '../../common/enums';
 import { StandardThrottle, BulkThrottle } from '../../common/decorators/throttle.decorator';
@@ -167,7 +169,8 @@ export class ProductsController {
   @ApiResponse({ status: 400, type: ErrorResponseDto })
   @ApiResponse({ status: 401, type: ErrorResponseDto })
   async createProduct(
-    @Body() createProductDto: CreateProductDto,
+    @Body(new ZodValidationPipe(CreateProductSchema))
+    createProductDto: CreateProductDto,
     @Req() req: AuthRequest,
   ): Promise<ProductResponseDto> {
     const userId = getUserIdFromSession(getUserSession(req));
@@ -216,7 +219,8 @@ export class ProductsController {
   @ApiResponse({ status: 404, type: ErrorResponseDto })
   async updateProduct(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateProductDto: UpdateProductDto,
+    @Body(new ZodValidationPipe(UpdateProductSchema))
+    updateProductDto: UpdateProductDto,
     @Req() req: AuthRequest,
   ): Promise<ProductResponseDto> {
     const userId = getUserIdFromSession(getUserSession(req));
