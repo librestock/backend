@@ -100,17 +100,6 @@ export class ProductsService {
       throw new BadRequestException('A product with this SKU already exists');
     }
 
-    // Validate price >= cost
-    if (
-      createProductDto.standard_price &&
-      createProductDto.standard_cost &&
-      createProductDto.standard_price < createProductDto.standard_cost
-    ) {
-      throw new BadRequestException(
-        'Standard price must be greater than or equal to standard cost',
-      );
-    }
-
     const entityData = toCreateProductEntity(createProductDto, userId);
     const product = await this.productRepository.create(entityData);
 
@@ -214,15 +203,6 @@ export class ProductsService {
       if (existingSku) {
         throw new BadRequestException('A product with this SKU already exists');
       }
-    }
-
-    // Validate price >= cost (considering both existing and new values)
-    const newCost = updateProductDto.standard_cost ?? product.standard_cost;
-    const newPrice = updateProductDto.standard_price ?? product.standard_price;
-    if (newCost && newPrice && newPrice < newCost) {
-      throw new BadRequestException(
-        'Standard price must be greater than or equal to standard cost',
-      );
     }
 
     if (Object.keys(updateProductDto).length === 0) {
