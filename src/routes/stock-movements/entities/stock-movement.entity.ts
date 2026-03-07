@@ -22,11 +22,11 @@ import { Order } from '../../orders/entities/order.entity';
 export class StockMovement {
   @ApiProperty({ description: 'Unique identifier', format: 'uuid' })
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @ApiProperty({ description: 'Product ID', format: 'uuid' })
   @Column({ type: 'uuid' })
-  product_id: string;
+  product_id!: string;
 
   @ApiProperty({
     description: 'Product relation',
@@ -34,7 +34,7 @@ export class StockMovement {
   })
   @ManyToOne(() => Product)
   @JoinColumn({ name: 'product_id' })
-  product: Product;
+  product!: Product;
 
   @ApiProperty({
     description: 'Source location ID',
@@ -42,7 +42,7 @@ export class StockMovement {
     nullable: true,
   })
   @Column({ type: 'uuid', nullable: true })
-  from_location_id: string | null;
+  from_location_id!: string | null;
 
   @ApiProperty({
     description: 'Source location relation',
@@ -51,7 +51,7 @@ export class StockMovement {
   })
   @ManyToOne(() => Location, { nullable: true })
   @JoinColumn({ name: 'from_location_id' })
-  fromLocation: Location | null;
+  fromLocation!: Location | null;
 
   @ApiProperty({
     description: 'Destination location ID',
@@ -59,7 +59,7 @@ export class StockMovement {
     nullable: true,
   })
   @Column({ type: 'uuid', nullable: true })
-  to_location_id: string | null;
+  to_location_id!: string | null;
 
   @ApiProperty({
     description: 'Destination location relation',
@@ -68,11 +68,11 @@ export class StockMovement {
   })
   @ManyToOne(() => Location, { nullable: true })
   @JoinColumn({ name: 'to_location_id' })
-  toLocation: Location | null;
+  toLocation!: Location | null;
 
   @ApiProperty({ description: 'Quantity moved' })
   @Column({ type: 'int' })
-  quantity: number;
+  quantity!: number;
 
   @ApiProperty({
     description: 'Reason for the stock movement',
@@ -82,7 +82,7 @@ export class StockMovement {
     type: 'enum',
     enum: StockMovementReason,
   })
-  reason: StockMovementReason;
+  reason!: StockMovementReason;
 
   @ApiProperty({
     description: 'Related order ID',
@@ -90,7 +90,7 @@ export class StockMovement {
     nullable: true,
   })
   @Column({ type: 'uuid', nullable: true })
-  order_id: string | null;
+  order_id!: string | null;
 
   @ApiProperty({
     description: 'Related order relation',
@@ -99,32 +99,32 @@ export class StockMovement {
   })
   @ManyToOne(() => Order, { nullable: true })
   @JoinColumn({ name: 'order_id' })
-  order: Order | null;
+  order!: Order | null;
 
   @ApiProperty({ description: 'Reference number', nullable: true })
   @Column({ type: 'varchar', nullable: true })
-  reference_number: string | null;
+  reference_number!: string | null;
 
   @ApiProperty({ description: 'Cost per unit', type: 'number', nullable: true })
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
-  cost_per_unit: number | null;
+  cost_per_unit!: number | null;
 
   @ApiProperty({ description: 'Kanban task ID', nullable: true })
   @Column({ type: 'varchar', nullable: true })
-  kanban_task_id: string | null;
+  kanban_task_id!: string | null;
 
   @ApiProperty({
     description: 'User ID who performed the movement',
     format: 'uuid',
   })
   @Column({ type: 'uuid' })
-  user_id: string;
+  user_id!: string;
 
   @ApiProperty({ description: 'Additional notes', nullable: true })
   @Column({ type: 'text', nullable: true })
-  notes: string | null;
+  notes!: string | null;
 
   @ApiProperty({ description: 'Creation timestamp' })
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 }

@@ -12,40 +12,40 @@ import { LocationType } from '../../../common/enums/location-type.enum';
 export class Location {
   @ApiProperty({ description: 'Unique identifier', format: 'uuid' })
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @ApiProperty({ description: 'Location name' })
   @Column({ type: 'varchar' })
-  name: string;
+  name!: string;
 
   @ApiProperty({ description: 'Location type', enum: LocationType })
   @Column({
     type: 'enum',
     enum: LocationType,
   })
-  type: LocationType;
+  type!: LocationType;
 
   @ApiProperty({ description: 'Physical address' })
   @Column({ type: 'text', default: '' })
-  address: string;
+  address!: string;
 
   @ApiProperty({ description: 'Contact person name' })
   @Column({ type: 'varchar', default: '' })
-  contact_person: string;
+  contact_person!: string;
 
   @ApiProperty({ description: 'Phone number' })
   @Column({ type: 'varchar', default: '' })
-  phone: string;
+  phone!: string;
 
   @ApiProperty({ description: 'Whether the location is active', default: true })
   @Column({ type: 'boolean', default: true })
-  is_active: boolean;
+  is_active!: boolean;
 
   @ApiProperty({ description: 'Creation timestamp' })
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 
   @ApiProperty({ description: 'Last update timestamp' })
   @UpdateDateColumn({ type: 'timestamptz' })
-  updated_at: Date;
+  updated_at!: Date;
 }

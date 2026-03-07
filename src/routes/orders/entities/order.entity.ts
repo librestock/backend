@@ -21,20 +21,20 @@ import { OrderItem } from './order-item.entity';
 export class Order {
   @ApiProperty({ description: 'Unique identifier', format: 'uuid' })
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @ApiProperty({ description: 'Order number' })
   @Column({ type: 'varchar' })
-  order_number: string;
+  order_number!: string;
 
   @ApiProperty({ description: 'Client ID', format: 'uuid' })
   @Column({ type: 'uuid' })
-  client_id: string;
+  client_id!: string;
 
   @ApiProperty({ description: 'Client relation', type: () => Client })
   @ManyToOne(() => Client)
   @JoinColumn({ name: 'client_id' })
-  client: Client;
+  client!: Client;
 
   @ApiProperty({
     description: 'Order status',
@@ -46,23 +46,23 @@ export class Order {
     enum: OrderStatus,
     default: OrderStatus.DRAFT,
   })
-  status: OrderStatus;
+  status!: OrderStatus;
 
   @ApiProperty({ description: 'Delivery deadline', nullable: true })
   @Column({ type: 'timestamptz', nullable: true })
-  delivery_deadline: Date | null;
+  delivery_deadline!: Date | null;
 
   @ApiProperty({ description: 'Delivery address' })
   @Column({ type: 'text' })
-  delivery_address: string;
+  delivery_address!: string;
 
   @ApiProperty({ description: 'Yacht name', nullable: true })
   @Column({ type: 'varchar', nullable: true })
-  yacht_name: string | null;
+  yacht_name!: string | null;
 
   @ApiProperty({ description: 'Special instructions', nullable: true })
   @Column({ type: 'text', nullable: true })
-  special_instructions: string | null;
+  special_instructions!: string | null;
 
   @ApiProperty({
     description: 'Total order amount',
@@ -70,7 +70,7 @@ export class Order {
     default: 0,
   })
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
-  total_amount: number;
+  total_amount!: number;
 
   @ApiProperty({
     description: 'User ID assigned to this order',
@@ -78,46 +78,46 @@ export class Order {
     nullable: true,
   })
   @Column({ type: 'uuid', nullable: true })
-  assigned_to: string | null;
+  assigned_to!: string | null;
 
   @ApiProperty({ description: 'User ID who created the order', format: 'uuid' })
   @Column({ type: 'uuid' })
-  created_by: string;
+  created_by!: string;
 
   @ApiProperty({
     description: 'Timestamp when order was confirmed',
     nullable: true,
   })
   @Column({ type: 'timestamptz', nullable: true })
-  confirmed_at: Date | null;
+  confirmed_at!: Date | null;
 
   @ApiProperty({
     description: 'Timestamp when order was shipped',
     nullable: true,
   })
   @Column({ type: 'timestamptz', nullable: true })
-  shipped_at: Date | null;
+  shipped_at!: Date | null;
 
   @ApiProperty({
     description: 'Timestamp when order was delivered',
     nullable: true,
   })
   @Column({ type: 'timestamptz', nullable: true })
-  delivered_at: Date | null;
+  delivered_at!: Date | null;
 
   @ApiProperty({ description: 'Kanban task ID', nullable: true })
   @Column({ type: 'varchar', nullable: true })
-  kanban_task_id: string | null;
+  kanban_task_id!: string | null;
 
   @ApiProperty({ description: 'Creation timestamp' })
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 
   @ApiProperty({ description: 'Order items', type: () => [OrderItem] })
   @OneToMany(() => OrderItem, (item) => item.order)
-  items: OrderItem[];
+  items!: OrderItem[];
 
   @ApiProperty({ description: 'Last update timestamp' })
   @UpdateDateColumn({ type: 'timestamptz' })
-  updated_at: Date;
+  updated_at!: Date;
 }
