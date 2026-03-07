@@ -44,7 +44,7 @@ import { StockMovementHateoas } from './stock-movements.hateoas';
 @ApiBearerAuth()
 @StandardThrottle()
 @UseGuards(PermissionGuard)
-@RequirePermission(Resource.STOCK, Permission.READ)
+@RequirePermission(Resource.STOCK_MOVEMENTS, Permission.READ)
 @Controller()
 export class StockMovementsController {
   constructor(
@@ -125,7 +125,7 @@ export class StockMovementsController {
   }
 
   @Post()
-  @RequirePermission(Resource.STOCK, Permission.WRITE)
+  @RequirePermission(Resource.STOCK_MOVEMENTS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @StockMovementHateoas()
   @Auditable({
