@@ -88,7 +88,7 @@ describe('OrdersService', () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
-      countByPrefix: jest.fn(),
+      getNextOrderNumberSequence: jest.fn(),
       existsById: jest.fn(),
     };
 
@@ -205,7 +205,7 @@ describe('OrdersService', () => {
     it('should create an order with items and calculate total', async () => {
       clientsService.existsById.mockResolvedValue(true);
       productsService.existsById.mockResolvedValue(true);
-      orderRepository.countByPrefix.mockResolvedValue(0);
+      orderRepository.getNextOrderNumberSequence.mockResolvedValue(1);
       orderRepository.create.mockResolvedValue({
         ...mockOrder,
         id: 'new-order',
@@ -223,6 +223,7 @@ describe('OrdersService', () => {
           total_amount: 150,
           status: OrderStatus.DRAFT,
           created_by: 'user-001',
+          order_number: expect.stringMatching(/^ORD-\d{8}-00001$/),
         }),
       );
       expect(orderItemRepository.createMany).toHaveBeenCalledWith(
@@ -249,7 +250,7 @@ describe('OrdersService', () => {
 
       clientsService.existsById.mockResolvedValue(true);
       productsService.existsById.mockResolvedValue(true);
-      orderRepository.countByPrefix.mockResolvedValue(0);
+      orderRepository.getNextOrderNumberSequence.mockResolvedValue(1);
       orderRepository.create.mockResolvedValue(mockOrder);
       orderItemRepository.createMany.mockResolvedValue([]);
       orderRepository.findById.mockResolvedValue(mockOrderWithItems);
@@ -259,6 +260,25 @@ describe('OrdersService', () => {
       expect(orderRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({ total_amount: 80 }),
       );
+    });
+
+    it('should generate order number using sequence value', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-03-10T10:00:00.000Z'));
+      clientsService.existsById.mockResolvedValue(true);
+      productsService.existsById.mockResolvedValue(true);
+      orderRepository.getNextOrderNumberSequence.mockResolvedValue(42);
+      orderRepository.create.mockResolvedValue(mockOrder);
+      orderItemRepository.createMany.mockResolvedValue([]);
+      orderRepository.findById.mockResolvedValue(mockOrderWithItems);
+
+      await service.create(createDto, 'user-001');
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          order_number: 'ORD-20260310-00042',
+        }),
+      );
+      jest.useRealTimers();
     });
 
     it('should throw BadRequestException when client does not exist', async () => {
@@ -284,45 +304,11 @@ describe('OrdersService', () => {
       );
     });
 
-    it('should retry on duplicate order number and succeed', async () => {
-      const duplicateError = Object.assign(new Error('duplicate key'), {
-        code: '23505',
-      });
-      clientsService.existsById.mockResolvedValue(true);
-      productsService.existsById.mockResolvedValue(true);
-      orderRepository.countByPrefix.mockResolvedValue(0);
-      orderRepository.create
-        .mockRejectedValueOnce(duplicateError)
-        .mockResolvedValueOnce({ ...mockOrder, id: 'new-order' });
-      orderItemRepository.createMany.mockResolvedValue([mockOrderItem]);
-      orderRepository.findById.mockResolvedValue(mockOrderWithItems);
-
-      const result = await service.create(createDto, 'user-001');
-
-      expect(result.id).toBe('order-001');
-      expect(orderRepository.create).toHaveBeenCalledTimes(2);
-    });
-
-    it('should throw after exhausting retries on duplicate order number', async () => {
-      const duplicateError = Object.assign(new Error('duplicate key'), {
-        code: '23505',
-      });
-      clientsService.existsById.mockResolvedValue(true);
-      productsService.existsById.mockResolvedValue(true);
-      orderRepository.countByPrefix.mockResolvedValue(0);
-      orderRepository.create.mockRejectedValue(duplicateError);
-
-      await expect(service.create(createDto, 'user-001')).rejects.toThrow(
-        duplicateError,
-      );
-      expect(orderRepository.create).toHaveBeenCalledTimes(4);
-    });
-
-    it('should not retry on non-duplicate errors', async () => {
+    it('should propagate repository errors without retrying', async () => {
       const otherError = new Error('connection lost');
       clientsService.existsById.mockResolvedValue(true);
       productsService.existsById.mockResolvedValue(true);
-      orderRepository.countByPrefix.mockResolvedValue(0);
+      orderRepository.getNextOrderNumberSequence.mockResolvedValue(1);
       orderRepository.create.mockRejectedValue(otherError);
 
       await expect(service.create(createDto, 'user-001')).rejects.toThrow(
