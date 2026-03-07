@@ -77,7 +77,8 @@ export class OrdersService {
       0,
     );
 
-    const order = await this.createOrderWithUniqueNumber({
+    const order_number = await this.generateOrderNumber();
+    const order = await this.orderRepository.create({
       client_id: dto.client_id,
       delivery_address: dto.delivery_address,
       delivery_deadline: dto.delivery_deadline
@@ -88,6 +89,7 @@ export class OrdersService {
       total_amount,
       created_by: userId,
       status: OrderStatus.DRAFT,
+      order_number,
     });
 
     const items = dto.items.map((item) => ({
@@ -102,27 +104,6 @@ export class OrdersService {
 
     const orderWithRelations = await this.orderRepository.findById(order.id);
     return toOrderResponseDto(orderWithRelations!);
-  }
-
-  private async createOrderWithUniqueNumber(
-    data: Partial<Order>,
-    maxRetries = 3,
-  ): Promise<Order> {
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      const order_number = await this.generateOrderNumber();
-      try {
-        return await this.orderRepository.create({ ...data, order_number });
-      } catch (error: unknown) {
-        const isUniqueViolation =
-          error instanceof Error &&
-          'code' in error &&
-          (error as { code: string }).code === '23505';
-        if (!isUniqueViolation || attempt === maxRetries) {
-          throw error;
-        }
-      }
-    }
-    throw new BadRequestException('Failed to generate unique order number');
   }
 
   async update(
@@ -200,8 +181,8 @@ export class OrdersService {
   private async generateOrderNumber(): Promise<string> {
     const date = new Date();
     const prefix = `ORD-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
-    const count = await this.orderRepository.countByPrefix(prefix);
-    return `${prefix}-${String(count + 1).padStart(4, '0')}`;
+    const sequence = await this.orderRepository.getNextOrderNumberSequence();
+    return `${prefix}-${String(sequence).padStart(5, '0')}`;
   }
 
   private async getOrderOrFail(id: string): Promise<Order> {
