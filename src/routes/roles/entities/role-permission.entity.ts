@@ -14,23 +14,23 @@ import { RoleEntity } from './role.entity';
 export class RolePermissionEntity {
   @ApiProperty({ description: 'Unique identifier', format: 'uuid' })
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @ApiProperty({ description: 'Role ID', format: 'uuid' })
   @Column({ type: 'uuid' })
-  role_id: string;
+  role_id!: string;
 
   @ApiProperty({ description: 'Resource name', example: 'dashboard' })
   @Column({ type: 'varchar', length: 50 })
-  resource: string;
+  resource!: string;
 
   @ApiProperty({ description: 'Permission type', example: 'read' })
   @Column({ type: 'varchar', length: 20 })
-  permission: string;
+  permission!: string;
 
   @ManyToOne(() => RoleEntity, (role) => role.permissions, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'role_id' })
-  role: RoleEntity;
+  role!: RoleEntity;
 }
