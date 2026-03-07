@@ -6,6 +6,11 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import * as express from 'express';
 import { toNodeHandler } from 'better-auth/node';
+import { DataSource } from 'typeorm';
+import {
+  addTransactionalDataSource,
+  initializeTransactionalContext,
+} from 'typeorm-transactional';
 import { AppModule } from './app.module';
 import { auth } from './auth';
 import { createAuthRateLimitMiddleware } from './common/middleware/auth-rate-limit.middleware';
@@ -25,6 +30,8 @@ import { Supplier } from './routes/suppliers/entities/supplier.entity';
 const VALID_NODE_ENVS = ['development', 'staging', 'production'];
 
 async function bootstrap() {
+  initializeTransactionalContext();
+
   const nodeEnv = process.env.NODE_ENV ?? 'development';
   if (!VALID_NODE_ENVS.includes(nodeEnv)) {
     throw new Error(
@@ -37,6 +44,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bodyParser: false,
   });
+  addTransactionalDataSource(app.get(DataSource));
+
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 
