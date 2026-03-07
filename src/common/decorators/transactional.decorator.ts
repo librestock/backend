@@ -1,9 +1,4 @@
-import { SetMetadata } from '@nestjs/common';
-
-/**
- * Metadata key for transactional decorator
- */
-export const TRANSACTIONAL_KEY = 'transactional';
+import { Transactional as TypeOrmTransactional } from 'typeorm-transactional';
 
 /**
  * Decorator to mark methods that should run within a database transaction
@@ -17,7 +12,6 @@ export const TRANSACTIONAL_KEY = 'transactional';
  * }
  * ```
  *
- * The transaction interceptor will automatically wrap the method execution
- * in a TypeORM transaction using the DataSource's transaction method.
+ * Uses AsyncLocalStorage-backed transaction propagation via `typeorm-transactional`.
  */
-export const Transactional = () => SetMetadata(TRANSACTIONAL_KEY, true);
+export const Transactional = (): MethodDecorator => TypeOrmTransactional();

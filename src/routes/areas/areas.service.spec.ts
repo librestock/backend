@@ -1,6 +1,11 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { type DataSource } from 'typeorm';
 import { LocationType } from 'src/common/enums';
+import {
+  setupTransactionalTestContext,
+  teardownTransactionalTestContext,
+} from 'src/test-utils/transactional-test-context';
 import { LocationsService } from '../locations/locations.service';
 import { type Location } from '../locations/entities/location.entity';
 import { AreasService } from './areas.service';
@@ -11,6 +16,7 @@ describe('AreasService', () => {
   let service: AreasService;
   let areaRepository: jest.Mocked<AreaRepository>;
   let locationsService: jest.Mocked<LocationsService>;
+  let transactionalDataSource: DataSource | null = null;
 
   const mockLocation: Location = {
     id: 'location-001',
@@ -53,6 +59,14 @@ describe('AreasService', () => {
     parent: mockArea,
     children: [],
   };
+
+  beforeAll(async () => {
+    transactionalDataSource = await setupTransactionalTestContext();
+  });
+
+  afterAll(async () => {
+    await teardownTransactionalTestContext(transactionalDataSource);
+  });
 
   beforeEach(async () => {
     const mockAreaRepository = {
