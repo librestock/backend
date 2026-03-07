@@ -1,128 +1,111 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { PaginatedRepository } from '../../common/repositories/paginated.repository';
+import {
+  type QuerySpec,
+  type RepositoryPaginatedResult,
+} from '../../common/utils/query-spec.utils';
 import { Product } from './entities/product.entity';
 import { ProductQueryDto, ProductSortField, SortOrder } from './dto';
 
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  total_pages: number;
-}
+export type PaginatedResult<T> = RepositoryPaginatedResult<T>;
+
+const productFilterSpec: QuerySpec<Product, ProductQueryDto> = (
+  queryBuilder,
+  query,
+) => {
+  if (!query.include_deleted) {
+    queryBuilder.where('product.deleted_at IS NULL');
+  }
+
+  if (query.search) {
+    queryBuilder.andWhere(
+      '(product.name ILIKE :search OR product.sku ILIKE :search)',
+      { search: `%${query.search}%` },
+    );
+  }
+
+  if (query.category_id) {
+    queryBuilder.andWhere('product.category_id = :category_id', {
+      category_id: query.category_id,
+    });
+  }
+
+  if (query.primary_supplier_id) {
+    queryBuilder.andWhere(
+      'product.primary_supplier_id = :primary_supplier_id',
+      { primary_supplier_id: query.primary_supplier_id },
+    );
+  }
+
+  if (query.is_active !== undefined) {
+    queryBuilder.andWhere('product.is_active = :is_active', {
+      is_active: query.is_active,
+    });
+  }
+
+  if (query.is_perishable !== undefined) {
+    queryBuilder.andWhere('product.is_perishable = :is_perishable', {
+      is_perishable: query.is_perishable,
+    });
+  }
+
+  if (query.min_price !== undefined && query.max_price !== undefined) {
+    queryBuilder.andWhere(
+      'product.standard_price BETWEEN :min_price AND :max_price',
+      { min_price: query.min_price, max_price: query.max_price },
+    );
+  } else if (query.min_price !== undefined) {
+    queryBuilder.andWhere('product.standard_price >= :min_price', {
+      min_price: query.min_price,
+    });
+  } else if (query.max_price !== undefined) {
+    queryBuilder.andWhere('product.standard_price <= :max_price', {
+      max_price: query.max_price,
+    });
+  }
+};
+
+const productSortSpec: QuerySpec<Product, ProductQueryDto> = (
+  queryBuilder,
+  query,
+) => {
+  const sortBy = query.sort_by ?? ProductSortField.NAME;
+  const sortOrder = query.sort_order ?? SortOrder.ASC;
+  queryBuilder.orderBy(`product.${sortBy}`, sortOrder);
+};
 
 @Injectable()
-export class ProductRepository {
+export class ProductRepository extends PaginatedRepository<
+  Product,
+  ProductQueryDto
+> {
   constructor(
     @InjectRepository(Product)
-    private readonly repository: Repository<Product>,
-  ) {}
+    repository: Repository<Product>,
+  ) {
+    super(repository);
+  }
+
+  protected createPaginatedQueryBuilder() {
+    return this.repository
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.category', 'category')
+      .leftJoinAndSelect('product.primary_supplier', 'supplier');
+  }
+
+  protected getPaginatedQuerySpecs(): readonly QuerySpec<
+    Product,
+    ProductQueryDto
+  >[] {
+    return [productFilterSpec, productSortSpec];
+  }
 
   async findAllPaginated(
     query: ProductQueryDto,
   ): Promise<PaginatedResult<Product>> {
-    const {
-      page = 1,
-      limit = 20,
-      search,
-      category_id,
-      primary_supplier_id,
-      is_active,
-      is_perishable,
-      min_price,
-      max_price,
-      include_deleted = false,
-      sort_by = ProductSortField.NAME,
-      sort_order = SortOrder.ASC,
-    } = query;
-
-    const skip = (page - 1) * limit;
-
-    const queryBuilder = this.repository.createQueryBuilder('product');
-
-    // Handle soft delete
-    if (!include_deleted) {
-      queryBuilder.where('product.deleted_at IS NULL');
-    }
-
-    // Search filter
-    if (search) {
-      queryBuilder.andWhere(
-        '(product.name ILIKE :search OR product.sku ILIKE :search)',
-        { search: `%${search}%` },
-      );
-    }
-
-    // Category filter
-    if (category_id) {
-      queryBuilder.andWhere('product.category_id = :category_id', {
-        category_id,
-      });
-    }
-
-    // Supplier filter
-    if (primary_supplier_id) {
-      queryBuilder.andWhere(
-        'product.primary_supplier_id = :primary_supplier_id',
-        {
-          primary_supplier_id,
-        },
-      );
-    }
-
-    // Active status filter
-    if (is_active !== undefined) {
-      queryBuilder.andWhere('product.is_active = :is_active', { is_active });
-    }
-
-    // Perishable filter
-    if (is_perishable !== undefined) {
-      queryBuilder.andWhere('product.is_perishable = :is_perishable', {
-        is_perishable,
-      });
-    }
-
-    // Price range filter
-    if (min_price !== undefined && max_price !== undefined) {
-      queryBuilder.andWhere(
-        'product.standard_price BETWEEN :min_price AND :max_price',
-        { min_price, max_price },
-      );
-    } else if (min_price !== undefined) {
-      queryBuilder.andWhere('product.standard_price >= :min_price', {
-        min_price,
-      });
-    } else if (max_price !== undefined) {
-      queryBuilder.andWhere('product.standard_price <= :max_price', {
-        max_price,
-      });
-    }
-
-    // Join relations for nested data
-    queryBuilder
-      .leftJoinAndSelect('product.category', 'category')
-      .leftJoinAndSelect('product.primary_supplier', 'supplier');
-
-    // Sorting
-    const sortColumn = `product.${sort_by}`;
-    queryBuilder.orderBy(sortColumn, sort_order);
-
-    // Get total count
-    const total = await queryBuilder.getCount();
-
-    // Apply pagination
-    queryBuilder.skip(skip).take(limit);
-
-    const data = await queryBuilder.getMany();
-
-    return {
-      data,
-      total,
-      page,
-      limit,
-      total_pages: Math.ceil(total / limit),
-    };
+    return this.runPaginatedQuery(query);
   }
 
   async findAll(includeDeleted = false): Promise<Product[]> {
