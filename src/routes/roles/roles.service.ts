@@ -27,7 +27,7 @@ interface CacheEntry {
 @Injectable()
 export class RolesService {
   private readonly logger = new Logger(RolesService.name);
-  private readonly CACHE_TTL_MS = 60_000;
+  private readonly CACHE_TTL_MS = 10_000;
   private cache = new Map<string, CacheEntry>();
 
   constructor(
@@ -85,12 +85,18 @@ export class RolesService {
     if (dto.description !== undefined)
       updateData.description = dto.description ?? null;
 
+    const roleNameChanged = updateData.name !== undefined;
     if (Object.keys(updateData).length > 0) {
       await this.rolesRepository.update(id, updateData);
     }
 
+    let shouldClearCache = roleNameChanged;
     if (dto.permissions !== undefined) {
       await this.rolesRepository.replacePermissions(id, dto.permissions);
+      shouldClearCache = true;
+    }
+
+    if (shouldClearCache) {
       this.clearAllCache();
     }
 
