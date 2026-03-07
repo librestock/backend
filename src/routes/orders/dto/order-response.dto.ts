@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { OrderStatus, type OrderResponseType as OrderResponseTypeShape, type OrderItemResponseType as OrderItemResponseTypeShape } from '@librestock/types/orders'
+import { OrderStatus, type OrderResponseDto as OrderResponseDtoShape, type OrderItemResponseDto as OrderItemResponseDtoShape } from '@librestock/types/orders'
 import { BaseResponseDto } from '../../../common/dto/base-response.dto';
 
 export class OrderItemResponseDto
   extends BaseResponseDto
-  implements OrderItemResponseTypeShape
+  implements OrderItemResponseDtoShape
 {
   @ApiProperty({ description: 'Unique identifier', format: 'uuid' })
   id: string;
@@ -39,7 +39,7 @@ export class OrderItemResponseDto
 
 export class OrderResponseDto
   extends BaseResponseDto
-  implements OrderResponseTypeShape
+  implements OrderResponseDtoShape
 {
   @ApiProperty({ description: 'Unique identifier', format: 'uuid' })
   id: string;
