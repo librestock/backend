@@ -1,10 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { AreaSummaryDto as AreaSummaryDtoShape, InventoryResponseDto as InventoryResponseDtoShape, LocationSummaryDto as LocationSummaryDtoShape, ProductSummaryDto as ProductSummaryDtoShape } from '@librestock/types/inventory'
+import type {
+  AreaId,
+  InventoryId,
+  LocationId,
+  ProductId,
+} from '@librestock/types/common'
+import type {
+  AreaSummaryDto as AreaSummaryDtoShape,
+  InventoryResponseDto as InventoryResponseDtoShape,
+  LocationSummaryDto as LocationSummaryDtoShape,
+  ProductSummaryDto as ProductSummaryDtoShape,
+} from '@librestock/types/inventory'
 import { BaseResponseDto } from '../../../common/dto/base-response.dto';
 
 export class ProductSummaryDto implements ProductSummaryDtoShape {
   @ApiProperty({ description: 'Product ID', format: 'uuid' })
-  id: string;
+  id: ProductId;
 
   @ApiProperty({ description: 'Product SKU' })
   sku: string;
@@ -18,7 +29,7 @@ export class ProductSummaryDto implements ProductSummaryDtoShape {
 
 export class LocationSummaryDto implements LocationSummaryDtoShape {
   @ApiProperty({ description: 'Location ID', format: 'uuid' })
-  id: string;
+  id: LocationId;
 
   @ApiProperty({ description: 'Location name' })
   name: string;
@@ -29,7 +40,7 @@ export class LocationSummaryDto implements LocationSummaryDtoShape {
 
 export class AreaSummaryDto implements AreaSummaryDtoShape {
   @ApiProperty({ description: 'Area ID', format: 'uuid' })
-  id: string;
+  id: AreaId;
 
   @ApiProperty({ description: 'Area name' })
   name: string;
@@ -47,13 +58,13 @@ export class InventoryResponseDto
     format: 'uuid',
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
-  id: string;
+  id: InventoryId;
 
   @ApiProperty({
     description: 'Product ID',
     format: 'uuid',
   })
-  product_id: string;
+  product_id: ProductId;
 
   @ApiProperty({
     description: 'Product details',
@@ -66,7 +77,7 @@ export class InventoryResponseDto
     description: 'Location ID',
     format: 'uuid',
   })
-  location_id: string;
+  location_id: LocationId;
 
   @ApiProperty({
     description: 'Location details',
@@ -80,7 +91,7 @@ export class InventoryResponseDto
     format: 'uuid',
     nullable: true,
   })
-  area_id: string | null;
+  area_id: AreaId | null;
 
   @ApiProperty({
     description: 'Area details',
