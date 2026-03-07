@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { LocationType } from '@librestock/types';
+import { LocationType } from '@librestock/types/locations'
 import { type Area } from '../../routes/areas/entities/area.entity';
 import { Inventory } from '../../routes/inventory/entities/inventory.entity';
 import { type Location } from '../../routes/locations/entities/location.entity';

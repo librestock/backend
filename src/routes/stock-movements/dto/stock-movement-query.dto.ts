@@ -9,10 +9,7 @@ import {
   Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import {
-  StockMovementReason,
-  type StockMovementQueryDto as StockMovementQueryDtoShape,
-} from '@librestock/types';
+import { StockMovementReason, type StockMovementQueryDto as StockMovementQueryDtoShape } from '@librestock/types/stock-movements'
 
 export class StockMovementQueryDto implements StockMovementQueryDtoShape {
   @ApiProperty({

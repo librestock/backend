@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, IsEnum, IsNumber, Min, Max } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { ClientStatus } from '@librestock/types';
-import type { ClientQueryDto as ClientQueryDtoShape } from '@librestock/types';
+import { ClientStatus } from '@librestock/types/clients'
+import type { ClientQueryDto as ClientQueryDtoShape } from '@librestock/types/clients'
 
 export class ClientQueryDto implements ClientQueryDtoShape {
   @ApiProperty({

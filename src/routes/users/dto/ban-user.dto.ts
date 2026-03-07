@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, IsDateString } from 'class-validator';
-import { type BanUserDto as BanUserDtoShape } from '@librestock/types';
+import type { BanUserDto as BanUserDtoShape } from '@librestock/types/users'
 
 export class BanUserDto implements BanUserDtoShape {
   @ApiProperty({ description: 'Reason for banning', required: false })

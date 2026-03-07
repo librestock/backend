@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ErrorType, type ErrorResponseDto as ErrorResponseDtoShape } from '@librestock/types';
+import { ErrorType, type ErrorResponseDto as ErrorResponseDtoShape } from '@librestock/types/common'
 
 export { ErrorType };
 

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { AreaResponseDto as AreaResponseDtoShape } from '@librestock/types';
+import type { AreaResponseDto as AreaResponseDtoShape } from '@librestock/types/areas'
 import { BaseResponseDto } from '../../../common/dto/base-response.dto';
 
 export class AreaResponseDto

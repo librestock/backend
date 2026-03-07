@@ -7,8 +7,8 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import type { CreateLocationDto as CreateLocationDtoShape } from '@librestock/types';
-import { LocationType } from '@librestock/types';
+import type { CreateLocationDto as CreateLocationDtoShape } from '@librestock/types/locations'
+import { LocationType } from '@librestock/types/locations'
 
 export class CreateLocationDto implements CreateLocationDtoShape {
   @ApiProperty({

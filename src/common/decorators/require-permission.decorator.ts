@@ -1,5 +1,5 @@
 import { SetMetadata } from '@nestjs/common';
-import type { Resource, Permission } from '@librestock/types';
+import type { Resource, Permission } from '@librestock/types/auth'
 
 export const PERMISSION_KEY = 'required_permission';
 

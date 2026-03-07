@@ -1,1 +1,1 @@
-export { AuditEntityType } from '@librestock/types';
+export { AuditEntityType } from '@librestock/types/audit-logs';

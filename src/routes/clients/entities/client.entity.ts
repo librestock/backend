@@ -5,7 +5,7 @@ import {
   Index,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { ClientStatus } from '@librestock/types';
+import { ClientStatus } from '@librestock/types/clients'
 import { BaseEntity } from '../../../common/entities/base.entity';
 
 @Entity('clients')

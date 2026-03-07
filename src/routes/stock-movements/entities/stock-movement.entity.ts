@@ -8,7 +8,7 @@ import {
   Index,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { StockMovementReason } from '@librestock/types';
+import { StockMovementReason } from '@librestock/types/stock-movements'
 import { Product } from '../../products/entities/product.entity';
 import { Location } from '../../locations/entities/location.entity';
 import { Order } from '../../orders/entities/order.entity';

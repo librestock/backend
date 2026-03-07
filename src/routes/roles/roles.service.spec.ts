@@ -5,7 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { Permission, Resource } from '@librestock/types';
+import { Permission, Resource } from '@librestock/types/auth'
 import { RolesService } from './roles.service';
 import { RolesRepository } from './roles.repository';
 import { type RoleEntity } from './entities/role.entity';

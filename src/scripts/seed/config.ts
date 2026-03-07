@@ -1,4 +1,4 @@
-import { LocationType } from '@librestock/types';
+import { LocationType } from '@librestock/types/locations'
 import { DataSource } from 'typeorm';
 import { Area } from '../../routes/areas/entities/area.entity';
 import { AuditLog } from '../../routes/audit-logs/entities/audit-log.entity';

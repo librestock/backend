@@ -117,6 +117,23 @@ export class InventoryRepository {
       .getMany();
   }
 
+  async countLowStock(): Promise<number> {
+    return this.repository
+      .createQueryBuilder('inventory')
+      .leftJoin('inventory.product', 'product')
+      .where('inventory.quantity <= product.reorder_point')
+      .getCount();
+  }
+
+  async countExpiringSoon(): Promise<number> {
+    return this.repository
+      .createQueryBuilder('inventory')
+      .where('inventory.expiry_date IS NOT NULL')
+      .andWhere('inventory.expiry_date > NOW()')
+      .andWhere('inventory.expiry_date <= NOW() + INTERVAL \'30 days\'')
+      .getCount();
+  }
+
   async findById(id: string): Promise<Inventory | null> {
     return this.repository
       .createQueryBuilder('inventory')

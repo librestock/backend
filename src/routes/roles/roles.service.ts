@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { Permission, Resource } from '@librestock/types';
+import { Permission, Resource } from '@librestock/types/auth'
 import { RolesRepository } from './roles.repository';
 import { RoleEntity } from './entities/role.entity';
 import type { CreateRoleDto } from './dto/create-role.dto';

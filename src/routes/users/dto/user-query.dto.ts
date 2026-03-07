@@ -7,7 +7,7 @@ import {
   Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import type { UserQueryDto as UserQueryDtoShape } from '@librestock/types';
+import type { UserQueryDto as UserQueryDtoShape } from '@librestock/types/users'
 
 export class UserQueryDto implements UserQueryDtoShape {
   @ApiProperty({

@@ -21,7 +21,7 @@ import {
   ApiTags,
   ApiBody,
 } from '@nestjs/swagger';
-import { Permission, Resource } from '@librestock/types';
+import { Permission, Resource } from '@librestock/types/auth'
 import { type Response } from 'express';
 import { RequirePermission } from '../../common/decorators';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';

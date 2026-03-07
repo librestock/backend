@@ -1,10 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  AuditAction,
-  AuditEntityType,
-  type AuditChanges,
-  type AuditLogResponseDto as AuditLogResponseDtoShape,
-} from '@librestock/types';
+import { AuditAction, AuditEntityType, type AuditChanges, type AuditLogResponseDto as AuditLogResponseDtoShape } from '@librestock/types/audit-logs'
 
 export class AuditLogResponseDto implements AuditLogResponseDtoShape {
   @ApiProperty({

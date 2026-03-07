@@ -13,10 +13,7 @@ import {
   IsDateString,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
-import type {
-  CreateOrderType as CreateOrderTypeShape,
-  CreateOrderItemType as CreateOrderItemTypeShape,
-} from '@librestock/types';
+import type { CreateOrderType as CreateOrderTypeShape, CreateOrderItemType as CreateOrderItemTypeShape } from '@librestock/types/orders'
 
 export class CreateOrderItemDto implements CreateOrderItemTypeShape {
   @ApiProperty({ description: 'Product ID', format: 'uuid' })

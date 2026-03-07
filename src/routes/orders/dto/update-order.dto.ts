@@ -7,7 +7,7 @@ import {
   IsDateString,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import type { UpdateOrderType as UpdateOrderTypeShape } from '@librestock/types';
+import type { UpdateOrderType as UpdateOrderTypeShape } from '@librestock/types/orders'
 
 export class UpdateOrderDto implements UpdateOrderTypeShape {
   @ApiProperty({ description: 'Delivery address', required: false })

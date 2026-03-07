@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, MaxLength, Matches, IsUrl, ValidateIf } from 'class-validator';
-import type { UpdateBrandingDto as UpdateBrandingDtoShape } from '@librestock/types';
+import type { UpdateBrandingDto as UpdateBrandingDtoShape } from '@librestock/types/branding'
 
 export class UpdateBrandingDto implements UpdateBrandingDtoShape {
   @ApiPropertyOptional({ description: 'Application name', maxLength: 100 })

@@ -9,11 +9,7 @@ import {
   Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import {
-  AuditAction,
-  AuditEntityType,
-  type AuditLogQueryDto as AuditLogQueryDtoShape,
-} from '@librestock/types';
+import { AuditAction, AuditEntityType, type AuditLogQueryDto as AuditLogQueryDtoShape } from '@librestock/types/audit-logs'
 
 export class AuditLogQueryDto implements AuditLogQueryDtoShape {
   @ApiProperty({

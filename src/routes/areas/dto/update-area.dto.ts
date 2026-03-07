@@ -6,7 +6,7 @@ import {
   IsBoolean,
   MaxLength,
 } from 'class-validator';
-import type { UpdateAreaDto as UpdateAreaDtoShape } from '@librestock/types';
+import type { UpdateAreaDto as UpdateAreaDtoShape } from '@librestock/types/areas'
 
 export class UpdateAreaDto implements UpdateAreaDtoShape {
   @ApiProperty({
