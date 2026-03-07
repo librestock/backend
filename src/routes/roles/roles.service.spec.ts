@@ -276,6 +276,31 @@ describe('RolesService', () => {
       );
     });
 
+    it('should clear all cache when role name changes', async () => {
+      rolesRepository.findById
+        .mockResolvedValueOnce(mockCustomRole)
+        .mockResolvedValueOnce({
+          ...mockCustomRole,
+          name: 'Updated Role Name',
+        } as RoleEntity);
+      rolesRepository.findByName.mockResolvedValue(null);
+      rolesRepository.update.mockResolvedValue(undefined);
+
+      dataSource.query.mockResolvedValue([
+        {
+          role_name: 'Custom Role',
+          resource: Resource.PRODUCTS,
+          permission: Permission.READ,
+        },
+      ]);
+      await service.getPermissionsForUser('user-1');
+
+      await service.update('role-2', { name: 'Updated Role Name' });
+      await service.getPermissionsForUser('user-1');
+
+      expect(dataSource.query).toHaveBeenCalledTimes(2);
+    });
+
     it('should not call update when no name or description changes', async () => {
       rolesRepository.findById
         .mockResolvedValueOnce(mockCustomRole)
@@ -396,7 +421,7 @@ describe('RolesService', () => {
 
       // Simulate cache expiration by manipulating Date.now
       const realDateNow = Date.now;
-      Date.now = jest.fn(() => realDateNow() + 61_000); // 61 seconds later
+      Date.now = jest.fn(() => realDateNow() + 11_000); // 11 seconds later
 
       try {
         await service.getPermissionsForUser('user-1');
