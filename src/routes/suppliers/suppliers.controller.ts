@@ -42,7 +42,7 @@ import { SupplierHateoas, DeleteSupplierHateoas } from './suppliers.hateoas';
 @ApiBearerAuth()
 @StandardThrottle()
 @UseGuards(PermissionGuard)
-@RequirePermission(Resource.STOCK, Permission.READ)
+@RequirePermission(Resource.SUPPLIERS, Permission.READ)
 @Controller()
 export class SuppliersController {
   constructor(private readonly suppliersService: SuppliersService) {}
@@ -78,7 +78,7 @@ export class SuppliersController {
   }
 
   @Post()
-  @RequirePermission(Resource.STOCK, Permission.WRITE)
+  @RequirePermission(Resource.SUPPLIERS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @SupplierHateoas()
   @Auditable({
@@ -97,7 +97,7 @@ export class SuppliersController {
   }
 
   @Put(':id')
-  @RequirePermission(Resource.STOCK, Permission.WRITE)
+  @RequirePermission(Resource.SUPPLIERS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @SupplierHateoas()
   @Auditable({
@@ -119,7 +119,7 @@ export class SuppliersController {
   }
 
   @Delete(':id')
-  @RequirePermission(Resource.STOCK, Permission.WRITE)
+  @RequirePermission(Resource.SUPPLIERS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @DeleteSupplierHateoas()
   @Auditable({
