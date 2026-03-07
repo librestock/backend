@@ -21,7 +21,6 @@ import { OrdersModule } from './routes/orders/orders.module';
 import { PhotosModule } from './routes/photos/photos.module';
 import { SuppliersModule } from './routes/suppliers/suppliers.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import { TransactionInterceptor } from './common/interceptors/transaction.interceptor';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { ThrottlerExceptionFilter } from './common/filters/throttler-exception.filter';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
@@ -84,10 +83,6 @@ import { auth } from './auth';
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: TransactionInterceptor,
     },
     // APP_FILTER providers run in reverse registration order:
     // ThrottlerExceptionFilter runs first, GlobalExceptionFilter is the fallback.
