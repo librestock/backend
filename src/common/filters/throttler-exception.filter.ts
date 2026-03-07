@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ThrottlerException } from '@nestjs/throttler';
 import { Response } from 'express';
+import { ErrorCode } from '@librestock/types/common'
 
 /**
  * Custom exception filter for throttler errors
@@ -23,6 +24,7 @@ export class ThrottlerExceptionFilter implements ExceptionFilter {
     response.status(status).json({
       statusCode: status,
       error: 'Too Many Requests',
+      code: ErrorCode.RATE_LIMIT_EXCEEDED,
       message:
         'Rate limit exceeded. Please slow down your requests and try again later.',
       path: request.url,

@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { ErrorCode } from '@librestock/types/common'
 import {
   PERMISSION_KEY,
   type RequiredPermission,
@@ -39,7 +40,10 @@ export class PermissionGuard implements CanActivate {
     const userId = session?.user?.id;
 
     if (!userId) {
-      throw new ForbiddenException('Insufficient permissions');
+      throw new ForbiddenException({
+        code: ErrorCode.PERMISSION_DENIED,
+        message: 'Insufficient permissions',
+      });
     }
 
     try {
@@ -51,7 +55,10 @@ export class PermissionGuard implements CanActivate {
         resourcePerms?.includes(required.permission) ?? false;
 
       if (!hasPermission) {
-        throw new ForbiddenException('Insufficient permissions');
+        throw new ForbiddenException({
+          code: ErrorCode.PERMISSION_DENIED,
+          message: 'Insufficient permissions',
+        });
       }
 
       return true;
@@ -61,9 +68,10 @@ export class PermissionGuard implements CanActivate {
       }
 
       this.logger.error('Failed to resolve permissions', error);
-      throw new InternalServerErrorException(
-        'Failed to resolve user permissions',
-      );
+      throw new InternalServerErrorException({
+        code: ErrorCode.INTERNAL_SERVER_ERROR,
+        message: 'Failed to resolve user permissions',
+      });
     }
   }
 }
