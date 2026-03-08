@@ -1,5 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { type DataSource } from 'typeorm';
+import {
+  setupTransactionalTestContext,
+  teardownTransactionalTestContext,
+} from 'src/test-utils/transactional-test-context';
 import { CategoriesService } from '../categories/categories.service';
 import { type Category } from '../categories/entities/category.entity';
 import { ProductsService } from './products.service';
@@ -11,6 +16,7 @@ describe('ProductsService', () => {
   let service: ProductsService;
   let productRepository: jest.Mocked<ProductRepository>;
   let categoriesService: jest.Mocked<CategoriesService>;
+  let transactionalDataSource: DataSource | null = null;
 
   const mockCategory: Category = {
     id: '550e8400-e29b-41d4-a716-446655440000',
@@ -53,6 +59,14 @@ describe('ProductsService', () => {
     primary_supplier: null,
     photos: [],
   };
+
+  beforeAll(async () => {
+    transactionalDataSource = await setupTransactionalTestContext();
+  });
+
+  afterAll(async () => {
+    await teardownTransactionalTestContext(transactionalDataSource);
+  });
 
   beforeEach(async () => {
     const mockProductRepository = {
