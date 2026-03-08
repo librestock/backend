@@ -34,12 +34,12 @@ Before starting work on any issue, ensure it is added to the **[LibreStock Impro
 Follow existing module patterns, but don't forget these easy-to-miss steps:
 
 1. Register module in `app.module.ts` imports **and** `app.routes.ts`
-2. Update shared DTOs/enums in `packages/types/src/<feature>/`
-3. Run `pnpm --filter @librestock/types barrels && pnpm --filter @librestock/types build`
+2. Update shared DTOs/enums in the `librestock/packages` repo under `types/src/<feature>/`
+3. Publish a new `@librestock/types` version and bump this repo's dependency before using the new exports here
 
 ## Adding an endpoint
 
 After adding the controller method + service logic, don't forget:
 
-1. Update shared DTOs/enums in `packages/types` if response/request shapes change
-2. Rebuild types (barrels → build)
+1. Update shared DTOs/enums in the `librestock/packages` repo if response/request shapes change
+2. Publish the updated `@librestock/types` package and bump the dependency here

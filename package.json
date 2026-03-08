@@ -26,7 +26,7 @@
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/typeorm-cli.config.ts"
   },
   "dependencies": {
-    "@librestock/types": "link:../packages/types",
+    "@librestock/types": "1.1.5",
     "@nestjs/common": "^11.1.10",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.10",
@@ -53,8 +53,8 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^10.1.0",
-    "@librestock/eslint-config": "^0.1.0",
-    "@librestock/tsconfig": "^0.1.0",
+    "@librestock/eslint-config": "1.1.5",
+    "@librestock/tsconfig": "1.1.5",
     "@nestjs/cli": "^11.0.14",
     "@nestjs/schematics": "^11.0.9",
     "@nestjs/testing": "^11.1.10",

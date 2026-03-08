@@ -138,8 +138,8 @@ export class RolesService {
     const permMap: Record<string, Set<string>> = {};
 
     for (const row of rows) {
-      permMap[row.resource] ??= new Set();
-      permMap[row.resource].add(row.permission);
+      const permissionsForResource = (permMap[row.resource] ??= new Set());
+      permissionsForResource.add(row.permission);
     }
 
     const permissions: Partial<Record<Resource, Permission[]>> = {};

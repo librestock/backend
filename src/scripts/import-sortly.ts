@@ -79,7 +79,9 @@ function parseDate(dateStr: string): Date | null {
   try {
     // Parse format: "28/08/2025 01:26PM"
     const [datePart, timePart] = dateStr.split(' ');
+    if (!datePart) return null;
     const [day, month, year] = datePart.split('/');
+    if (!day || !month || !year) return null;
 
     // Handle time with AM/PM
     let hours = 0;
@@ -88,6 +90,7 @@ function parseDate(dateStr: string): Date | null {
       const isPM = timePart.toLowerCase().includes('pm');
       const timeOnly = timePart.replace(/[ap]m/i, '');
       const [h, m] = timeOnly.split(':');
+      if (!h || !m) return null;
       hours = Number.parseInt(h);
       minutes = Number.parseInt(m);
 
@@ -229,6 +232,11 @@ async function importSortlyData(
     const rowNum = i + 2; // +2 for header row and 0-indexing
 
     try {
+      if (!record) {
+        stats.skippedTransactions++;
+        continue;
+      }
+
       const sortlyId = record['Sortly ID (SID)'];
       const entryName = record['Entry Name'];
       const folderName = record.Folder;

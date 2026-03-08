@@ -46,7 +46,7 @@ registry.register({
           ? 'workshop'
           : 'warehouse';
 
-      const areaNames = (AREA_TEMPLATES[templateKey] || AREA_TEMPLATES.warehouse)
+      const areaNames = (AREA_TEMPLATES[templateKey] ?? AREA_TEMPLATES.warehouse ?? [])
         .slice(0, SEED_CONFIG.areasPerLocation);
 
       let areaCode = 1;
