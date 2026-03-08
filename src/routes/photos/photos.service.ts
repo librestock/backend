@@ -1,5 +1,5 @@
-import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { access, mkdir, unlink, writeFile } from 'node:fs/promises';
 import {
   Injectable,
   NotFoundException,
@@ -33,11 +33,6 @@ export class PhotosService {
     this.uploadsDir =
       this.configService.get<string>('UPLOADS_DIR') ??
       path.join(process.cwd(), 'uploads', 'photos');
-
-    // Ensure the uploads directory exists
-    if (!fs.existsSync(this.uploadsDir)) {
-      fs.mkdirSync(this.uploadsDir, { recursive: true });
-    }
   }
 
   async uploadPhoto(
@@ -64,23 +59,27 @@ export class PhotosService {
     const uniqueName = `${productId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
     const storagePath = path.join(this.uploadsDir, uniqueName);
 
-    // Write file to disk
-    fs.writeFileSync(storagePath, file.buffer);
+    await this.ensureUploadsDir();
+    await writeFile(storagePath, file.buffer);
 
-    // Get display_order (next after max existing)
-    const existingCount = await this.photoRepository.countByProductId(productId);
+    try {
+      const existingCount = await this.photoRepository.countByProductId(productId);
 
-    const photo = await this.photoRepository.create({
-      product_id: productId,
-      filename: file.originalname,
-      mimetype: file.mimetype,
-      size: file.size,
-      storage_path: storagePath,
-      display_order: existingCount,
-      uploaded_by: userId ?? null,
-    });
+      const photo = await this.photoRepository.create({
+        product_id: productId,
+        filename: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        storage_path: storagePath,
+        display_order: existingCount,
+        uploaded_by: userId ?? null,
+      });
 
-    return toPhotoResponseDto(photo);
+      return toPhotoResponseDto(photo);
+    } catch (error) {
+      await this.safeUnlink(storagePath);
+      throw error;
+    }
   }
 
   async findByProductId(productId: string): Promise<PhotoResponseDto[]> {
@@ -99,7 +98,9 @@ export class PhotosService {
   async getFilePath(id: string): Promise<{ filePath: string; mimetype: string; filename: string }> {
     const photo = await this.findById(id);
 
-    if (!fs.existsSync(photo.storage_path)) {
+    try {
+      await access(photo.storage_path);
+    } catch {
       this.logger.warn(`Photo file not found on disk: ${photo.storage_path}`);
       throw new NotFoundException('Photo file not found on disk');
     }
@@ -114,12 +115,23 @@ export class PhotosService {
   async deletePhoto(id: string): Promise<void> {
     const photo = await this.findById(id);
 
-    // Remove file from disk
-    if (fs.existsSync(photo.storage_path)) {
-      fs.unlinkSync(photo.storage_path);
-    }
+    await this.safeUnlink(photo.storage_path);
 
     await this.photoRepository.delete(id);
+  }
+
+  private async ensureUploadsDir(): Promise<void> {
+    await mkdir(this.uploadsDir, { recursive: true });
+  }
+
+  private async safeUnlink(storagePath: string): Promise<void> {
+    try {
+      await unlink(storagePath);
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error;
+      }
+    }
   }
 
   private getExtFromMime(mimetype: string): string {
