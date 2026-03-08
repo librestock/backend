@@ -9,13 +9,14 @@ import {
   MaxLength,
   IsNumber,
 } from 'class-validator';
+import type { LocationId, OrderId, ProductId } from '@librestock/types/common'
 import type { CreateStockMovementDto as CreateStockMovementDtoShape } from '@librestock/types/stock-movements'
 import { StockMovementReason } from '@librestock/types/stock-movements'
 
 export class CreateStockMovementDto implements CreateStockMovementDtoShape {
   @ApiProperty({ description: 'Product ID', format: 'uuid' })
   @IsUUID()
-  product_id: string;
+  product_id: ProductId;
 
   @ApiProperty({
     description: 'Source location ID',
@@ -24,7 +25,7 @@ export class CreateStockMovementDto implements CreateStockMovementDtoShape {
   })
   @IsOptional()
   @IsUUID()
-  from_location_id?: string;
+  from_location_id?: LocationId;
 
   @ApiProperty({
     description: 'Destination location ID',
@@ -33,7 +34,7 @@ export class CreateStockMovementDto implements CreateStockMovementDtoShape {
   })
   @IsOptional()
   @IsUUID()
-  to_location_id?: string;
+  to_location_id?: LocationId;
 
   @ApiProperty({ description: 'Quantity to move', minimum: 1 })
   @IsInt()
@@ -54,7 +55,7 @@ export class CreateStockMovementDto implements CreateStockMovementDtoShape {
   })
   @IsOptional()
   @IsUUID()
-  order_id?: string;
+  order_id?: OrderId;
 
   @ApiProperty({
     description: 'Reference number',

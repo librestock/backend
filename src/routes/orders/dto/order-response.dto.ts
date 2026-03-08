@@ -1,4 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
+import type {
+  ClientId,
+  OrderId,
+  OrderItemId,
+  ProductId,
+  UserId,
+} from '@librestock/types/common'
 import { OrderStatus, type OrderResponseDto as OrderResponseDtoShape, type OrderItemResponseDto as OrderItemResponseDtoShape } from '@librestock/types/orders'
 import { BaseResponseDto } from '../../../common/dto/base-response.dto';
 
@@ -7,10 +14,10 @@ export class OrderItemResponseDto
   implements OrderItemResponseDtoShape
 {
   @ApiProperty({ description: 'Unique identifier', format: 'uuid' })
-  id: string;
+  id: OrderItemId;
 
   @ApiProperty({ description: 'Product ID', format: 'uuid' })
-  product_id: string;
+  product_id: ProductId;
 
   @ApiProperty({ description: 'Product name', nullable: true })
   product_name: string | null;
@@ -42,13 +49,13 @@ export class OrderResponseDto
   implements OrderResponseDtoShape
 {
   @ApiProperty({ description: 'Unique identifier', format: 'uuid' })
-  id: string;
+  id: OrderId;
 
   @ApiProperty({ description: 'Order number' })
   order_number: string;
 
   @ApiProperty({ description: 'Client ID', format: 'uuid' })
-  client_id: string;
+  client_id: ClientId;
 
   @ApiProperty({ description: 'Client company name', nullable: true })
   client_name: string | null;
@@ -76,10 +83,10 @@ export class OrderResponseDto
     format: 'uuid',
     nullable: true,
   })
-  assigned_to: string | null;
+  assigned_to: UserId | null;
 
   @ApiProperty({ description: 'User ID who created the order', format: 'uuid' })
-  created_by: string;
+  created_by: UserId;
 
   @ApiProperty({ description: 'Confirmed timestamp', nullable: true })
   confirmed_at: Date | null;

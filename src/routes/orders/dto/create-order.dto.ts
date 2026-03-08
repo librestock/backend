@@ -13,12 +13,16 @@ import {
   IsDateString,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
-import type { CreateOrderType as CreateOrderTypeShape, CreateOrderItemType as CreateOrderItemTypeShape } from '@librestock/types/orders'
+import type { ClientId, ProductId } from '@librestock/types/common'
+import type {
+  CreateOrderItemType as CreateOrderItemTypeShape,
+  CreateOrderType as CreateOrderTypeShape,
+} from '@librestock/types/orders'
 
 export class CreateOrderItemDto implements CreateOrderItemTypeShape {
   @ApiProperty({ description: 'Product ID', format: 'uuid' })
   @IsUUID()
-  product_id: string;
+  product_id: ProductId;
 
   @ApiProperty({ description: 'Quantity ordered', minimum: 1 })
   @IsInt()
@@ -39,7 +43,7 @@ export class CreateOrderItemDto implements CreateOrderItemTypeShape {
 export class CreateOrderDto implements CreateOrderTypeShape {
   @ApiProperty({ description: 'Client ID', format: 'uuid' })
   @IsUUID()
-  client_id: string;
+  client_id: ClientId;
 
   @ApiProperty({ description: 'Delivery address' })
   @IsString()

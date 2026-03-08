@@ -3,6 +3,9 @@
   "compilerOptions": {
     "outDir": "./dist",
     "baseUrl": "./",
-    "strictPropertyInitialization": true
+    "paths": {
+      "@librestock/types/*": ["../packages/types/src/*/index.ts"]
+    },
+    "strictPropertyInitialization": false
   }
 }
