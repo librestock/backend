@@ -19,16 +19,16 @@ import { Location } from '../../locations/entities/location.entity';
 export class Area {
   @ApiProperty({ description: 'Unique identifier', format: 'uuid' })
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @ApiProperty({ description: 'Location ID', format: 'uuid' })
   @Column({ type: 'uuid' })
-  location_id: string;
+  location_id!: string;
 
   @ApiProperty({ description: 'Location relation', type: () => Location })
   @ManyToOne(() => Location, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'location_id' })
-  location: Location;
+  location!: Location;
 
   @ApiProperty({
     description: 'Parent area ID (for nested areas)',
@@ -36,44 +36,44 @@ export class Area {
     nullable: true,
   })
   @Column({ type: 'uuid', nullable: true })
-  parent_id: string | null;
+  parent_id!: string | null;
 
   @ManyToOne(() => Area, (area) => area.children, {
     nullable: true,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'parent_id' })
-  parent: Area | null;
+  parent!: Area | null;
 
   @OneToMany(() => Area, (area) => area.parent)
-  children: Area[];
+  children!: Area[];
 
   @ApiProperty({ description: 'Area name', example: 'Zone A' })
   @Column({ type: 'varchar', length: 100 })
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: 'Area code (short identifier)',
     example: 'A1',
   })
   @Column({ type: 'varchar', length: 50, default: '' })
-  code: string;
+  code!: string;
 
   @ApiProperty({
     description: 'Area description',
   })
   @Column({ type: 'text', default: '' })
-  description: string;
+  description!: string;
 
   @ApiProperty({ description: 'Whether the area is active', default: true })
   @Column({ type: 'boolean', default: true })
-  is_active: boolean;
+  is_active!: boolean;
 
   @ApiProperty({ description: 'Creation timestamp' })
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 
   @ApiProperty({ description: 'Last update timestamp' })
   @UpdateDateColumn({ type: 'timestamptz' })
-  updated_at: Date;
+  updated_at!: Date;
 }
