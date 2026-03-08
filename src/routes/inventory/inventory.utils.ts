@@ -1,32 +1,38 @@
 import type { InventoryResponseDto } from './dto';
 import type { Inventory } from './entities/inventory.entity';
+import {
+  asAreaId,
+  asInventoryId,
+  asLocationId,
+  asProductId,
+} from '@librestock/types/common'
 
 export function toInventoryResponseDto(
   inventory: Inventory,
 ): InventoryResponseDto {
   return {
-    id: inventory.id,
-    product_id: inventory.product_id,
+    id: asInventoryId(inventory.id),
+    product_id: asProductId(inventory.product_id),
     product: inventory.product
       ? {
-          id: inventory.product.id,
+          id: asProductId(inventory.product.id),
           sku: inventory.product.sku,
           name: inventory.product.name,
           unit: inventory.product.unit,
         }
       : null,
-    location_id: inventory.location_id,
+    location_id: asLocationId(inventory.location_id),
     location: inventory.location
       ? {
-          id: inventory.location.id,
+          id: asLocationId(inventory.location.id),
           name: inventory.location.name,
           type: inventory.location.type,
         }
       : null,
-    area_id: inventory.area_id,
+    area_id: inventory.area_id ? asAreaId(inventory.area_id) : null,
     area: inventory.area
       ? {
-          id: inventory.area.id,
+          id: asAreaId(inventory.area.id),
           name: inventory.area.name,
           code: inventory.area.code,
         }

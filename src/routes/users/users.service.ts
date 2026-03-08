@@ -86,9 +86,9 @@ export class UsersService {
       image: u.image ?? null,
       roles: rolesByUserId.get(u.id) ?? [],
       banned: u.banned ?? false,
-      banReason: u.banReason ?? null,
-      banExpires: u.banExpires ?? null,
-      createdAt: u.createdAt,
+      ban_reason: u.banReason ?? null,
+      ban_expires: u.banExpires ?? null,
+      created_at: u.createdAt,
     }));
 
     if (query.role) {
@@ -134,9 +134,9 @@ export class UsersService {
       image: user.image ?? null,
       roles: roleEntities.map((re) => re.role.name),
       banned: user.banned ?? false,
-      banReason: user.banReason ?? null,
-      banExpires: user.banExpires ?? null,
-      createdAt: user.createdAt,
+      ban_reason: user.banReason ?? null,
+      ban_expires: user.banExpires ?? null,
+      created_at: user.createdAt,
     };
   }
 

@@ -9,6 +9,7 @@ import {
   Min,
   MaxLength,
 } from 'class-validator';
+import type { AreaId, LocationId } from '@librestock/types/common'
 import type { UpdateInventoryDto as UpdateInventoryDtoShape } from '@librestock/types/inventory'
 
 export class UpdateInventoryDto implements UpdateInventoryDtoShape {
@@ -19,7 +20,7 @@ export class UpdateInventoryDto implements UpdateInventoryDtoShape {
   })
   @IsOptional()
   @IsUUID()
-  location_id?: string;
+  location_id?: LocationId;
 
   @ApiProperty({
     description: 'Area ID (optional, specific placement within location)',
@@ -29,7 +30,7 @@ export class UpdateInventoryDto implements UpdateInventoryDtoShape {
   })
   @IsOptional()
   @IsUUID()
-  area_id?: string | null;
+  area_id?: AreaId | null;
 
   @ApiProperty({
     description: 'Quantity in stock',

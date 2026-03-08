@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { ErrorCode } from '@librestock/types/common'
 import { OrderStatus } from '@librestock/types/orders'
 import { getOrderState } from './order-state';
 
@@ -57,6 +58,14 @@ describe('OrderState', () => {
       expect(() => state.validateTransition(OrderStatus.SHIPPED)).toThrow(
         'Cannot transition from DRAFT to SHIPPED',
       );
+
+      try {
+        state.validateTransition(OrderStatus.SHIPPED);
+      } catch (error) {
+        expect(error).toBeInstanceOf(BadRequestException);
+        const response = (error as BadRequestException).getResponse() as { code?: string };
+        expect(response.code).toBe(ErrorCode.ORDER_INVALID_TRANSITION);
+      }
     });
 
     it('should throw for DELIVERED to any status', () => {

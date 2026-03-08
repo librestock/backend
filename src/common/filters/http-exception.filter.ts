@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { resolveErrorCode } from '../utils/error-code.utils';
 
 const STATUS_NAMES: Record<number, string> = {
   400: 'Bad Request',
@@ -71,10 +72,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const message = isProduction && status >= 500
       ? 'Internal Server Error'
       : rawMessage;
+    const code = resolveErrorCode(status, exceptionResponse, rawMessage);
 
     response.status(status).json({
       statusCode: status,
       error,
+      code,
       message,
       path: request.path,
       timestamp: new Date().toISOString(),

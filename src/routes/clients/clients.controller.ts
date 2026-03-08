@@ -42,7 +42,7 @@ import { ClientHateoas, DeleteClientHateoas } from './clients.hateoas';
 @ApiBearerAuth()
 @StandardThrottle()
 @UseGuards(PermissionGuard)
-@RequirePermission(Resource.STOCK, Permission.READ)
+@RequirePermission(Resource.CLIENTS, Permission.READ)
 @Controller()
 export class ClientsController {
   constructor(private readonly clientsService: ClientsService) {}
@@ -78,7 +78,7 @@ export class ClientsController {
   }
 
   @Post()
-  @RequirePermission(Resource.STOCK, Permission.WRITE)
+  @RequirePermission(Resource.CLIENTS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @ClientHateoas()
   @Auditable({
@@ -98,7 +98,7 @@ export class ClientsController {
   }
 
   @Put(':id')
-  @RequirePermission(Resource.STOCK, Permission.WRITE)
+  @RequirePermission(Resource.CLIENTS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @ClientHateoas()
   @Auditable({
@@ -121,7 +121,7 @@ export class ClientsController {
   }
 
   @Delete(':id')
-  @RequirePermission(Resource.STOCK, Permission.WRITE)
+  @RequirePermission(Resource.CLIENTS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @DeleteClientHateoas()
   @Auditable({

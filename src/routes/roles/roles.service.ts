@@ -165,6 +165,18 @@ export class RolesService {
   }
 
   async seed(): Promise<void> {
+    const stockScopedResources: readonly Resource[] = [
+      Resource.STOCK,
+      Resource.ORDERS,
+      Resource.CLIENTS,
+      Resource.SUPPLIERS,
+      Resource.STOCK_MOVEMENTS,
+    ];
+    const mapStockScopedPermissions = (
+      permission: Permission,
+    ): { resource: Resource; permission: Permission }[] =>
+      stockScopedResources.map((resource) => ({ resource, permission }));
+
     const seedRoles: {
       name: string;
       description: string;
@@ -175,8 +187,8 @@ export class RolesService {
         description: 'Full system access',
         permissions: [
           { resource: Resource.DASHBOARD, permission: Permission.READ },
-          { resource: Resource.STOCK, permission: Permission.READ },
-          { resource: Resource.STOCK, permission: Permission.WRITE },
+          ...mapStockScopedPermissions(Permission.READ),
+          ...mapStockScopedPermissions(Permission.WRITE),
           { resource: Resource.PRODUCTS, permission: Permission.READ },
           { resource: Resource.PRODUCTS, permission: Permission.WRITE },
           { resource: Resource.LOCATIONS, permission: Permission.READ },
@@ -197,8 +209,8 @@ export class RolesService {
         description: 'Manage warehouse operations',
         permissions: [
           { resource: Resource.DASHBOARD, permission: Permission.READ },
-          { resource: Resource.STOCK, permission: Permission.READ },
-          { resource: Resource.STOCK, permission: Permission.WRITE },
+          ...mapStockScopedPermissions(Permission.READ),
+          ...mapStockScopedPermissions(Permission.WRITE),
           { resource: Resource.PRODUCTS, permission: Permission.READ },
           { resource: Resource.PRODUCTS, permission: Permission.WRITE },
           { resource: Resource.LOCATIONS, permission: Permission.READ },
@@ -214,7 +226,7 @@ export class RolesService {
         description: 'Pick and manage inventory',
         permissions: [
           { resource: Resource.DASHBOARD, permission: Permission.READ },
-          { resource: Resource.STOCK, permission: Permission.READ },
+          ...mapStockScopedPermissions(Permission.READ),
           { resource: Resource.PRODUCTS, permission: Permission.READ },
           { resource: Resource.LOCATIONS, permission: Permission.READ },
           { resource: Resource.INVENTORY, permission: Permission.READ },
@@ -228,7 +240,7 @@ export class RolesService {
         description: 'View stock and products',
         permissions: [
           { resource: Resource.DASHBOARD, permission: Permission.READ },
-          { resource: Resource.STOCK, permission: Permission.READ },
+          ...mapStockScopedPermissions(Permission.READ),
           { resource: Resource.PRODUCTS, permission: Permission.READ },
           { resource: Resource.INVENTORY, permission: Permission.READ },
           { resource: Resource.SETTINGS, permission: Permission.READ },
