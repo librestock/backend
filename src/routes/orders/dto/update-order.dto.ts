@@ -7,6 +7,7 @@ import {
   IsDateString,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
+import type { UserId } from '@librestock/types/common'
 import type { UpdateOrderType as UpdateOrderTypeShape } from '@librestock/types/orders'
 
 export class UpdateOrderDto implements UpdateOrderTypeShape {
@@ -43,5 +44,5 @@ export class UpdateOrderDto implements UpdateOrderTypeShape {
   })
   @IsOptional()
   @IsUUID()
-  assigned_to?: string;
+  assigned_to?: UserId;
 }

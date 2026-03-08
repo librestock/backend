@@ -9,6 +9,7 @@ import {
   Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import type { LocationId, ProductId } from '@librestock/types/common'
 import { StockMovementReason, type StockMovementQueryDto as StockMovementQueryDtoShape } from '@librestock/types/stock-movements'
 
 export class StockMovementQueryDto implements StockMovementQueryDtoShape {
@@ -45,7 +46,7 @@ export class StockMovementQueryDto implements StockMovementQueryDtoShape {
   })
   @IsOptional()
   @IsUUID()
-  product_id?: string;
+  product_id?: ProductId;
 
   @ApiProperty({
     description: 'Filter by location ID (matches from or to)',
@@ -54,7 +55,7 @@ export class StockMovementQueryDto implements StockMovementQueryDtoShape {
   })
   @IsOptional()
   @IsUUID()
-  location_id?: string;
+  location_id?: LocationId;
 
   @ApiProperty({
     description: 'Filter by reason',

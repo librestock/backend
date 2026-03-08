@@ -50,7 +50,7 @@ import { OrderHateoas, DeleteOrderHateoas } from './orders.hateoas';
 @ApiBearerAuth()
 @StandardThrottle()
 @UseGuards(PermissionGuard)
-@RequirePermission(Resource.STOCK, Permission.READ)
+@RequirePermission(Resource.ORDERS, Permission.READ)
 @Controller()
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
@@ -86,7 +86,7 @@ export class OrdersController {
   }
 
   @Post()
-  @RequirePermission(Resource.STOCK, Permission.WRITE)
+  @RequirePermission(Resource.ORDERS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @OrderHateoas()
   @Auditable({
@@ -107,7 +107,7 @@ export class OrdersController {
   }
 
   @Put(':id')
-  @RequirePermission(Resource.STOCK, Permission.WRITE)
+  @RequirePermission(Resource.ORDERS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @OrderHateoas()
   @Auditable({
@@ -129,7 +129,7 @@ export class OrdersController {
   }
 
   @Patch(':id/status')
-  @RequirePermission(Resource.STOCK, Permission.WRITE)
+  @RequirePermission(Resource.ORDERS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @OrderHateoas()
   @Auditable({
@@ -154,7 +154,7 @@ export class OrdersController {
   }
 
   @Delete(':id')
-  @RequirePermission(Resource.STOCK, Permission.WRITE)
+  @RequirePermission(Resource.ORDERS, Permission.WRITE)
   @UseInterceptors(HateoasInterceptor, AuditInterceptor)
   @DeleteOrderHateoas()
   @Auditable({
