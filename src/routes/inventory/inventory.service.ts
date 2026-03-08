@@ -234,14 +234,7 @@ export class InventoryService {
     id: string,
     adjustDto: AdjustInventoryDto,
   ): Promise<InventoryResponseDto> {
-    const inventory = await this.getInventoryOrFail(id);
-
-    // Check if adjustment would make quantity negative
-    if (inventory.quantity + adjustDto.adjustment < 0) {
-      throw new BadRequestException(
-        `Cannot adjust quantity by ${adjustDto.adjustment}. Current quantity is ${inventory.quantity}.`,
-      );
-    }
+    await this.getInventoryOrFail(id);
 
     const affected = await this.inventoryRepository.adjustQuantity(
       id,
