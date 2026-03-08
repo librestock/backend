@@ -6,7 +6,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Session, UserSession } from '@thallesp/nestjs-better-auth';
-import { AuthThrottle } from 'src/common/decorators/throttle.decorator';
+import { StandardThrottle } from 'src/common/decorators/throttle.decorator';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import {
   getSessionIdFromSession,
@@ -20,7 +20,9 @@ import { ProfileResponseDto } from './dto/profile-response.dto';
 
 @ApiTags('Auth')
 @ApiBearerAuth()
-@AuthThrottle()
+// These endpoints are authenticated reads, not credential-submission endpoints.
+// Applying the standard API throttle avoids spurious 429s during normal app usage.
+@StandardThrottle()
 @Controller()
 export class AuthController {
   constructor(private readonly rolesService: RolesService) {}
