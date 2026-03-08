@@ -294,8 +294,8 @@ describe('UsersService', () => {
       expect(result.email).toBe('');
       expect(result.image).toBeNull();
       expect(result.banned).toBe(false);
-      expect(result.banReason).toBeNull();
-      expect(result.banExpires).toBeNull();
+      expect(result.ban_reason).toBeNull();
+      expect(result.ban_expires).toBeNull();
     });
   });
 

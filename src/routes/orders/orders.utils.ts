@@ -1,11 +1,18 @@
 import type { OrderResponseDto, OrderItemResponseDto } from './dto';
 import type { Order } from './entities/order.entity';
 import type { OrderItem } from './entities/order-item.entity';
+import {
+  asClientId,
+  asEntityId,
+  asOrderId,
+  asProductId,
+  asUserId,
+} from '@librestock/types/common'
 
 export function toOrderItemResponseDto(item: OrderItem): OrderItemResponseDto {
   return {
-    id: item.id,
-    product_id: item.product_id,
+    id: asEntityId<'OrderItemId'>(item.id),
+    product_id: asProductId(item.product_id),
     product_name: item.product?.name ?? null,
     product_sku: item.product?.sku ?? null,
     quantity: item.quantity,
@@ -21,9 +28,9 @@ export function toOrderItemResponseDto(item: OrderItem): OrderItemResponseDto {
 
 export function toOrderResponseDto(order: Order): OrderResponseDto {
   return {
-    id: order.id,
+    id: asOrderId(order.id),
     order_number: order.order_number,
-    client_id: order.client_id,
+    client_id: asClientId(order.client_id),
     client_name: order.client?.company_name ?? null,
     status: order.status,
     delivery_address: order.delivery_address,
@@ -31,8 +38,8 @@ export function toOrderResponseDto(order: Order): OrderResponseDto {
     yacht_name: order.yacht_name,
     special_instructions: order.special_instructions,
     total_amount: Number(order.total_amount),
-    assigned_to: order.assigned_to,
-    created_by: order.created_by,
+    assigned_to: order.assigned_to ? asUserId(order.assigned_to) : null,
+    created_by: asUserId(order.created_by),
     confirmed_at: order.confirmed_at,
     shipped_at: order.shipped_at,
     delivered_at: order.delivered_at,
