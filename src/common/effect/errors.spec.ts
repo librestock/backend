@@ -10,6 +10,9 @@ import {
 
 describe('Effect domain errors', () => {
   class ProductNotFound extends NotFoundError('ProductNotFound') {}
+  class ProductNotFoundWithId extends NotFoundError(
+    'ProductNotFoundWithId',
+  )<{ readonly id: string }> {}
   class DuplicateSku extends BadRequestError('DuplicateSku') {}
   class SkuConflict extends ConflictError('SkuConflict') {}
   class AccessDenied extends ForbiddenError('AccessDenied') {}
@@ -30,6 +33,17 @@ describe('Effect domain errors', () => {
     expect(error.statusCode).toBe(status);
   });
 
+  it('allows subclasses to add typed payload fields without redefining message', () => {
+    const error = new ProductNotFoundWithId({
+      id: 'product-1',
+      message: 'Product not found',
+    });
+
+    expect(error.id).toBe('product-1');
+    expect(error.message).toBe('Product not found');
+    expect(error.statusCode).toBe(404);
+  });
+
   describe('isAppError', () => {
     it('returns true for domain errors', () => {
       expect(isAppError(new ProductNotFound({ message: 'x' }))).toBe(true);
@@ -37,6 +51,12 @@ describe('Effect domain errors', () => {
 
     it('returns false for plain objects missing fields', () => {
       expect(isAppError({ _tag: 'Foo', message: 'x' })).toBe(false);
+      expect(isAppError({ _tag: 123, message: 'x', statusCode: 400 })).toBe(
+        false,
+      );
+      expect(isAppError({ _tag: 'Foo', message: 123, statusCode: 400 })).toBe(
+        false,
+      );
       expect(isAppError(null)).toBe(false);
       expect(isAppError('string')).toBe(false);
     });

@@ -1,5 +1,23 @@
 import { Data } from 'effect';
 
+type AppErrorFields = {
+  readonly message: string;
+};
+
+type AppErrorInstance<
+  Tag extends string,
+  StatusCode extends number,
+  Fields extends object = {},
+> = AppError<Tag, StatusCode> & Readonly<Fields>;
+
+type AppErrorConstructor<
+  Tag extends string,
+  StatusCode extends number,
+  BaseFields extends object = AppErrorFields,
+> = new <Fields extends object = {}>(
+  args: Readonly<Fields & BaseFields>,
+) => AppErrorInstance<Tag, StatusCode, Fields & BaseFields>;
+
 /**
  * Convention for Effect domain errors in this codebase:
  *
@@ -8,62 +26,64 @@ import { Data } from 'effect';
  * - The `runEffect` bridge reads these to produce the correct NestJS HttpException
  *
  * Usage:
- *   class ProductNotFound extends NotFoundError("ProductNotFound")<{ id: string }> {}
+ *   class ProductNotFound extends NotFoundError("ProductNotFound")<{ readonly id: string }> {}
  *   yield* new ProductNotFound({ id, message: "Product not found" })
  */
-
-// ---------------------------------------------------------------------------
-// Branded factory helpers — produce a TaggedError subclass pre-wired with
-// the correct HTTP status code. Domain modules extend these.
-// ---------------------------------------------------------------------------
-
-export const NotFoundError = <Tag extends string>(tag: Tag) =>
-  class extends Data.TaggedError(tag)<{ readonly message: string }> {
-    readonly statusCode = 404 as const;
-  };
-
-export const BadRequestError = <Tag extends string>(tag: Tag) =>
-  class extends Data.TaggedError(tag)<{ readonly message: string }> {
-    readonly statusCode = 400 as const;
-  };
-
-export const ConflictError = <Tag extends string>(tag: Tag) =>
-  class extends Data.TaggedError(tag)<{ readonly message: string }> {
-    readonly statusCode = 409 as const;
-  };
-
-export const ForbiddenError = <Tag extends string>(tag: Tag) =>
-  class extends Data.TaggedError(tag)<{ readonly message: string }> {
-    readonly statusCode = 403 as const;
-  };
-
-export const UnauthorizedError = <Tag extends string>(tag: Tag) =>
-  class extends Data.TaggedError(tag)<{ readonly message: string }> {
-    readonly statusCode = 401 as const;
-  };
-
-export const InternalError = <Tag extends string>(tag: Tag) =>
-  class extends Data.TaggedError(tag)<{
-    readonly message: string;
-    readonly cause?: unknown;
-  }> {
-    readonly statusCode = 500 as const;
-  };
 
 // ---------------------------------------------------------------------------
 // Type guard used by runEffect to detect our domain errors
 // ---------------------------------------------------------------------------
 
-export interface AppError {
-  readonly _tag: string;
+export interface AppError<
+  Tag extends string = string,
+  StatusCode extends number = number,
+> extends Error {
+  readonly _tag: Tag;
   readonly message: string;
-  readonly statusCode: number;
+  readonly statusCode: StatusCode;
 }
 
-export const isAppError = (u: unknown): u is AppError =>
-  u !== null &&
-  typeof u === 'object' &&
-  '_tag' in u &&
-  'message' in u &&
-  'statusCode' in u &&
-  typeof (u as AppError).statusCode === 'number';
+const isRecord = (value: unknown): value is Record<PropertyKey, unknown> =>
+  value !== null && typeof value === 'object';
+
+export const isAppError = (value: unknown): value is AppError =>
+  isRecord(value) &&
+  typeof value._tag === 'string' &&
+  typeof value.message === 'string' &&
+  typeof value.statusCode === 'number';
+
+// ---------------------------------------------------------------------------
+// Branded factory helpers — produce a TaggedError subclass pre-wired with
+// the correct HTTP status code. Domain modules extend these.
+//
+// The returned constructor stays generic over extra payload fields while still
+// enforcing that every instance has a message and statusCode.
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a factory that produces TaggedError subclasses with a fixed statusCode.
+ * Extra payload fields are carried by the generic constructor signature, so
+ * subclasses can add domain-specific context without re-declaring `message`.
+ */
+function makeErrorFactory<StatusCode extends number>(statusCode: StatusCode) {
+  return <Tag extends string>(
+    tag: Tag,
+  ): AppErrorConstructor<Tag, StatusCode> => {
+    class EffectError extends Data.TaggedError(tag)<AppErrorFields> {
+      readonly statusCode: StatusCode = statusCode;
+
+      constructor(args: Readonly<object & AppErrorFields>) {
+        super(args);
+      }
+    }
+
+    return EffectError as AppErrorConstructor<Tag, StatusCode>;
+  };
+}
+
+export const NotFoundError = makeErrorFactory(404);
+export const BadRequestError = makeErrorFactory(400);
+export const ConflictError = makeErrorFactory(409);
+export const ForbiddenError = makeErrorFactory(403);
+export const UnauthorizedError = makeErrorFactory(401);
+export const InternalError = makeErrorFactory(500);
