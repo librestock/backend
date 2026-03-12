@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from './entities/order.entity';
-import { OrderQueryDto } from './dto';
+import { type OrderQuery } from '@librestock/types';
 
 export interface PaginatedResult<T> {
   data: T[];
@@ -20,7 +20,7 @@ export class OrderRepository {
   ) {}
 
   async findAllPaginated(
-    query: OrderQueryDto,
+    query: OrderQuery,
   ): Promise<PaginatedResult<Order>> {
     const { page = 1, limit = 20, q, client_id, status, date_from, date_to } = query;
     const skip = (page - 1) * limit;
