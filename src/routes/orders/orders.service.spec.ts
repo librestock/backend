@@ -1,15 +1,17 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Effect } from 'effect';
+// eslint-disable-next-line no-restricted-imports
 import { OrderStatus } from '@librestock/types';
 import { ClientsService } from '../clients/clients.service';
 import { ProductsService } from '../products/products.service';
-import { OrdersService } from './orders.service';
-import { OrderRepository, type PaginatedResult } from './orders.repository';
-import { OrderItemRepository } from './order-items.repository';
-import { ORDER_STATUS_CHANGED } from './events/order-status-changed.event';
-import { type Order } from './entities/order.entity';
 import { type OrderItem } from './entities/order-item.entity';
+import { type Order } from './entities/order.entity';
+import { ORDER_STATUS_CHANGED } from './events/order-status-changed.event';
+import { OrderItemRepository } from './order-items.repository';
+import { OrderRepository, type PaginatedResult } from './orders.repository';
+import { type CreateOrder } from '@librestock/types';
+import { OrdersService } from './orders.service';
 
 describe('OrdersService', () => {
   let service: OrdersService;
@@ -18,6 +20,10 @@ describe('OrdersService', () => {
   let clientsService: jest.Mocked<ClientsService>;
   let productsService: jest.Mocked<ProductsService>;
   let eventEmitter: jest.Mocked<Pick<EventEmitter2, 'emitAsync'>>;
+
+  const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runPromise(effect);
+  const fail = <A, E>(effect: Effect.Effect<A, E>) =>
+    Effect.runPromise(Effect.flip(effect));
 
   const mockOrder: Order = {
     id: 'order-001',
@@ -144,7 +150,7 @@ describe('OrdersService', () => {
       };
       orderRepository.findAllPaginated.mockResolvedValue(paginatedResult);
 
-      const result = await service.findAllPaginated({ page: 1, limit: 20 });
+      const result = await run(service.findAllPaginated({ page: 1, limit: 20 }));
 
       expect(result.data).toHaveLength(1);
       expect(result.meta.page).toBe(1);
@@ -163,7 +169,7 @@ describe('OrdersService', () => {
       };
       orderRepository.findAllPaginated.mockResolvedValue(paginatedResult);
 
-      const result = await service.findAllPaginated({ page: 2, limit: 20 });
+      const result = await run(service.findAllPaginated({ page: 2, limit: 20 }));
 
       expect(result.meta.has_next).toBe(true);
       expect(result.meta.has_previous).toBe(true);
@@ -174,27 +180,26 @@ describe('OrdersService', () => {
     it('should return an order by id', async () => {
       orderRepository.findById.mockResolvedValue(mockOrderWithItems);
 
-      const result = await service.findOne('order-001');
+      const result = await run(service.findOne('order-001'));
 
       expect(result.id).toBe('order-001');
       expect(result.order_number).toBe('ORD-20240101-0001');
       expect(result.client_name).toBe('Acme Corp');
     });
 
-    it('should throw NotFoundException when order does not exist', async () => {
+    it('should fail with OrderNotFound when order does not exist', async () => {
       orderRepository.findById.mockResolvedValue(null);
 
-      await expect(service.findOne('non-existent')).rejects.toThrow(
-        NotFoundException,
-      );
-      await expect(service.findOne('non-existent')).rejects.toThrow(
-        'Order not found',
-      );
+      await expect(fail(service.findOne('non-existent'))).resolves.toMatchObject({
+        _tag: 'OrderNotFound',
+        message: 'Order not found',
+        statusCode: 404,
+      });
     });
   });
 
   describe('create', () => {
-    const createDto = {
+    const createDto: CreateOrder = {
       client_id: 'client-001',
       delivery_address: '123 Harbor Dr',
       items: [
@@ -213,7 +218,7 @@ describe('OrdersService', () => {
       orderItemRepository.createMany.mockResolvedValue([mockOrderItem]);
       orderRepository.findById.mockResolvedValue(mockOrderWithItems);
 
-      const result = await service.create(createDto, 'user-001');
+      const result = await run(service.create(createDto, 'user-001'));
 
       expect(result.id).toBe('order-001');
       expect(orderRepository.create).toHaveBeenCalledWith(
@@ -223,7 +228,7 @@ describe('OrdersService', () => {
           total_amount: 150,
           status: OrderStatus.DRAFT,
           created_by: 'user-001',
-          order_number: expect.stringMatching(/^ORD-\d{8}-00001$/),
+          order_number: expect.stringMatching(/^ORD-\d{8}-0{4}1$/),
         }),
       );
       expect(orderItemRepository.createMany).toHaveBeenCalledWith(
@@ -239,7 +244,7 @@ describe('OrdersService', () => {
     });
 
     it('should calculate total_amount from multiple items', async () => {
-      const multiItemDto = {
+      const multiItemDto: CreateOrder = {
         client_id: 'client-001',
         delivery_address: '123 Harbor Dr',
         items: [
@@ -255,7 +260,7 @@ describe('OrdersService', () => {
       orderItemRepository.createMany.mockResolvedValue([]);
       orderRepository.findById.mockResolvedValue(mockOrderWithItems);
 
-      await service.create(multiItemDto, 'user-001');
+      await run(service.create(multiItemDto, 'user-001'));
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({ total_amount: 80 }),
@@ -271,7 +276,7 @@ describe('OrdersService', () => {
       orderItemRepository.createMany.mockResolvedValue([]);
       orderRepository.findById.mockResolvedValue(mockOrderWithItems);
 
-      await service.create(createDto, 'user-001');
+      await run(service.create(createDto, 'user-001'));
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -281,39 +286,42 @@ describe('OrdersService', () => {
       jest.useRealTimers();
     });
 
-    it('should throw BadRequestException when client does not exist', async () => {
+    it('should fail with ClientNotFound when client does not exist', async () => {
       clientsService.existsById.mockResolvedValue(false);
 
-      await expect(service.create(createDto, 'user-001')).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.create(createDto, 'user-001')).rejects.toThrow(
-        'Client not found',
-      );
+      await expect(fail(service.create(createDto, 'user-001'))).resolves
+        .toMatchObject({
+          _tag: 'ClientNotFound',
+          message: 'Client not found',
+          statusCode: 400,
+        });
     });
 
-    it('should throw BadRequestException when product does not exist', async () => {
+    it('should fail with ProductNotFound when product does not exist', async () => {
       clientsService.existsById.mockResolvedValue(true);
       productsService.existsById.mockResolvedValue(false);
 
-      await expect(service.create(createDto, 'user-001')).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.create(createDto, 'user-001')).rejects.toThrow(
-        'Product product-001 not found',
-      );
+      await expect(fail(service.create(createDto, 'user-001'))).resolves
+        .toMatchObject({
+          _tag: 'ProductNotFound',
+          message: 'Product product-001 not found',
+          statusCode: 400,
+        });
     });
 
-    it('should propagate repository errors without retrying', async () => {
+    it('should map repository failures to an internal typed error', async () => {
       const otherError = new Error('connection lost');
       clientsService.existsById.mockResolvedValue(true);
       productsService.existsById.mockResolvedValue(true);
       orderRepository.getNextOrderNumberSequence.mockResolvedValue(1);
       orderRepository.create.mockRejectedValue(otherError);
 
-      await expect(service.create(createDto, 'user-001')).rejects.toThrow(
-        'connection lost',
-      );
+      await expect(fail(service.create(createDto, 'user-001'))).resolves
+        .toMatchObject({
+          _tag: 'OrdersInfrastructureError',
+          action: 'create order',
+          statusCode: 500,
+        });
       expect(orderRepository.create).toHaveBeenCalledTimes(1);
     });
   });
@@ -329,9 +337,11 @@ describe('OrdersService', () => {
         });
       orderRepository.update.mockResolvedValue(1);
 
-      const result = await service.updateStatus('order-001', {
-        status: OrderStatus.CONFIRMED,
-      });
+      const result = await run(
+        service.updateStatus('order-001', {
+          status: OrderStatus.CONFIRMED,
+        }),
+      );
 
       expect(result.status).toBe(OrderStatus.CONFIRMED);
       expect(orderRepository.update).toHaveBeenCalledWith('order-001', {
@@ -360,9 +370,11 @@ describe('OrdersService', () => {
         });
       orderRepository.update.mockResolvedValue(1);
 
-      const result = await service.updateStatus('order-001', {
-        status: OrderStatus.SHIPPED,
-      });
+      const result = await run(
+        service.updateStatus('order-001', {
+          status: OrderStatus.SHIPPED,
+        }),
+      );
 
       expect(result.status).toBe(OrderStatus.SHIPPED);
       expect(orderRepository.update).toHaveBeenCalledWith('order-001', {
@@ -391,9 +403,11 @@ describe('OrdersService', () => {
         });
       orderRepository.update.mockResolvedValue(1);
 
-      await service.updateStatus('order-001', {
-        status: OrderStatus.DELIVERED,
-      });
+      await run(
+        service.updateStatus('order-001', {
+          status: OrderStatus.DELIVERED,
+        }),
+      );
 
       expect(orderRepository.update).toHaveBeenCalledWith('order-001', {
         status: OrderStatus.DELIVERED,
@@ -408,7 +422,7 @@ describe('OrdersService', () => {
       );
     });
 
-    it('should throw BadRequestException for invalid transition', async () => {
+    it('should fail for an invalid transition', async () => {
       const deliveredOrder = {
         ...mockOrderWithItems,
         status: OrderStatus.DELIVERED,
@@ -416,14 +430,19 @@ describe('OrdersService', () => {
       orderRepository.findById.mockResolvedValue(deliveredOrder);
 
       await expect(
-        service.updateStatus('order-001', { status: OrderStatus.DRAFT }),
-      ).rejects.toThrow(BadRequestException);
-      await expect(
-        service.updateStatus('order-001', { status: OrderStatus.DRAFT }),
-      ).rejects.toThrow('Cannot transition from DELIVERED to DRAFT');
+        fail(
+          service.updateStatus('order-001', {
+            status: OrderStatus.DRAFT,
+          }),
+        ),
+      ).resolves.toMatchObject({
+        _tag: 'InvalidOrderStatusTransition',
+        message: 'Cannot transition from DELIVERED to DRAFT',
+        statusCode: 400,
+      });
     });
 
-    it('should throw BadRequestException for CANCELLED to any status', async () => {
+    it('should fail for CANCELLED to any status', async () => {
       const cancelledOrder = {
         ...mockOrderWithItems,
         status: OrderStatus.CANCELLED,
@@ -431,8 +450,15 @@ describe('OrdersService', () => {
       orderRepository.findById.mockResolvedValue(cancelledOrder);
 
       await expect(
-        service.updateStatus('order-001', { status: OrderStatus.CONFIRMED }),
-      ).rejects.toThrow(BadRequestException);
+        fail(
+          service.updateStatus('order-001', {
+            status: OrderStatus.CONFIRMED,
+          }),
+        ),
+      ).resolves.toMatchObject({
+        _tag: 'InvalidOrderStatusTransition',
+        statusCode: 400,
+      });
     });
 
     it('should allow ON_HOLD to CONFIRMED', async () => {
@@ -448,21 +474,28 @@ describe('OrdersService', () => {
         });
       orderRepository.update.mockResolvedValue(1);
 
-      const result = await service.updateStatus('order-001', {
-        status: OrderStatus.CONFIRMED,
-      });
+      const result = await run(
+        service.updateStatus('order-001', {
+          status: OrderStatus.CONFIRMED,
+        }),
+      );
 
       expect(result.status).toBe(OrderStatus.CONFIRMED);
     });
 
-    it('should throw NotFoundException when order does not exist', async () => {
+    it('should fail with OrderNotFound when order does not exist', async () => {
       orderRepository.findById.mockResolvedValue(null);
 
       await expect(
-        service.updateStatus('non-existent', {
-          status: OrderStatus.CONFIRMED,
-        }),
-      ).rejects.toThrow(NotFoundException);
+        fail(
+          service.updateStatus('non-existent', {
+            status: OrderStatus.CONFIRMED,
+          }),
+        ),
+      ).resolves.toMatchObject({
+        _tag: 'OrderNotFound',
+        statusCode: 404,
+      });
     });
   });
 
@@ -473,7 +506,7 @@ describe('OrdersService', () => {
       orderItemRepository.deleteByOrderId.mockResolvedValue(undefined);
       orderRepository.delete.mockResolvedValue(undefined);
 
-      await service.delete('order-001');
+      await run(service.delete('order-001'));
 
       expect(orderItemRepository.deleteByOrderId).toHaveBeenCalledWith(
         'order-001',
@@ -481,27 +514,27 @@ describe('OrdersService', () => {
       expect(orderRepository.delete).toHaveBeenCalledWith('order-001');
     });
 
-    it('should throw BadRequestException when deleting non-DRAFT order', async () => {
+    it('should fail when deleting a non-DRAFT order', async () => {
       const confirmedOrder = {
         ...mockOrderWithItems,
         status: OrderStatus.CONFIRMED,
       };
       orderRepository.findById.mockResolvedValue(confirmedOrder);
 
-      await expect(service.delete('order-001')).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.delete('order-001')).rejects.toThrow(
-        'Only draft orders can be deleted',
-      );
+      await expect(fail(service.delete('order-001'))).resolves.toMatchObject({
+        _tag: 'CannotDeleteNonDraftOrder',
+        message: 'Only draft orders can be deleted',
+        statusCode: 400,
+      });
     });
 
-    it('should throw NotFoundException when order does not exist', async () => {
+    it('should fail with OrderNotFound when order does not exist', async () => {
       orderRepository.findById.mockResolvedValue(null);
 
-      await expect(service.delete('non-existent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(fail(service.delete('non-existent'))).resolves.toMatchObject({
+        _tag: 'OrderNotFound',
+        statusCode: 404,
+      });
     });
   });
 
@@ -509,7 +542,7 @@ describe('OrdersService', () => {
     it('should return true when order exists', async () => {
       orderRepository.existsById.mockResolvedValue(true);
 
-      const result = await service.existsById('order-001');
+      const result = await run(service.existsById('order-001'));
 
       expect(result).toBe(true);
     });
@@ -517,7 +550,7 @@ describe('OrdersService', () => {
     it('should return false when order does not exist', async () => {
       orderRepository.existsById.mockResolvedValue(false);
 
-      const result = await service.existsById('non-existent');
+      const result = await run(service.existsById('non-existent'));
 
       expect(result).toBe(false);
     });
@@ -534,7 +567,7 @@ describe('OrdersService', () => {
         });
       orderRepository.update.mockResolvedValue(1);
 
-      const result = await service.update('order-001', updateDto);
+      const result = await run(service.update('order-001', updateDto));
 
       expect(result.delivery_address).toBe('New Address');
       expect(orderRepository.update).toHaveBeenCalledWith(
@@ -546,18 +579,21 @@ describe('OrdersService', () => {
     it('should return existing order when no changes provided', async () => {
       orderRepository.findById.mockResolvedValue(mockOrderWithItems);
 
-      const result = await service.update('order-001', {});
+      const result = await run(service.update('order-001', {}));
 
       expect(orderRepository.update).not.toHaveBeenCalled();
       expect(result.id).toBe('order-001');
     });
 
-    it('should throw NotFoundException when order does not exist', async () => {
+    it('should fail with OrderNotFound when order does not exist', async () => {
       orderRepository.findById.mockResolvedValue(null);
 
       await expect(
-        service.update('non-existent', { delivery_address: 'Test' }),
-      ).rejects.toThrow(NotFoundException);
+        fail(service.update('non-existent', { delivery_address: 'Test' })),
+      ).resolves.toMatchObject({
+        _tag: 'OrderNotFound',
+        statusCode: 404,
+      });
     });
   });
 });

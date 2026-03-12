@@ -1,50 +1,61 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
+  Param,
+  Patch,
   Post,
   Put,
-  Patch,
-  Delete,
-  Body,
-  Param,
   Query,
-  ParseUUIDPipe,
+  Req,
   UseGuards,
   UseInterceptors,
-  Req,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiParam,
   ApiResponse,
   ApiTags,
-  ApiParam,
 } from '@nestjs/swagger';
-import { Permission, Resource } from '@librestock/types';
-import { RequirePermission } from '../../common/decorators';
-import { ErrorResponseDto } from '../../common/dto/error-response.dto';
-import { MessageResponseDto } from '../../common/dto/message-response.dto';
+// eslint-disable-next-line no-restricted-imports
+import {
+  CreateOrderSchema,
+  OrderIdSchema,
+  OrderQuerySchema,
+  Permission,
+  Resource,
+  UpdateOrderSchema,
+  UpdateOrderStatusSchema,
+  type CreateOrder,
+  type OrderQuery,
+  type UpdateOrder,
+  type UpdateOrderStatus,
+} from '@librestock/types';
 import {
   getUserIdFromSession,
   getUserSession,
   type AuthRequest,
 } from '../../common/auth/session';
+import { RequirePermission } from '../../common/decorators';
+import { Auditable } from '../../common/decorators/auditable.decorator';
+import { StandardThrottle } from '../../common/decorators/throttle.decorator';
+import { EffectPipe } from '../../common/effect/effect-pipe';
+import { ApiEffectBody, ApiEffectQuery } from '../../common/effect/swagger';
+import { AuditAction, AuditEntityType } from '../../common/enums';
+import { ErrorResponseDto } from '../../common/dto/error-response.dto';
+import { MessageResponseDto } from '../../common/dto/message-response.dto';
+import { runEffect } from '../../common/effect/run-effect';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { HateoasInterceptor } from '../../common/hateoas/hateoas.interceptor';
 import { AuditInterceptor } from '../../common/interceptors/audit.interceptor';
-import { Auditable } from '../../common/decorators/auditable.decorator';
-import { AuditAction, AuditEntityType } from '../../common/enums';
-import { StandardThrottle } from '../../common/decorators/throttle.decorator';
 import {
-  CreateOrderDto,
-  UpdateOrderDto,
-  UpdateOrderStatusDto,
   OrderResponseDto,
-  OrderQueryDto,
   PaginatedOrdersResponseDto,
 } from './dto';
+import { DeleteOrderHateoas, OrderHateoas } from './orders.hateoas';
 import { OrdersService } from './orders.service';
-import { OrderHateoas, DeleteOrderHateoas } from './orders.hateoas';
 
 @ApiTags('Orders')
 @ApiBearerAuth()
@@ -62,12 +73,13 @@ export class OrdersController {
     summary: 'List orders with pagination and filtering',
     operationId: 'listOrders',
   })
+  @ApiEffectQuery(OrderQuerySchema)
   @ApiResponse({ status: 200, type: PaginatedOrdersResponseDto })
   @ApiResponse({ status: 401, type: ErrorResponseDto })
   async listOrders(
-    @Query() query: OrderQueryDto,
+    @Query(new EffectPipe(OrderQuerySchema)) query: OrderQuery,
   ): Promise<PaginatedOrdersResponseDto> {
-    return this.ordersService.findAllPaginated(query);
+    return runEffect(this.ordersService.findAllPaginated(query));
   }
 
   @Get(':id')
@@ -80,9 +92,9 @@ export class OrdersController {
   @ApiResponse({ status: 401, type: ErrorResponseDto })
   @ApiResponse({ status: 404, type: ErrorResponseDto })
   async getOrder(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', new EffectPipe(OrderIdSchema)) id: string,
   ): Promise<OrderResponseDto> {
-    return this.ordersService.findOne(id);
+    return runEffect(this.ordersService.findOne(id));
   }
 
   @Post()
@@ -95,15 +107,16 @@ export class OrdersController {
     entityIdFromResponse: 'id',
   })
   @ApiOperation({ summary: 'Create order', operationId: 'createOrder' })
+  @ApiEffectBody(CreateOrderSchema)
   @ApiResponse({ status: 201, type: OrderResponseDto })
   @ApiResponse({ status: 400, type: ErrorResponseDto })
   @ApiResponse({ status: 401, type: ErrorResponseDto })
   async createOrder(
-    @Body() createOrderDto: CreateOrderDto,
+    @Body(new EffectPipe(CreateOrderSchema)) createOrderDto: CreateOrder,
     @Req() req: AuthRequest,
   ): Promise<OrderResponseDto> {
     const userId = getUserIdFromSession(getUserSession(req));
-    return this.ordersService.create(createOrderDto, userId ?? '');
+    return runEffect(this.ordersService.create(createOrderDto, userId ?? ''));
   }
 
   @Put(':id')
@@ -117,15 +130,16 @@ export class OrdersController {
   })
   @ApiOperation({ summary: 'Update order', operationId: 'updateOrder' })
   @ApiParam({ name: 'id', description: 'Order UUID', type: String })
+  @ApiEffectBody(UpdateOrderSchema)
   @ApiResponse({ status: 200, type: OrderResponseDto })
   @ApiResponse({ status: 400, type: ErrorResponseDto })
   @ApiResponse({ status: 401, type: ErrorResponseDto })
   @ApiResponse({ status: 404, type: ErrorResponseDto })
   async updateOrder(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateOrderDto: UpdateOrderDto,
+    @Param('id', new EffectPipe(OrderIdSchema)) id: string,
+    @Body(new EffectPipe(UpdateOrderSchema)) updateOrderDto: UpdateOrder,
   ): Promise<OrderResponseDto> {
-    return this.ordersService.update(id, updateOrderDto);
+    return runEffect(this.ordersService.update(id, updateOrderDto));
   }
 
   @Patch(':id/status')
@@ -142,15 +156,17 @@ export class OrdersController {
     operationId: 'updateOrderStatus',
   })
   @ApiParam({ name: 'id', description: 'Order UUID', type: String })
+  @ApiEffectBody(UpdateOrderStatusSchema)
   @ApiResponse({ status: 200, type: OrderResponseDto })
   @ApiResponse({ status: 400, type: ErrorResponseDto })
   @ApiResponse({ status: 401, type: ErrorResponseDto })
   @ApiResponse({ status: 404, type: ErrorResponseDto })
   async updateOrderStatus(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateStatusDto: UpdateOrderStatusDto,
+    @Param('id', new EffectPipe(OrderIdSchema)) id: string,
+    @Body(new EffectPipe(UpdateOrderStatusSchema))
+    updateStatusDto: UpdateOrderStatus,
   ): Promise<OrderResponseDto> {
-    return this.ordersService.updateStatus(id, updateStatusDto);
+    return runEffect(this.ordersService.updateStatus(id, updateStatusDto));
   }
 
   @Delete(':id')
@@ -169,9 +185,9 @@ export class OrdersController {
   @ApiResponse({ status: 401, type: ErrorResponseDto })
   @ApiResponse({ status: 404, type: ErrorResponseDto })
   async deleteOrder(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', new EffectPipe(OrderIdSchema)) id: string,
   ): Promise<MessageResponseDto> {
-    await this.ordersService.delete(id);
+    await runEffect(this.ordersService.delete(id));
     return { message: 'Order deleted successfully' };
   }
 }
