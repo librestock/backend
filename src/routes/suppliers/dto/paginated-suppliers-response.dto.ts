@@ -1,8 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type {
-  PaginatedSuppliersResponseDto as PaginatedSuppliersResponseDtoShape,
-  PaginationMeta as PaginationMetaShape,
-} from '@librestock/types';
+import type { PaginationMeta as PaginationMetaShape } from '@librestock/types/common';
+import type { PaginatedSuppliersResponseDto as PaginatedSuppliersResponseDtoShape } from '@librestock/types/suppliers';
 import { SupplierResponseDto } from './supplier-response.dto';
 
 export class PaginationMeta implements PaginationMetaShape {

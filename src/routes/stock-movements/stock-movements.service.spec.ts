@@ -1,6 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { StockMovementReason } from '@librestock/types';
+import { StockMovementReason } from '@librestock/types/stock-movements';
 import { ProductsService } from '../products/products.service';
 import { LocationsService } from '../locations/locations.service';
 import { StockMovementsService } from './stock-movements.service';

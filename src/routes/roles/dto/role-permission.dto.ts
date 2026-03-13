@@ -1,10 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum } from 'class-validator';
-import {
-  Resource,
-  Permission,
-  type RolePermissionDto as RolePermissionDtoShape,
-} from '@librestock/types';
+import { Resource, Permission } from '@librestock/types/auth';
+import { type RolePermissionDto as RolePermissionDtoShape } from '@librestock/types/roles';
 
 export class RolePermissionDto implements RolePermissionDtoShape {
   @ApiProperty({ description: 'Resource', enum: Resource })

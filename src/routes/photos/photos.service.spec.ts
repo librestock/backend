@@ -74,8 +74,8 @@ describe('PhotosService', () => {
   describe('uploadPhoto', () => {
     it('writes file and persists photo metadata', async () => {
       photoRepository.countByProductId.mockResolvedValue(0);
-      photoRepository.create.mockImplementation(async (data) => {
-        return {
+      photoRepository.create.mockImplementation((data) => {
+        return Promise.resolve({
           id: 'photo-001',
           product_id: data.product_id!,
           filename: data.filename!,
@@ -86,7 +86,7 @@ describe('PhotosService', () => {
           uploaded_by: data.uploaded_by ?? null,
           created_at: new Date('2026-03-01T00:00:00.000Z'),
           product: null as never,
-        } satisfies Photo;
+        } satisfies Photo);
       });
 
       const result = await service.uploadPhoto(
@@ -100,7 +100,7 @@ describe('PhotosService', () => {
       expect(photoRepository.create).toHaveBeenCalledTimes(1);
 
       const [createPayload] = photoRepository.create.mock.calls[0];
-      await expect(access(createPayload.storage_path!)).resolves.toBeUndefined();
+      await expect(access(createPayload.storage_path)).resolves.toBeUndefined();
     });
 
     it('cleans up uploaded file when db create fails', async () => {

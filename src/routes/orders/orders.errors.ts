@@ -1,5 +1,5 @@
 import { Data } from 'effect';
-import type { OrderStatus } from '@librestock/types';
+import type { OrderStatus } from '@librestock/types/orders';
 
 export class OrderNotFound extends Data.TaggedError('OrderNotFound')<{
   readonly id: string;

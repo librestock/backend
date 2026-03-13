@@ -9,8 +9,8 @@ import {
   MaxLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { ClientStatus } from '@librestock/types';
-import type { UpdateClientDto as UpdateClientDtoShape } from '@librestock/types';
+import { ClientStatus } from '@librestock/types/clients';
+import type { UpdateClientDto as UpdateClientDtoShape } from '@librestock/types/clients';
 
 export class UpdateClientDto implements UpdateClientDtoShape {
   @ApiProperty({

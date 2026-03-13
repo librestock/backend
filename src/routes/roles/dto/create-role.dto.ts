@@ -8,7 +8,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import type { CreateRoleDto as CreateRoleDtoShape } from '@librestock/types';
+import type { CreateRoleDto as CreateRoleDtoShape } from '@librestock/types/roles';
 import { RolePermissionDto } from './role-permission.dto';
 
 export class CreateRoleDto implements CreateRoleDtoShape {

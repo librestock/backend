@@ -3,7 +3,7 @@ import {
   OrderStatus,
   type OrderResponseType as OrderResponseTypeShape,
   type OrderItemResponseType as OrderItemResponseTypeShape,
-} from '@librestock/types';
+} from '@librestock/types/orders';
 import { BaseResponseDto } from '../../../common/dto/base-response.dto';
 
 export class OrderItemResponseDto

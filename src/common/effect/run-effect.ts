@@ -7,9 +7,9 @@ const FiberFailureCauseSymbol = Symbol.for(
   'effect/Runtime/FiberFailure/Cause',
 );
 
-type FiberFailure = {
+interface FiberFailure {
   readonly [FiberFailureCauseSymbol]: Cause.Cause<unknown>;
-};
+}
 
 const hasFiberFailureCause = (value: object): value is FiberFailure =>
   FiberFailureCauseSymbol in value;

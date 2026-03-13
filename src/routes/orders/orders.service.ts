@@ -3,11 +3,11 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Effect } from 'effect';
 import {
   OrderStatus,
-  type CreateOrder,
-  type OrderQuery,
-  type UpdateOrder,
-  type UpdateOrderStatus,
-} from '@librestock/types';
+  type CreateOrderType as CreateOrder,
+  type OrderQueryType as OrderQuery,
+  type UpdateOrderType as UpdateOrder,
+  type UpdateOrderStatusType as UpdateOrderStatus,
+} from '@librestock/types/orders';
 import { toPaginatedResponse } from '../../common/utils/pagination.utils';
 import { ClientsService } from '../clients/clients.service';
 import { ProductsService } from '../products/products.service';
@@ -47,7 +47,7 @@ export class OrdersService {
       OrderUtils.tryAsync('list orders', () =>
         this.orderRepository.findAllPaginated(query),
       ),
-      (result) => toPaginatedResponse(result, OrderUtils.toOrderResponseDto),
+      (result) => toPaginatedResponse(result, (order) => OrderUtils.toOrderResponseDto(order)),
     );
   }
 
@@ -57,7 +57,7 @@ export class OrdersService {
     OrderResponseDto,
     OrderNotFound | OrdersInfrastructureError
   > {
-    return Effect.map(this.getOrderOrFail(id), OrderUtils.toOrderResponseDto);
+    return Effect.map(this.getOrderOrFail(id), (order) => OrderUtils.toOrderResponseDto(order));
   }
 
   public create(
@@ -109,7 +109,7 @@ export class OrdersService {
         this.orderRepository.create({
           client_id: dto.client_id,
           delivery_address: dto.delivery_address,
-          delivery_deadline: dto.delivery_deadline ?? null,
+          delivery_deadline: dto.delivery_deadline ? new Date(dto.delivery_deadline) : null,
           yacht_name: dto.yacht_name ?? null,
           special_instructions: dto.special_instructions ?? null,
           total_amount,
@@ -155,7 +155,7 @@ export class OrdersService {
         updateData.delivery_address = dto.delivery_address;
       }
       if (dto.delivery_deadline !== undefined) {
-        updateData.delivery_deadline = dto.delivery_deadline;
+        updateData.delivery_deadline = new Date(dto.delivery_deadline);
       }
       if (dto.yacht_name !== undefined) {
         updateData.yacht_name = dto.yacht_name;

@@ -1,1 +1,1 @@
-export { LocationType } from '@librestock/types';
+export { LocationType } from '@librestock/types/locations';

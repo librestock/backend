@@ -6,7 +6,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import type { UpdateCategoryDto as UpdateCategoryDtoShape } from '@librestock/types';
+import type { UpdateCategoryDto as UpdateCategoryDtoShape } from '@librestock/types/categories';
 
 export class UpdateCategoryDto implements UpdateCategoryDtoShape {
   @ApiProperty({

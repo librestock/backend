@@ -9,8 +9,8 @@ import {
   MaxLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { ClientStatus } from '@librestock/types';
-import type { CreateClientDto as CreateClientDtoShape } from '@librestock/types';
+import { ClientStatus } from '@librestock/types/clients';
+import type { CreateClientDto as CreateClientDtoShape } from '@librestock/types/clients';
 
 export class CreateClientDto implements CreateClientDtoShape {
   @ApiProperty({ description: 'Company name', maxLength: 200 })

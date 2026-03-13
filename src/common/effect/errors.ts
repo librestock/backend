@@ -1,20 +1,20 @@
 import { Data } from 'effect';
 
-type AppErrorFields = {
+interface AppErrorFields {
   readonly message: string;
-};
+}
 
 type AppErrorInstance<
   Tag extends string,
   StatusCode extends number,
-  Fields extends object = {},
+  Fields extends object = object,
 > = AppError<Tag, StatusCode> & Readonly<Fields>;
 
 type AppErrorConstructor<
   Tag extends string,
   StatusCode extends number,
   BaseFields extends object = AppErrorFields,
-> = new <Fields extends object = {}>(
+> = new <Fields extends object = object>(
   args: Readonly<Fields & BaseFields>,
 ) => AppErrorInstance<Tag, StatusCode, Fields & BaseFields>;
 

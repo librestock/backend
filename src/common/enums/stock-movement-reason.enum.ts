@@ -1,1 +1,1 @@
-export { StockMovementReason } from '@librestock/types';
+export { StockMovementReason } from '@librestock/types/stock-movements';

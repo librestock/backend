@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
-import { LocationType, StockMovementReason } from '@librestock/types';
+import { LocationType } from '@librestock/types/locations';
+import { StockMovementReason } from '@librestock/types/stock-movements';
 import { type Location } from '../../routes/locations/entities/location.entity';
 import { type Order } from '../../routes/orders/entities/order.entity';
 import { type Product } from '../../routes/products/entities/product.entity';

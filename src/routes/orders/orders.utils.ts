@@ -1,8 +1,8 @@
+import { Effect } from 'effect';
 import type { OrderResponseDto, OrderItemResponseDto } from './dto';
 import type { Order } from './entities/order.entity';
 import type { OrderItem } from './entities/order-item.entity';
 import { OrdersInfrastructureError } from './orders.errors';
-import { Effect } from 'effect';
 
 export class OrderUtils {
   public static toOrderItemResponseDto(item: OrderItem): OrderItemResponseDto {

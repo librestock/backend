@@ -1,8 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Effect } from 'effect';
-// eslint-disable-next-line no-restricted-imports
-import { OrderStatus } from '@librestock/types';
+import { OrderStatus, type CreateOrderType as CreateOrder } from '@librestock/types/orders';
 import { ClientsService } from '../clients/clients.service';
 import { ProductsService } from '../products/products.service';
 import { type OrderItem } from './entities/order-item.entity';
@@ -10,7 +9,6 @@ import { type Order } from './entities/order.entity';
 import { ORDER_STATUS_CHANGED } from './events/order-status-changed.event';
 import { OrderItemRepository } from './order-items.repository';
 import { OrderRepository, type PaginatedResult } from './orders.repository';
-import { type CreateOrder } from '@librestock/types';
 import { OrdersService } from './orders.service';
 
 describe('OrdersService', () => {

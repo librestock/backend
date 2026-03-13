@@ -10,11 +10,8 @@ import {
   Max,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import {
-  ProductSortField,
-  SortOrder,
-  type ProductQueryDto as ProductQueryDtoShape,
-} from '@librestock/types';
+import { SortOrder } from '@librestock/types/common';
+import { ProductSortField, type ProductQueryDto as ProductQueryDtoShape } from '@librestock/types/products';
 
 export { ProductSortField, SortOrder };
 

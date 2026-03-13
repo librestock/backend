@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import type { ProfileResponseDto as ProfileResponseDtoShape } from '@librestock/types';
+import type { ProfileResponseDto as ProfileResponseDtoShape } from '@librestock/types/auth';
 
 export class ProfileResponseDto implements ProfileResponseDtoShape {
   @ApiProperty({ description: 'User ID' })

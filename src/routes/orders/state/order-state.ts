@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { OrderStatus } from '@librestock/types';
+import { OrderStatus } from '@librestock/types/orders';
 import { type Order } from '../entities/order.entity';
 
 export abstract class OrderState {

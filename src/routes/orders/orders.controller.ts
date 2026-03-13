@@ -24,15 +24,16 @@ import {
   CreateOrderSchema,
   OrderIdSchema,
   OrderQuerySchema,
-  Permission,
-  Resource,
   UpdateOrderSchema,
   UpdateOrderStatusSchema,
-  type CreateOrder,
-  type OrderQuery,
-  type UpdateOrder,
-  type UpdateOrderStatus,
 } from '@librestock/types';
+import { Permission, Resource } from '@librestock/types/auth';
+import {
+  type CreateOrderType as CreateOrder,
+  type OrderQueryType as OrderQuery,
+  type UpdateOrderType as UpdateOrder,
+  type UpdateOrderStatusType as UpdateOrderStatus,
+} from '@librestock/types/orders';
 import {
   getUserIdFromSession,
   getUserSession,

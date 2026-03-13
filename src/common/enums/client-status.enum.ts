@@ -1,1 +1,1 @@
-export { ClientStatus } from '@librestock/types';
+export { ClientStatus } from '@librestock/types/clients';

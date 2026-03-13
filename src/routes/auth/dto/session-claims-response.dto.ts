@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { SessionClaimsResponseDto as SessionClaimsResponseDtoShape } from '@librestock/types';
+import type { SessionClaimsResponseDto as SessionClaimsResponseDtoShape } from '@librestock/types/auth';
 
 export class SessionClaimsResponseDto implements SessionClaimsResponseDtoShape {
   @ApiProperty()

@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
-import { ClientStatus, OrderStatus } from '@librestock/types';
+import { ClientStatus } from '@librestock/types/clients';
+import { OrderStatus } from '@librestock/types/orders';
 import { type Client } from '../../routes/clients/entities/client.entity';
 import { OrderItem } from '../../routes/orders/entities/order-item.entity';
 import { Order } from '../../routes/orders/entities/order.entity';

@@ -1,8 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  type LocationResponseDto as LocationResponseDtoShape,
-  LocationType,
-} from '@librestock/types';
+import { type LocationResponseDto as LocationResponseDtoShape, LocationType } from '@librestock/types/locations';
 import { BaseResponseDto } from '../../../common/dto/base-response.dto';
 
 export class LocationResponseDto
