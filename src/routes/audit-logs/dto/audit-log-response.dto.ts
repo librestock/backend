@@ -4,7 +4,7 @@ import {
   AuditEntityType,
   type AuditChanges,
   type AuditLogResponseDto as AuditLogResponseDtoShape,
-} from '@librestock/types';
+} from '@librestock/types/audit-logs';
 
 export class AuditLogResponseDto implements AuditLogResponseDtoShape {
   @ApiProperty({

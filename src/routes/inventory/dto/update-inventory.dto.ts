@@ -9,7 +9,7 @@ import {
   Min,
   MaxLength,
 } from 'class-validator';
-import type { UpdateInventoryDto as UpdateInventoryDtoShape } from '@librestock/types';
+import type { UpdateInventoryDto as UpdateInventoryDtoShape } from '@librestock/types/inventory';
 
 export class UpdateInventoryDto implements UpdateInventoryDtoShape {
   @ApiProperty({

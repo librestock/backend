@@ -13,7 +13,7 @@ import {
   AuditAction,
   AuditEntityType,
   type AuditLogQueryDto as AuditLogQueryDtoShape,
-} from '@librestock/types';
+} from '@librestock/types/audit-logs';
 
 export class AuditLogQueryDto implements AuditLogQueryDtoShape {
   @ApiProperty({

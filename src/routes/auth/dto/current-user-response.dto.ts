@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Permission, Resource } from '@librestock/types';
-import type { CurrentUserResponseDto as CurrentUserResponseDtoShape } from '@librestock/types';
+import { Permission, Resource } from '@librestock/types/auth';
+import type { CurrentUserResponseDto as CurrentUserResponseDtoShape } from '@librestock/types/auth';
 
 export class CurrentUserResponseDto implements CurrentUserResponseDtoShape {
   @ApiProperty({ description: 'User ID' })

@@ -15,7 +15,7 @@ import type {
   BulkDeleteDto as BulkDeleteDtoShape,
   BulkRestoreDto as BulkRestoreDtoShape,
   BulkOperationResultDto as BulkOperationResultDtoShape,
-} from '@librestock/types';
+} from '@librestock/types/products';
 import { CreateProductDto } from './create-product.dto';
 
 export class BulkCreateProductsDto implements BulkCreateProductsDtoShape {

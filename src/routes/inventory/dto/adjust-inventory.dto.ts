@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsInt } from 'class-validator';
-import type { AdjustInventoryDto as AdjustInventoryDtoShape } from '@librestock/types';
+import type { AdjustInventoryDto as AdjustInventoryDtoShape } from '@librestock/types/inventory';
 
 export class AdjustInventoryDto implements AdjustInventoryDtoShape {
   @ApiProperty({

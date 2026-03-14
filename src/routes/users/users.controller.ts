@@ -20,7 +20,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import type { Request } from 'express';
-import { Resource, Permission } from '@librestock/types';
+import { Resource, Permission } from '@librestock/types/auth';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { RequirePermission } from '../../common/decorators';
 import { PermissionGuard } from '../../common/guards/permission.guard';

@@ -7,6 +7,13 @@ const FiberFailureCauseSymbol = Symbol.for(
   'effect/Runtime/FiberFailure/Cause',
 );
 
+interface FiberFailure {
+  readonly [FiberFailureCauseSymbol]: Cause.Cause<unknown>;
+}
+
+const hasFiberFailureCause = (value: object): value is FiberFailure =>
+  FiberFailureCauseSymbol in value;
+
 /**
  * Extract the original error from an Effect FiberFailure wrapper.
  *
@@ -16,23 +23,24 @@ const FiberFailureCauseSymbol = Symbol.for(
  */
 function unwrapFiberFailure(thrown: unknown): unknown {
   if (
-    thrown !== null &&
-    typeof thrown === 'object' &&
-    FiberFailureCauseSymbol in thrown
+    thrown === null ||
+    typeof thrown !== 'object' ||
+    !hasFiberFailureCause(thrown)
   ) {
-    const cause = (thrown as Record<symbol, unknown>)[
-      FiberFailureCauseSymbol
-    ] as Cause.Cause<unknown>;
-
-    // Expected failure → extract the error value
-    if (cause._tag === 'Fail') {
-      return cause.error;
-    }
-    // Defect → extract the defect value
-    if (cause._tag === 'Die') {
-      return cause.defect;
-    }
+    return thrown;
   }
+
+  const cause = thrown[FiberFailureCauseSymbol];
+
+  // Expected failure → extract the error value
+  if (cause._tag === 'Fail') {
+    return cause.error;
+  }
+  // Defect → extract the defect value
+  if (cause._tag === 'Die') {
+    return cause.defect;
+  }
+
   return thrown;
 }
 

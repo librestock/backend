@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { CategoryWithChildrenResponseDto as CategoryWithChildrenResponseDtoShape } from '@librestock/types';
+import type { CategoryWithChildrenResponseDto as CategoryWithChildrenResponseDtoShape } from '@librestock/types/categories';
 import { BaseResponseDto } from '../../../common/dto/base-response.dto';
 
 export class CategoryWithChildrenResponseDto

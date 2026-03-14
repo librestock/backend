@@ -6,7 +6,7 @@ import { AuditLogRepository } from './audit-log.repository';
 
 describe('AuditLogRepository', () => {
   let repository: AuditLogRepository;
-  let typeormRepository: Record<string, jest.Mock>;
+  let typeormRepository: Record<string, jest.Mock | undefined>;
 
   const mockAuditLog: AuditLog = {
     id: '550e8400-e29b-41d4-a716-446655440000',
@@ -56,7 +56,7 @@ describe('AuditLogRepository', () => {
     mockQueryBuilder.orderBy.mockReturnThis();
     mockQueryBuilder.skip.mockReturnThis();
     mockQueryBuilder.take.mockReturnThis();
-    typeormRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+    typeormRepository.createQueryBuilder!.mockReturnValue(mockQueryBuilder);
   });
 
   it('should be defined', () => {
@@ -65,8 +65,8 @@ describe('AuditLogRepository', () => {
 
   describe('create', () => {
     it('should create and save an audit log', async () => {
-      typeormRepository.create.mockReturnValue(mockAuditLog);
-      typeormRepository.save.mockResolvedValue(mockAuditLog);
+      typeormRepository.create!.mockReturnValue(mockAuditLog);
+      typeormRepository.save!.mockResolvedValue(mockAuditLog);
 
       const data = {
         user_id: 'user_123',
@@ -105,8 +105,8 @@ describe('AuditLogRepository', () => {
         ...d,
       }));
 
-      typeormRepository.create.mockReturnValue(mockLogs);
-      typeormRepository.save.mockResolvedValue(mockLogs);
+      typeormRepository.create!.mockReturnValue(mockLogs);
+      typeormRepository.save!.mockResolvedValue(mockLogs);
 
       const result = await repository.createMany(dataArray);
 
@@ -119,7 +119,7 @@ describe('AuditLogRepository', () => {
   describe('findByEntityId', () => {
     it('should find logs by entity type and id', async () => {
       const logs = [mockAuditLog];
-      typeormRepository.find.mockResolvedValue(logs);
+      typeormRepository.find!.mockResolvedValue(logs);
 
       const result = await repository.findByEntityId(
         AuditEntityType.PRODUCT,
@@ -140,7 +140,7 @@ describe('AuditLogRepository', () => {
   describe('findByUserId', () => {
     it('should find logs by user id', async () => {
       const logs = [mockAuditLog];
-      typeormRepository.find.mockResolvedValue(logs);
+      typeormRepository.find!.mockResolvedValue(logs);
 
       const result = await repository.findByUserId('user_123');
 
@@ -289,7 +289,7 @@ describe('AuditLogRepository', () => {
 
   describe('findById', () => {
     it('should find audit log by id', async () => {
-      typeormRepository.findOneBy.mockResolvedValue(mockAuditLog);
+      typeormRepository.findOneBy!.mockResolvedValue(mockAuditLog);
 
       const result = await repository.findById(mockAuditLog.id);
 
@@ -300,7 +300,7 @@ describe('AuditLogRepository', () => {
     });
 
     it('should return null when not found', async () => {
-      typeormRepository.findOneBy.mockResolvedValue(null);
+      typeormRepository.findOneBy!.mockResolvedValue(null);
 
       const result = await repository.findById('non-existent');
 

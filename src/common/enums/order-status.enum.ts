@@ -1,1 +1,1 @@
-export { OrderStatus } from '@librestock/types';
+export { OrderStatus } from '@librestock/types/orders';

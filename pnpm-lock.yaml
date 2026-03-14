@@ -4,16 +4,13 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  '@librestock/types': link:../packages/types
-
 importers:
 
   .:
     dependencies:
       '@librestock/types':
-        specifier: link:../packages/types
-        version: link:../packages/types
+        specifier: 1.2.0
+        version: 1.2.0(effect@3.19.19)
       '@nestjs/common':
         specifier: ^11.1.10
         version: 11.1.13(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -733,6 +730,11 @@ packages:
 
   '@librestock/tsconfig@1.1.5':
     resolution: {integrity: sha512-lN8mFJWG/2hTtTuiK4/yWSEWtwviLsQhC6uW71tSllHbvMk/S0gk5DLmrehrNrEsmql8YybThVXdEjdFNl+VhQ==}
+
+  '@librestock/types@1.2.0':
+    resolution: {integrity: sha512-YtvzbUpxv6oAZlpejNdz2gJ/u/VthRwAsY81PhuOy+ZJGN0CYO1u3pO5vyq5hFb15bBe6fb7RbO0u3MRyt6EJA==}
+    peerDependencies:
+      effect: ^3.19.0
 
   '@lukeed/csprng@1.1.0':
     resolution: {integrity: sha512-Z7C/xXCiGWsg0KuKsHTKJxbWhpI3Vs5GwLfOean7MGyVFGqdRgBbAjOCh6u4bbjPc/8MJ2pZmK/0DLdCbivLDA==}
@@ -4484,6 +4486,11 @@ snapshots:
       - supports-color
 
   '@librestock/tsconfig@1.1.5': {}
+
+  '@librestock/types@1.2.0(effect@3.19.19)':
+    dependencies:
+      effect: 3.19.19
+      zod: 4.3.6
 
   '@lukeed/csprng@1.1.0': {}
 

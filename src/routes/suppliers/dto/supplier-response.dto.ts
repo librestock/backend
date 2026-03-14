@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { SupplierResponseDto as SupplierResponseDtoShape } from '@librestock/types';
+import type { SupplierResponseDto as SupplierResponseDtoShape } from '@librestock/types/suppliers';
 import { BaseResponseDto } from '../../../common/dto/base-response.dto';
 
 export class SupplierResponseDto

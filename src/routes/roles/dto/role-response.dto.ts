@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import type { RoleResponseDto as RoleResponseDtoShape } from '@librestock/types';
+import type { RoleResponseDto as RoleResponseDtoShape } from '@librestock/types/roles';
 import { RolePermissionDto } from './role-permission.dto';
 
 export class RoleResponseDto implements RoleResponseDtoShape {

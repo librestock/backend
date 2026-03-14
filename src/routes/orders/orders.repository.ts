@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { type OrderQueryType as OrderQuery } from '@librestock/types/orders';
 import { Order } from './entities/order.entity';
-import { type OrderQuery } from '@librestock/types';
 
 export interface PaginatedResult<T> {
   data: T[];

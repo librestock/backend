@@ -184,7 +184,7 @@ describe('InventoryService', () => {
       const result = await service.findAll();
 
       expect(result).toHaveLength(1);
-      expect(result[0].product_id).toBe('product-001');
+      expect(result[0]!.product_id).toBe('product-001');
     });
   });
 

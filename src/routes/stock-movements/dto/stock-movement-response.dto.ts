@@ -4,7 +4,7 @@ import {
   type StockMovementLocationSummary,
   type StockMovementProductSummary,
   StockMovementReason,
-} from '@librestock/types';
+} from '@librestock/types/stock-movements';
 
 export class StockMovementResponseDto implements StockMovementResponseDtoShape {
   @ApiProperty({ description: 'Unique identifier', format: 'uuid' })

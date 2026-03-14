@@ -176,7 +176,7 @@ describe('ProductsService', () => {
       const result = await service.findAll();
 
       expect(result).toHaveLength(1);
-      expect(result[0].sku).toBe('PROD-001');
+      expect(result[0]!.sku).toBe('PROD-001');
     });
   });
 
@@ -220,7 +220,7 @@ describe('ProductsService', () => {
       const result = await service.findByCategory(mockCategory.id);
 
       expect(result).toHaveLength(1);
-      expect(result[0].category_id).toBe(mockCategory.id);
+      expect(result[0]!.category_id).toBe(mockCategory.id);
     });
 
     it('should throw NotFoundException when category does not exist', async () => {
@@ -381,8 +381,8 @@ describe('ProductsService', () => {
     it('should handle duplicate SKUs in request', async () => {
       const bulkDtoWithDuplicates = {
         products: [
-          { ...bulkDto.products[0], sku: 'DUPLICATE' },
-          { ...bulkDto.products[1], sku: 'DUPLICATE' },
+          { ...bulkDto.products[0]!, sku: 'DUPLICATE' },
+          { ...bulkDto.products[1]!, sku: 'DUPLICATE' },
         ],
       };
       categoriesService.existsById.mockResolvedValue(true);
@@ -527,7 +527,7 @@ describe('ProductsService', () => {
 
       expect(result.success_count).toBe(1);
       expect(result.failure_count).toBe(1);
-      expect(result.failures[0].id).toBe('non-existent');
+      expect(result.failures[0]!.id).toBe('non-existent');
     });
   });
 
@@ -674,7 +674,7 @@ describe('ProductsService', () => {
 
       expect(result.success_count).toBe(1);
       expect(result.failure_count).toBe(1);
-      expect(result.failures[0].error).toBe('Product not found or not deleted');
+      expect(result.failures[0]!.error).toBe('Product not found or not deleted');
     });
   });
 });

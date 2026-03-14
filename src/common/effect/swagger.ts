@@ -1,6 +1,6 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiBody, ApiQuery } from '@nestjs/swagger';
-import { JSONSchema, Schema } from 'effect';
+import { JSONSchema, type Schema } from 'effect';
 
 type JsonSchemaObj = Record<string, unknown>;
 
@@ -20,8 +20,8 @@ function resolveRefs(
   const obj = node as JsonSchemaObj;
 
   // Resolve $ref pointers
-  if (typeof obj['$ref'] === 'string') {
-    const refPath = obj['$ref'] as string;
+  if (typeof obj.$ref === 'string') {
+    const refPath = obj.$ref;
     const defName = refPath.replace('#/$defs/', '');
     const resolved = defs[defName];
     if (resolved) {
@@ -52,7 +52,7 @@ export function effectSchemaToOpenApi<A, I, R>(
   const jsonSchema: JsonSchemaObj = JSON.parse(
     JSON.stringify(JSONSchema.make(schema)),
   );
-  const defs = (jsonSchema['$defs'] as Record<string, JsonSchemaObj>) ?? {};
+  const defs = (jsonSchema.$defs as Record<string, JsonSchemaObj>) ?? {};
   return resolveRefs(jsonSchema, defs) as JsonSchemaObj;
 }
 
@@ -86,12 +86,12 @@ export function ApiEffectQuery<A, I, R>(
   schema: Schema.Schema<A, I, R>,
 ): MethodDecorator {
   const openApi = effectSchemaToOpenApi(schema);
-  const properties = (openApi['properties'] ?? {}) as Record<
+  const properties = (openApi.properties ?? {}) as Record<
     string,
     JsonSchemaObj
   >;
   const required = new Set(
-    (openApi['required'] as string[] | undefined) ?? [],
+    (openApi.required as string[] | undefined) ?? [],
   );
 
   const decorators = Object.entries(properties).map(([name, propSchema]) =>

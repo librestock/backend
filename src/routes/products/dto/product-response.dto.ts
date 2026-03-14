@@ -4,7 +4,7 @@ import type {
   SupplierSummaryDto as SupplierSummaryDtoShape,
   ProductLinksDto as ProductLinksDtoShape,
   ProductResponseDto as ProductResponseDtoShape,
-} from '@librestock/types';
+} from '@librestock/types/products';
 import { HateoasLink } from '../../../common/hateoas/hateoas-link.dto';
 import { BaseAuditResponseDto } from '../../../common/dto/base-response.dto';
 

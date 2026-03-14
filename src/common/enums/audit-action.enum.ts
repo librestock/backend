@@ -1,1 +1,1 @@
-export { AuditAction } from '@librestock/types';
+export { AuditAction } from '@librestock/types/audit-logs';

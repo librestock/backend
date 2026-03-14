@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { PhotoResponseDto as PhotoResponseDtoShape } from '@librestock/types';
+import type { PhotoResponseDto as PhotoResponseDtoShape } from '@librestock/types/photos';
 
 export class PhotoResponseDto implements PhotoResponseDtoShape {
   @ApiProperty({

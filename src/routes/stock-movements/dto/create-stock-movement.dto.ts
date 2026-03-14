@@ -9,8 +9,8 @@ import {
   MaxLength,
   IsNumber,
 } from 'class-validator';
-import type { CreateStockMovementDto as CreateStockMovementDtoShape } from '@librestock/types';
-import { StockMovementReason } from '@librestock/types';
+import type { CreateStockMovementDto as CreateStockMovementDtoShape } from '@librestock/types/stock-movements';
+import { StockMovementReason } from '@librestock/types/stock-movements';
 
 export class CreateStockMovementDto implements CreateStockMovementDtoShape {
   @ApiProperty({ description: 'Product ID', format: 'uuid' })

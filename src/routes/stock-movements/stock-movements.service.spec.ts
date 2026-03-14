@@ -1,6 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { StockMovementReason } from '@librestock/types';
+import { StockMovementReason } from '@librestock/types/stock-movements';
 import { ProductsService } from '../products/products.service';
 import { LocationsService } from '../locations/locations.service';
 import { StockMovementsService } from './stock-movements.service';
@@ -160,7 +160,7 @@ describe('StockMovementsService', () => {
       const result = await service.findByProduct('product-001');
 
       expect(result).toHaveLength(1);
-      expect(result[0].product_id).toBe('product-001');
+      expect(result[0]!.product_id).toBe('product-001');
     });
 
     it('should throw NotFoundException when product does not exist', async () => {

@@ -15,7 +15,8 @@ import {
   ApiTags,
   ApiParam,
 } from '@nestjs/swagger';
-import { AuditEntityType, Resource, Permission } from '@librestock/types';
+import { AuditEntityType } from '@librestock/types/audit-logs';
+import { Resource, Permission } from '@librestock/types/auth';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { RequirePermission } from '../../common/decorators';
 import { PermissionGuard } from '../../common/guards/permission.guard';

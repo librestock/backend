@@ -19,7 +19,7 @@ import {
   ApiTags,
   ApiParam,
 } from '@nestjs/swagger';
-import { Permission, Resource } from '@librestock/types';
+import { Permission, Resource } from '@librestock/types/auth';
 import { RequirePermission } from '../../common/decorators';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { MessageResponseDto } from '../../common/dto/message-response.dto';

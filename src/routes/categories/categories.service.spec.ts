@@ -84,9 +84,9 @@ describe('CategoriesService', () => {
 
       expect(categoryRepository.findAll).toHaveBeenCalled();
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Electronics');
-      expect(result[0].children).toHaveLength(1);
-      expect(result[0].children[0].name).toBe('Smartphones');
+      expect(result[0]!.name).toBe('Electronics');
+      expect(result[0]!.children).toHaveLength(1);
+      expect(result[0]!.children![0]!.name).toBe('Smartphones');
     });
 
     it('should return empty array when no categories exist', async () => {

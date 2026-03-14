@@ -5,7 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { Permission, Resource } from '@librestock/types';
+import { Permission, Resource } from '@librestock/types/auth';
 import { RolesService } from './roles.service';
 import { RolesRepository } from './roles.repository';
 import { type RoleEntity } from './entities/role.entity';
@@ -95,11 +95,11 @@ describe('RolesService', () => {
       const result = await service.findAll();
 
       expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('role-1');
-      expect(result[0].name).toBe('Admin');
-      expect(result[0].is_system).toBe(true);
-      expect(result[0].permissions).toHaveLength(2);
-      expect(result[1].id).toBe('role-2');
+      expect(result[0]!.id).toBe('role-1');
+      expect(result[0]!.name).toBe('Admin');
+      expect(result[0]!.is_system).toBe(true);
+      expect(result[0]!.permissions).toHaveLength(2);
+      expect(result[1]!.id).toBe('role-2');
     });
 
     it('should return empty array when no roles exist', async () => {
@@ -120,7 +120,7 @@ describe('RolesService', () => {
       expect(result.id).toBe('role-1');
       expect(result.name).toBe('Admin');
       expect(result.permissions).toHaveLength(2);
-      expect(result.permissions[0].resource).toBe(Resource.PRODUCTS);
+      expect(result.permissions[0]!.resource).toBe(Resource.PRODUCTS);
     });
 
     it('should throw NotFoundException when role does not exist', async () => {

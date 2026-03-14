@@ -16,7 +16,7 @@ import {
   ValidationArguments,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import type { UpdateProductDto as UpdateProductDtoShape } from '@librestock/types';
+import type { UpdateProductDto as UpdateProductDtoShape } from '@librestock/types/products';
 import { Product } from '../entities/product.entity';
 
 @ValidatorConstraint({ name: 'updatePriceGreaterThanCost', async: false })

@@ -179,7 +179,7 @@ describe('AreasService', () => {
       const result = await service.findAll({});
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Zone A');
+      expect(result[0]!.name).toBe('Zone A');
     });
 
     it('should return hierarchical areas when include_children and location_id are provided', async () => {

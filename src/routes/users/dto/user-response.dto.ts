@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { UserResponseDto as UserResponseDtoShape } from '@librestock/types';
+import type { UserResponseDto as UserResponseDtoShape } from '@librestock/types/users';
 
 export class UserResponseDto implements UserResponseDtoShape {
   @ApiProperty({ description: 'User ID', format: 'uuid' })

@@ -21,11 +21,11 @@ jest.mock('../../auth', () => ({
   },
 }));
 
-const mockListUsers = auth.api.listUsers as jest.Mock;
-const mockBanUser = auth.api.banUser as jest.Mock;
-const mockUnbanUser = auth.api.unbanUser as jest.Mock;
-const mockRemoveUser = auth.api.removeUser as jest.Mock;
-const mockRevokeUserSessions = auth.api.revokeUserSessions as jest.Mock;
+const mockListUsers = auth.api.listUsers as unknown as jest.Mock;
+const mockBanUser = auth.api.banUser as unknown as jest.Mock;
+const mockUnbanUser = auth.api.unbanUser as unknown as jest.Mock;
+const mockRemoveUser = auth.api.removeUser as unknown as jest.Mock;
+const mockRevokeUserSessions = auth.api.revokeUserSessions as unknown as jest.Mock;
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -124,9 +124,9 @@ describe('UsersService', () => {
       );
 
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].id).toBe('user-1');
-      expect(result.data[0].name).toBe('John Doe');
-      expect(result.data[0].roles).toEqual(['Admin']);
+      expect(result.data[0]!.id).toBe('user-1');
+      expect(result.data[0]!.name).toBe('John Doe');
+      expect(result.data[0]!.roles).toEqual(['Admin']);
       expect(result.total).toBe(1);
       expect(result.page).toBe(1);
       expect(result.limit).toBe(20);
@@ -193,7 +193,7 @@ describe('UsersService', () => {
       );
 
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].id).toBe('user-1');
+      expect(result.data[0]!.id).toBe('user-1');
       expect(result.total).toBe(1);
     });
 
