@@ -19,14 +19,13 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-// eslint-disable-next-line no-restricted-imports
 import {
   CreateOrderSchema,
   OrderIdSchema,
   OrderQuerySchema,
   UpdateOrderSchema,
   UpdateOrderStatusSchema,
-} from '@librestock/types';
+} from '@librestock/types/orders';
 import { Permission, Resource } from '@librestock/types/auth';
 import {
   type CreateOrderType as CreateOrder,
@@ -51,10 +50,7 @@ import { runEffect } from '../../common/effect/run-effect';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { HateoasInterceptor } from '../../common/hateoas/hateoas.interceptor';
 import { AuditInterceptor } from '../../common/interceptors/audit.interceptor';
-import {
-  OrderResponseDto,
-  PaginatedOrdersResponseDto,
-} from './dto';
+import { OrderResponseDto, PaginatedOrdersResponseDto } from './dto';
 import { DeleteOrderHateoas, OrderHateoas } from './orders.hateoas';
 import { OrdersService } from './orders.service';
 
