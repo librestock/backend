@@ -1,5 +1,5 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { Effect } from 'effect';
 import { type DataSource } from 'typeorm';
 import {
   setupTransactionalTestContext,
@@ -11,6 +11,10 @@ import { ProductsService } from './products.service';
 import { ProductRepository, type PaginatedResult } from './product.repository';
 import { type Product } from './entities/product.entity';
 import { ProductSortField, SortOrder } from './dto';
+
+const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runPromise(effect);
+const fail = <A, E>(effect: Effect.Effect<A, E>) =>
+  Effect.runPromise(Effect.flip(effect));
 
 describe('ProductsService', () => {
   let service: ProductsService;
@@ -133,12 +137,12 @@ describe('ProductsService', () => {
       };
       productRepository.findAllPaginated.mockResolvedValue(paginatedResult);
 
-      const result = await service.findAllPaginated({
+      const result = await run(service.findAllPaginated({
         page: 1,
         limit: 20,
         sort_by: ProductSortField.NAME,
         sort_order: SortOrder.ASC,
-      });
+      }));
 
       expect(result.data).toHaveLength(1);
       expect(result.meta.page).toBe(1);
@@ -157,12 +161,12 @@ describe('ProductsService', () => {
       };
       productRepository.findAllPaginated.mockResolvedValue(paginatedResult);
 
-      const result = await service.findAllPaginated({
+      const result = await run(service.findAllPaginated({
         page: 2,
         limit: 20,
         sort_by: ProductSortField.NAME,
         sort_order: SortOrder.ASC,
-      });
+      }));
 
       expect(result.meta.has_next).toBe(true);
       expect(result.meta.has_previous).toBe(true);
@@ -173,7 +177,7 @@ describe('ProductsService', () => {
     it('should return all products', async () => {
       productRepository.findAll.mockResolvedValue([mockProduct]);
 
-      const result = await service.findAll();
+      const result = await run(service.findAll());
 
       expect(result).toHaveLength(1);
       expect(result[0]!.sku).toBe('PROD-001');
@@ -184,25 +188,28 @@ describe('ProductsService', () => {
     it('should return a product by id', async () => {
       productRepository.findById.mockResolvedValue(mockProduct);
 
-      const result = await service.findOne(mockProduct.id);
+      const result = await run(service.findOne(mockProduct.id));
 
       expect(result.id).toBe(mockProduct.id);
       expect(result.sku).toBe('PROD-001');
     });
 
-    it('should throw NotFoundException when product does not exist', async () => {
+    it('should fail with ProductNotFound when product does not exist', async () => {
       productRepository.findById.mockResolvedValue(null);
 
-      await expect(service.findOne('non-existent-id')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(fail(service.findOne('non-existent-id'))).resolves
+        .toMatchObject({
+          _tag: 'ProductNotFound',
+          statusCode: 404,
+          message: 'Product not found',
+        });
     });
 
     it('should include deleted products when includeDeleted is true', async () => {
       const deletedProduct = { ...mockProduct, deleted_at: new Date() };
       productRepository.findById.mockResolvedValue(deletedProduct);
 
-      const result = await service.findOne(mockProduct.id, true);
+      const result = await run(service.findOne(mockProduct.id, true));
 
       expect(productRepository.findById).toHaveBeenCalledWith(
         mockProduct.id,
@@ -217,18 +224,21 @@ describe('ProductsService', () => {
       categoriesService.existsById.mockResolvedValue(true);
       productRepository.findByCategoryId.mockResolvedValue([mockProduct]);
 
-      const result = await service.findByCategory(mockCategory.id);
+      const result = await run(service.findByCategory(mockCategory.id));
 
       expect(result).toHaveLength(1);
       expect(result[0]!.category_id).toBe(mockCategory.id);
     });
 
-    it('should throw NotFoundException when category does not exist', async () => {
+    it('should fail with CategoryNotFound when category does not exist', async () => {
       categoriesService.existsById.mockResolvedValue(false);
 
-      await expect(service.findByCategory('non-existent-id')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(fail(service.findByCategory('non-existent-id'))).resolves
+        .toMatchObject({
+          _tag: 'CategoryNotFound',
+          statusCode: 404,
+          message: 'Category not found',
+        });
     });
   });
 
@@ -241,7 +251,7 @@ describe('ProductsService', () => {
       ]);
       productRepository.findByCategoryIds.mockResolvedValue([mockProduct]);
 
-      const result = await service.findByCategoryTree(mockCategory.id);
+      const result = await run(service.findByCategoryTree(mockCategory.id));
 
       expect(productRepository.findByCategoryIds).toHaveBeenCalledWith([
         mockCategory.id,
@@ -267,7 +277,7 @@ describe('ProductsService', () => {
       productRepository.create.mockResolvedValue(mockProduct);
       productRepository.findById.mockResolvedValue(mockProduct);
 
-      const result = await service.create(createDto, 'user_123');
+      const result = await run(service.create(createDto, 'user_123'));
 
       expect(categoriesService.existsById).toHaveBeenCalledWith(
         mockCategory.id,
@@ -276,27 +286,30 @@ describe('ProductsService', () => {
       expect(result.sku).toBe('PROD-001');
     });
 
-    it('should throw BadRequestException when category does not exist', async () => {
+    it('should fail with CategoryNotFound when category does not exist', async () => {
       categoriesService.existsById.mockResolvedValue(false);
 
-      await expect(service.create(createDto, 'user_123')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(fail(service.create(createDto, 'user_123'))).resolves
+        .toMatchObject({
+          _tag: 'CategoryNotFound',
+          statusCode: 404,
+          message: 'Category not found',
+        });
     });
 
-    it('should throw BadRequestException when SKU already exists', async () => {
+    it('should fail with SkuAlreadyExists when SKU already exists', async () => {
       categoriesService.existsById.mockResolvedValue(true);
       productRepository.findBySku.mockResolvedValue(mockProduct);
 
-      await expect(service.create(createDto, 'user_123')).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.create(createDto, 'user_123')).rejects.toThrow(
-        'A product with this SKU already exists',
-      );
+      await expect(fail(service.create(createDto, 'user_123'))).resolves
+        .toMatchObject({
+          _tag: 'SkuAlreadyExists',
+          statusCode: 400,
+          message: 'A product with this SKU already exists',
+        });
     });
 
-    it('should throw BadRequestException when price is less than cost', async () => {
+    it('should fail with PriceBelowCost when price is less than cost', async () => {
       const dtoWithInvalidPrice = {
         ...createDto,
         standard_cost: 100,
@@ -305,14 +318,12 @@ describe('ProductsService', () => {
       categoriesService.existsById.mockResolvedValue(true);
       productRepository.findBySku.mockResolvedValue(null);
 
-      await expect(
-        service.create(dtoWithInvalidPrice, 'user_123'),
-      ).rejects.toThrow(BadRequestException);
-      await expect(
-        service.create(dtoWithInvalidPrice, 'user_123'),
-      ).rejects.toThrow(
-        'Standard price must be greater than or equal to standard cost',
-      );
+      await expect(fail(service.create(dtoWithInvalidPrice, 'user_123')))
+        .resolves.toMatchObject({
+          _tag: 'PriceBelowCost',
+          statusCode: 400,
+          message: 'Standard price must be greater than or equal to standard cost',
+        });
     });
 
     it('should allow equal price and cost', async () => {
@@ -327,7 +338,7 @@ describe('ProductsService', () => {
       productRepository.findById.mockResolvedValue(mockProduct);
 
       await expect(
-        service.create(dtoWithEqualPriceAndCost, 'user_123'),
+        run(service.create(dtoWithEqualPriceAndCost, 'user_123')),
       ).resolves.toBeDefined();
     });
   });
@@ -424,35 +435,43 @@ describe('ProductsService', () => {
         .mockResolvedValueOnce(updatedProduct);
       productRepository.update.mockResolvedValue(1);
 
-      const result = await service.update(
+      const result = await run(service.update(
         mockProduct.id,
         updateDto,
         'user_123',
-      );
+      ));
 
       expect(productRepository.update).toHaveBeenCalled();
       expect(result.name).toBe('Updated Product');
     });
 
-    it('should throw NotFoundException when product does not exist', async () => {
+    it('should fail with ProductNotFound when product does not exist', async () => {
       productRepository.findById.mockResolvedValue(null);
 
       await expect(
-        service.update('non-existent-id', { name: 'Test' }, 'user_123'),
-      ).rejects.toThrow(NotFoundException);
+        fail(service.update('non-existent-id', { name: 'Test' }, 'user_123')),
+      ).resolves.toMatchObject({
+        _tag: 'ProductNotFound',
+        statusCode: 404,
+        message: 'Product not found',
+      });
     });
 
-    it('should validate category exists when updating category_id', async () => {
+    it('should fail with CategoryNotFound when updating category_id', async () => {
       const updateDto = { category_id: 'new-category-id' };
       productRepository.findById.mockResolvedValue(mockProduct);
       categoriesService.existsById.mockResolvedValue(false);
 
       await expect(
-        service.update(mockProduct.id, updateDto, 'user_123'),
-      ).rejects.toThrow(BadRequestException);
+        fail(service.update(mockProduct.id, updateDto, 'user_123')),
+      ).resolves.toMatchObject({
+        _tag: 'CategoryNotFound',
+        statusCode: 404,
+        message: 'Category not found',
+      });
     });
 
-    it('should validate SKU uniqueness when updating SKU', async () => {
+    it('should fail with SkuAlreadyExists when updating SKU', async () => {
       const updateDto = { sku: 'EXISTING-SKU' };
       productRepository.findById.mockResolvedValue(mockProduct);
       productRepository.findBySku.mockResolvedValue({
@@ -462,11 +481,12 @@ describe('ProductsService', () => {
       });
 
       await expect(
-        service.update(mockProduct.id, updateDto, 'user_123'),
-      ).rejects.toThrow(BadRequestException);
-      await expect(
-        service.update(mockProduct.id, updateDto, 'user_123'),
-      ).rejects.toThrow('A product with this SKU already exists');
+        fail(service.update(mockProduct.id, updateDto, 'user_123')),
+      ).resolves.toMatchObject({
+        _tag: 'SkuAlreadyExists',
+        statusCode: 400,
+        message: 'A product with this SKU already exists',
+      });
     });
 
     it('should allow updating to same SKU', async () => {
@@ -475,7 +495,7 @@ describe('ProductsService', () => {
       productRepository.update.mockResolvedValue(1);
 
       await expect(
-        service.update(mockProduct.id, updateDto, 'user_123'),
+        run(service.update(mockProduct.id, updateDto, 'user_123')),
       ).resolves.toBeDefined();
     });
 
@@ -487,14 +507,17 @@ describe('ProductsService', () => {
       });
 
       await expect(
-        service.update(mockProduct.id, updateDto, 'user_123'),
-      ).rejects.toThrow(BadRequestException);
+        fail(service.update(mockProduct.id, updateDto, 'user_123')),
+      ).resolves.toMatchObject({
+        _tag: 'PriceBelowCost',
+        statusCode: 400,
+      });
     });
 
     it('should return existing product when no changes provided', async () => {
       productRepository.findById.mockResolvedValue(mockProduct);
 
-      const result = await service.update(mockProduct.id, {}, 'user_123');
+      const result = await run(service.update(mockProduct.id, {}, 'user_123'));
 
       expect(productRepository.update).not.toHaveBeenCalled();
       expect(result.id).toBe(mockProduct.id);
@@ -536,7 +559,7 @@ describe('ProductsService', () => {
       productRepository.findById.mockResolvedValue(mockProduct);
       productRepository.softDelete.mockResolvedValue(undefined);
 
-      await service.delete(mockProduct.id, 'user_123');
+      await run(service.delete(mockProduct.id, 'user_123'));
 
       expect(productRepository.softDelete).toHaveBeenCalledWith(
         mockProduct.id,
@@ -549,18 +572,21 @@ describe('ProductsService', () => {
       productRepository.findById.mockResolvedValue(mockProduct);
       productRepository.hardDelete.mockResolvedValue(undefined);
 
-      await service.delete(mockProduct.id, 'user_123', true);
+      await run(service.delete(mockProduct.id, 'user_123', true));
 
       expect(productRepository.hardDelete).toHaveBeenCalledWith(mockProduct.id);
       expect(productRepository.softDelete).not.toHaveBeenCalled();
     });
 
-    it('should throw NotFoundException when product does not exist', async () => {
+    it('should fail with ProductNotFound when product does not exist', async () => {
       productRepository.findById.mockResolvedValue(null);
 
       await expect(
-        service.delete('non-existent-id', 'user_123'),
-      ).rejects.toThrow(NotFoundException);
+        fail(service.delete('non-existent-id', 'user_123')),
+      ).resolves.toMatchObject({
+        _tag: 'ProductNotFound',
+        statusCode: 404,
+      });
     });
   });
 
@@ -621,29 +647,32 @@ describe('ProductsService', () => {
         .mockResolvedValueOnce({ ...mockProduct, deleted_at: null });
       productRepository.restore.mockResolvedValue(undefined);
 
-      const result = await service.restore(mockProduct.id);
+      const result = await run(service.restore(mockProduct.id));
 
       expect(productRepository.restore).toHaveBeenCalledWith(mockProduct.id);
       expect(result.deleted_at).toBeNull();
     });
 
-    it('should throw NotFoundException when product does not exist', async () => {
+    it('should fail with ProductNotFound when product does not exist', async () => {
       productRepository.findById.mockResolvedValue(null);
 
-      await expect(service.restore('non-existent-id')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(fail(service.restore('non-existent-id'))).resolves
+        .toMatchObject({
+          _tag: 'ProductNotFound',
+          statusCode: 404,
+          message: 'Product not found',
+        });
     });
 
-    it('should throw BadRequestException when product is not deleted', async () => {
+    it('should fail with ProductNotDeleted when product is not deleted', async () => {
       productRepository.findById.mockResolvedValue(mockProduct);
 
-      await expect(service.restore(mockProduct.id)).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.restore(mockProduct.id)).rejects.toThrow(
-        'Product is not deleted',
-      );
+      await expect(fail(service.restore(mockProduct.id))).resolves
+        .toMatchObject({
+          _tag: 'ProductNotDeleted',
+          statusCode: 400,
+          message: 'Product is not deleted',
+        });
     });
   });
 

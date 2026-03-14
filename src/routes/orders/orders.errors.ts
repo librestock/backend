@@ -15,13 +15,6 @@ export class ClientNotFound extends Data.TaggedError('ClientNotFound')<{
   readonly statusCode = 400 as const;
 }
 
-export class ProductNotFound extends Data.TaggedError('ProductNotFound')<{
-  readonly productId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
-
 export class InvalidOrderStatusTransition extends Data.TaggedError(
   'InvalidOrderStatusTransition',
 )<{

@@ -35,7 +35,10 @@ import { HateoasInterceptor } from '../../common/hateoas/hateoas.interceptor';
 import { AuditInterceptor } from '../../common/interceptors/audit.interceptor';
 import { Auditable } from '../../common/decorators/auditable.decorator';
 import { AuditAction, AuditEntityType } from '../../common/enums';
-import { StandardThrottle, BulkThrottle } from '../../common/decorators/throttle.decorator';
+import {
+  StandardThrottle,
+  BulkThrottle,
+} from '../../common/decorators/throttle.decorator';
 import {
   CreateProductDto,
   UpdateProductDto,
@@ -56,6 +59,7 @@ import {
   BulkDeleteHateoas,
   BulkRestoreHateoas,
 } from './products.hateoas';
+import { runEffect } from '../../common/effect/run-effect';
 
 @ApiTags('Products')
 @ApiBearerAuth()
@@ -78,7 +82,7 @@ export class ProductsController {
   async listProducts(
     @Query() query: ProductQueryDto,
   ): Promise<PaginatedProductsResponseDto> {
-    return this.productsService.findAllPaginated(query);
+    return runEffect(this.productsService.findAllPaginated(query));
   }
 
   @Get('all')
@@ -91,7 +95,7 @@ export class ProductsController {
   @ApiResponse({ status: 200, type: [ProductResponseDto] })
   @ApiResponse({ status: 401, type: ErrorResponseDto })
   async listAllProducts(): Promise<ProductResponseDto[]> {
-    return this.productsService.findAll();
+    return runEffect(this.productsService.findAll());
   }
 
   @Get(':id')
@@ -113,9 +117,11 @@ export class ProductsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Query('include_deleted') includeDeleted?: string,
   ): Promise<ProductResponseDto> {
-    return this.productsService.findOne(
-      id,
-      includeDeleted === 'true' || includeDeleted === '1',
+    return runEffect(
+      this.productsService.findOne(
+        id,
+        includeDeleted === 'true' || includeDeleted === '1',
+      ),
     );
   }
 
@@ -130,10 +136,11 @@ export class ProductsController {
   @ApiResponse({ status: 200, type: [ProductResponseDto] })
   @ApiResponse({ status: 400, type: ErrorResponseDto })
   @ApiResponse({ status: 401, type: ErrorResponseDto })
+  @ApiResponse({ status: 404, type: ErrorResponseDto })
   async getProductsByCategory(
     @Param('categoryId', ParseUUIDPipe) categoryId: string,
   ): Promise<ProductResponseDto[]> {
-    return this.productsService.findByCategory(categoryId);
+    return runEffect(this.productsService.findByCategory(categoryId));
   }
 
   @Get('category/:categoryId/tree')
@@ -147,10 +154,11 @@ export class ProductsController {
   @ApiResponse({ status: 200, type: [ProductResponseDto] })
   @ApiResponse({ status: 400, type: ErrorResponseDto })
   @ApiResponse({ status: 401, type: ErrorResponseDto })
+  @ApiResponse({ status: 404, type: ErrorResponseDto })
   async getProductsByCategoryTree(
     @Param('categoryId', ParseUUIDPipe) categoryId: string,
   ): Promise<ProductResponseDto[]> {
-    return this.productsService.findByCategoryTree(categoryId);
+    return runEffect(this.productsService.findByCategoryTree(categoryId));
   }
 
   @Post()
@@ -166,12 +174,15 @@ export class ProductsController {
   @ApiResponse({ status: 201, type: ProductResponseDto })
   @ApiResponse({ status: 400, type: ErrorResponseDto })
   @ApiResponse({ status: 401, type: ErrorResponseDto })
+  @ApiResponse({ status: 404, type: ErrorResponseDto })
   async createProduct(
     @Body() createProductDto: CreateProductDto,
     @Req() req: AuthRequest,
   ): Promise<ProductResponseDto> {
     const userId = getUserIdFromSession(getUserSession(req));
-    return this.productsService.create(createProductDto, userId ?? undefined);
+    return runEffect(
+      this.productsService.create(createProductDto, userId ?? undefined),
+    );
   }
 
   @Post('bulk')
@@ -220,7 +231,9 @@ export class ProductsController {
     @Req() req: AuthRequest,
   ): Promise<ProductResponseDto> {
     const userId = getUserIdFromSession(getUserSession(req));
-    return this.productsService.update(id, updateProductDto, userId ?? undefined);
+    return runEffect(
+      this.productsService.update(id, updateProductDto, userId ?? undefined),
+    );
   }
 
   @Patch('bulk/status')
@@ -275,7 +288,9 @@ export class ProductsController {
   ): Promise<MessageResponseDto> {
     const isPermanent = permanent === 'true' || permanent === '1';
     const userId = getUserIdFromSession(getUserSession(req));
-    await this.productsService.delete(id, userId ?? undefined, isPermanent);
+    await runEffect(
+      this.productsService.delete(id, userId ?? undefined, isPermanent),
+    );
     return {
       message: isPermanent
         ? 'Product permanently deleted'
@@ -329,7 +344,7 @@ export class ProductsController {
   async restoreProduct(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<ProductResponseDto> {
-    return this.productsService.restore(id);
+    return runEffect(this.productsService.restore(id));
   }
 
   @Patch('bulk/restore')

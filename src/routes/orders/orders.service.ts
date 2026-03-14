@@ -24,11 +24,11 @@ import {
   InvalidOrderStatusTransition,
   OrderNotFound,
   OrdersInfrastructureError,
-  ProductNotFound,
 } from './orders.errors';
 import { OrderRepository } from './orders.repository';
 import { getOrderState } from './state/order-state';
 import { OrderUtils } from './orders.utils';
+import { ProductNotFound } from '../products/products.errors';
 
 @Injectable()
 export class OrdersService {
@@ -47,7 +47,10 @@ export class OrdersService {
       OrderUtils.tryAsync('list orders', () =>
         this.orderRepository.findAllPaginated(query),
       ),
-      (result) => toPaginatedResponse(result, (order) => OrderUtils.toOrderResponseDto(order)),
+      (result) =>
+        toPaginatedResponse(result, (order) =>
+          OrderUtils.toOrderResponseDto(order),
+        ),
     );
   }
 
@@ -57,7 +60,9 @@ export class OrdersService {
     OrderResponseDto,
     OrderNotFound | OrdersInfrastructureError
   > {
-    return Effect.map(this.getOrderOrFail(id), (order) => OrderUtils.toOrderResponseDto(order));
+    return Effect.map(this.getOrderOrFail(id), (order) =>
+      OrderUtils.toOrderResponseDto(order),
+    );
   }
 
   public create(
@@ -109,7 +114,9 @@ export class OrdersService {
         this.orderRepository.create({
           client_id: dto.client_id,
           delivery_address: dto.delivery_address,
-          delivery_deadline: dto.delivery_deadline ? new Date(dto.delivery_deadline) : null,
+          delivery_deadline: dto.delivery_deadline
+            ? new Date(dto.delivery_deadline)
+            : null,
           yacht_name: dto.yacht_name ?? null,
           special_instructions: dto.special_instructions ?? null,
           total_amount,
