@@ -98,7 +98,7 @@ describe('LocationsService', () => {
       const result = await service.findAll();
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Main Warehouse');
+      expect(result[0]!.name).toBe('Main Warehouse');
     });
 
     it('should return empty array when no locations exist', async () => {

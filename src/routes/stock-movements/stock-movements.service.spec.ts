@@ -160,7 +160,7 @@ describe('StockMovementsService', () => {
       const result = await service.findByProduct('product-001');
 
       expect(result).toHaveLength(1);
-      expect(result[0].product_id).toBe('product-001');
+      expect(result[0]!.product_id).toBe('product-001');
     });
 
     it('should throw NotFoundException when product does not exist', async () => {

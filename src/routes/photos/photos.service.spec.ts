@@ -99,8 +99,8 @@ describe('PhotosService', () => {
       expect(result.uploaded_by).toBe('user-001');
       expect(photoRepository.create).toHaveBeenCalledTimes(1);
 
-      const [createPayload] = photoRepository.create.mock.calls[0];
-      await expect(access(createPayload.storage_path)).resolves.toBeUndefined();
+      const [createPayload] = photoRepository.create.mock.calls[0]!;
+      await expect(access(createPayload.storage_path!)).resolves.toBeUndefined();
     });
 
     it('cleans up uploaded file when db create fails', async () => {
