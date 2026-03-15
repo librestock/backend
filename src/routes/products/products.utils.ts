@@ -1,5 +1,7 @@
-import type { Product } from './entities/product.entity';
+import { Effect } from 'effect';
 import type { CreateProductDto, ProductResponseDto } from './dto';
+import type { Product } from './entities/product.entity';
+import { ProductsInfrastructureError } from './products.errors';
 
 export function toProductResponseDto(product: Product): ProductResponseDto {
   const dto: ProductResponseDto = {
@@ -78,4 +80,19 @@ export function toCreateProductEntity(
     created_by: userId ?? null,
     updated_by: userId ?? null,
   };
+}
+
+export function productTryAsync<A>(
+  action: string,
+  execute: () => Promise<A>,
+): Effect.Effect<A, ProductsInfrastructureError> {
+  return Effect.tryPromise({
+    try: execute,
+    catch: (cause) =>
+      new ProductsInfrastructureError({
+        action,
+        cause,
+        message: `Products service failed to ${action}`,
+      }),
+  });
 }

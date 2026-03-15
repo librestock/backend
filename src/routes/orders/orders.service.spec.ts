@@ -303,7 +303,7 @@ describe('OrdersService', () => {
         .toMatchObject({
           _tag: 'ProductNotFound',
           message: 'Product product-001 not found',
-          statusCode: 400,
+          statusCode: 404,
         });
     });
 

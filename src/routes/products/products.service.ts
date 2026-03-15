@@ -1,39 +1,44 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
-import { CategoriesService } from '../categories/categories.service';
+import { Injectable } from '@nestjs/common';
+import { Effect } from 'effect';
 import { Transactional } from '../../common/decorators/transactional.decorator';
-import { ErrorType } from '../../common/dto/error-response.dto';
 import {
-  createEmptyBulkResult,
-  addBulkSuccess,
   addBulkFailure,
-  findDuplicates,
-  toPaginatedResponse,
-  partitionByExistence,
+  addBulkSuccess,
   addNotFoundFailures,
+  createEmptyBulkResult,
+  findDuplicates,
+  partitionByExistence,
+  toPaginatedResponse,
 } from '../../common/utils';
-import { Product } from './entities/product.entity';
+import { CategoriesService } from '../categories/categories.service';
 import {
+  BulkCreateProductsDto,
+  BulkDeleteDto,
+  BulkOperationResultDto,
+  BulkRestoreDto,
+  BulkUpdateStatusDto,
   CreateProductDto,
-  UpdateProductDto,
+  PaginatedProductsResponseDto,
   ProductQueryDto,
   ProductResponseDto,
-  PaginatedProductsResponseDto,
-  BulkCreateProductsDto,
-  BulkUpdateStatusDto,
-  BulkDeleteDto,
-  BulkRestoreDto,
-  BulkOperationResultDto,
+  UpdateProductDto,
 } from './dto';
+import { Product } from './entities/product.entity';
 import { ProductRepository } from './product.repository';
 import {
+  productTryAsync,
   toCreateProductEntity,
   toProductResponseDto,
   toProductResponseDtoList,
 } from './products.utils';
+import {
+  CategoryNotFound,
+  PriceBelowCost,
+  ProductNotFound,
+  ProductNotDeleted,
+  ProductsInfrastructureError,
+  SkuAlreadyExists,
+} from './products.errors';
 
 @Injectable()
 export class ProductsService {
@@ -42,83 +47,110 @@ export class ProductsService {
     private readonly categoriesService: CategoriesService,
   ) {}
 
-  async findAllPaginated(
+  findAllPaginated(
     query: ProductQueryDto,
-  ): Promise<PaginatedProductsResponseDto> {
-    const result = await this.productRepository.findAllPaginated(query);
-    return toPaginatedResponse(result, toProductResponseDto);
+  ): Effect.Effect<PaginatedProductsResponseDto, ProductsInfrastructureError> {
+    return Effect.map(
+      productTryAsync('list products', () =>
+        this.productRepository.findAllPaginated(query),
+      ),
+      (result) => toPaginatedResponse(result, toProductResponseDto),
+    );
   }
 
-  async findAll(): Promise<ProductResponseDto[]> {
-    const products = await this.productRepository.findAll();
-    return toProductResponseDtoList(products);
+  findAll(): Effect.Effect<ProductResponseDto[], ProductsInfrastructureError> {
+    return Effect.map(
+      productTryAsync('list all products', () => this.productRepository.findAll()),
+      toProductResponseDtoList,
+    );
   }
 
-  async findOne(
+  findOne(
     id: string,
     includeDeleted = false,
-  ): Promise<ProductResponseDto> {
-    const product = await this.productRepository.findById(id, includeDeleted);
-    if (!product) {
-      throw new NotFoundException('Product not found');
-    }
-    return toProductResponseDto(product);
+  ): Effect.Effect<
+    ProductResponseDto,
+    ProductNotFound | ProductsInfrastructureError
+  > {
+    return Effect.map(this.getProductOrFail(id, includeDeleted), toProductResponseDto);
   }
 
-  async findByCategory(categoryId: string): Promise<ProductResponseDto[]> {
-    await this.checkCategoryExistence(categoryId, ErrorType.NOT_FOUND);
-    const products = await this.productRepository.findByCategoryId(categoryId);
-    return toProductResponseDtoList(products);
+  findByCategory(
+    categoryId: string,
+  ): Effect.Effect<
+    ProductResponseDto[],
+    CategoryNotFound | ProductsInfrastructureError
+  > {
+    return Effect.gen(this, function* () {
+      yield* this.checkCategoryExists(categoryId);
+      const products = yield* productTryAsync('list products by category', () =>
+        this.productRepository.findByCategoryId(categoryId),
+      );
+      return toProductResponseDtoList(products);
+    });
   }
 
-  async findByCategoryTree(categoryId: string): Promise<ProductResponseDto[]> {
-    await this.checkCategoryExistence(categoryId, ErrorType.NOT_FOUND);
+  findByCategoryTree(
+    categoryId: string,
+  ): Effect.Effect<
+    ProductResponseDto[],
+    CategoryNotFound | ProductsInfrastructureError
+  > {
+    return Effect.gen(this, function* () {
+      yield* this.checkCategoryExists(categoryId);
 
-    const descendantIds =
-      await this.categoriesService.findAllDescendantIds(categoryId);
-    const categoryIds = [categoryId, ...descendantIds];
+      const descendantIds = yield* productTryAsync(
+        'load category descendant ids',
+        () => this.categoriesService.findAllDescendantIds(categoryId),
+      );
+      const categoryIds = [categoryId, ...descendantIds];
 
-    const products =
-      await this.productRepository.findByCategoryIds(categoryIds);
-    return toProductResponseDtoList(products);
+      const products = yield* productTryAsync(
+        'list products by category tree',
+        () => this.productRepository.findByCategoryIds(categoryIds),
+      );
+      return toProductResponseDtoList(products);
+    });
   }
 
-  async create(
+  create(
     createProductDto: CreateProductDto,
     userId?: string,
-  ): Promise<ProductResponseDto> {
-    await this.checkCategoryExistence(
-      createProductDto.category_id,
-      ErrorType.BAD_REQUEST,
-    );
-
-    const existingSku = await this.productRepository.findBySku(
-      createProductDto.sku,
-    );
-
-    if (existingSku) {
-      throw new BadRequestException('A product with this SKU already exists');
-    }
-
-    // Validate price >= cost
-    if (
-      createProductDto.standard_price &&
-      createProductDto.standard_cost &&
-      createProductDto.standard_price < createProductDto.standard_cost
-    ) {
-      throw new BadRequestException(
-        'Standard price must be greater than or equal to standard cost',
+  ): Effect.Effect<
+    ProductResponseDto,
+    | CategoryNotFound
+    | PriceBelowCost
+    | ProductsInfrastructureError
+    | SkuAlreadyExists
+  > {
+    return Effect.gen(this, function* () {
+      yield* this.checkCategoryExists(createProductDto.category_id);
+      yield* this.ensureSkuAvailable(createProductDto.sku);
+      yield* this.validatePriceNotBelowCost(
+        createProductDto.standard_price,
+        createProductDto.standard_cost,
       );
-    }
 
-    const entityData = toCreateProductEntity(createProductDto, userId);
-    const product = await this.productRepository.create(entityData);
-
-    // Fetch with relations
-    const productWithRelations = await this.productRepository.findById(
-      product.id,
-    );
-    return toProductResponseDto(productWithRelations!);
+      const entityData = toCreateProductEntity(createProductDto, userId);
+      const product = yield* productTryAsync('create product', () =>
+        this.productRepository.create(entityData),
+      );
+      const productWithRelations = yield* Effect.flatMap(
+        productTryAsync('load created product', () =>
+          this.productRepository.findById(product.id),
+        ),
+        (createdProduct) =>
+          createdProduct
+            ? Effect.succeed(createdProduct)
+            : Effect.fail(
+                new ProductsInfrastructureError({
+                  action: 'load created product',
+                  message: 'Products service failed to load created product',
+                }),
+              ),
+      );
+      return toProductResponseDto(productWithRelations);
+    });
   }
 
   @Transactional()
@@ -192,51 +224,48 @@ export class ProductsService {
     return result;
   }
 
-  async update(
+  update(
     id: string,
     updateProductDto: UpdateProductDto,
     userId?: string,
-  ): Promise<ProductResponseDto> {
-    const product = await this.getProductOrFail(id);
+  ): Effect.Effect<
+    ProductResponseDto,
+    | CategoryNotFound
+    | PriceBelowCost
+    | ProductNotFound
+    | ProductsInfrastructureError
+    | SkuAlreadyExists
+  > {
+    return Effect.gen(this, function* () {
+      const product = yield* this.getProductOrFail(id);
 
-    if (updateProductDto.category_id) {
-      await this.checkCategoryExistence(
-        updateProductDto.category_id,
-        ErrorType.BAD_REQUEST,
-      );
-    }
-
-    if (updateProductDto.sku && updateProductDto.sku !== product.sku) {
-      const existingSku = await this.productRepository.findBySku(
-        updateProductDto.sku,
-      );
-
-      if (existingSku) {
-        throw new BadRequestException('A product with this SKU already exists');
+      if (updateProductDto.category_id) {
+        yield* this.checkCategoryExists(updateProductDto.category_id);
       }
-    }
 
-    // Validate price >= cost (considering both existing and new values)
-    const newCost = updateProductDto.standard_cost ?? product.standard_cost;
-    const newPrice = updateProductDto.standard_price ?? product.standard_price;
-    if (newCost && newPrice && newPrice < newCost) {
-      throw new BadRequestException(
-        'Standard price must be greater than or equal to standard cost',
+      if (updateProductDto.sku && updateProductDto.sku !== product.sku) {
+        yield* this.ensureSkuAvailable(updateProductDto.sku);
+      }
+
+      yield* this.validatePriceNotBelowCost(
+        updateProductDto.standard_price ?? product.standard_price,
+        updateProductDto.standard_cost ?? product.standard_cost,
       );
-    }
 
-    if (Object.keys(updateProductDto).length === 0) {
-      return toProductResponseDto(product);
-    }
+      if (Object.keys(updateProductDto).length === 0) {
+        return toProductResponseDto(product);
+      }
 
-    await this.productRepository.update(id, {
-      ...updateProductDto,
-      updated_by: userId ?? null,
+      yield* productTryAsync('update product', () =>
+        this.productRepository.update(id, {
+          ...updateProductDto,
+          updated_by: userId ?? null,
+        }),
+      );
+
+      const productWithRelations = yield* this.getProductOrFail(id);
+      return toProductResponseDto(productWithRelations);
     });
-
-    // Fetch with relations
-    const productWithRelations = await this.productRepository.findById(id);
-    return toProductResponseDto(productWithRelations!);
   }
 
   async bulkUpdateStatus(
@@ -276,14 +305,23 @@ export class ProductsService {
     return result;
   }
 
-  async delete(id: string, userId?: string, permanent = false): Promise<void> {
-    await this.getProductOrFail(id);
-
-    if (permanent) {
-      await this.productRepository.hardDelete(id);
-    } else {
-      await this.productRepository.softDelete(id, userId);
-    }
+  public delete(
+    id: string,
+    userId?: string,
+    permanent = false,
+  ): Effect.Effect<void, ProductNotFound | ProductsInfrastructureError> {
+    return Effect.gen(this, function* () {
+      yield* this.getProductOrFail(id);
+      if (permanent) {
+        yield* productTryAsync('hard delete product', () =>
+          this.productRepository.hardDelete(id),
+        );
+      } else {
+        yield* productTryAsync('soft delete product', () =>
+          this.productRepository.softDelete(id, userId),
+        );
+      }
+    });
   }
 
   async bulkDelete(
@@ -320,19 +358,30 @@ export class ProductsService {
     return result;
   }
 
-  async restore(id: string): Promise<ProductResponseDto> {
-    const product = await this.productRepository.findById(id, true);
-    if (!product) {
-      throw new NotFoundException('Product not found');
-    }
-    if (!product.deleted_at) {
-      throw new BadRequestException('Product is not deleted');
-    }
+  restore(
+    id: string,
+  ): Effect.Effect<
+    ProductResponseDto,
+    ProductNotDeleted | ProductNotFound | ProductsInfrastructureError
+  > {
+    return Effect.gen(this, function* () {
+      const product = yield* this.getProductOrFail(id, true);
+      if (!product.deleted_at) {
+        return yield* Effect.fail(
+          new ProductNotDeleted({
+            productId: id,
+            message: 'Product is not deleted',
+          }),
+        );
+      }
 
-    await this.productRepository.restore(id);
+      yield* productTryAsync('restore product', () =>
+        this.productRepository.restore(id),
+      );
 
-    const restored = await this.productRepository.findById(id);
-    return toProductResponseDto(restored!);
+      const restored = yield* this.getProductOrFail(id);
+      return toProductResponseDto(restored);
+    });
   }
 
   async bulkRestore(bulkDto: BulkRestoreDto): Promise<BulkOperationResultDto> {
@@ -371,24 +420,80 @@ export class ProductsService {
     return product !== null;
   }
 
-  private async getProductOrFail(id: string): Promise<Product> {
-    const product = await this.productRepository.findById(id);
-    if (!product) {
-      throw new NotFoundException('Product not found');
-    }
-    return product;
+  private getProductOrFail(
+    id: string,
+    includeDeleted = false,
+  ): Effect.Effect<Product, ProductNotFound | ProductsInfrastructureError> {
+    return Effect.flatMap(
+      productTryAsync('load product', () =>
+        this.productRepository.findById(id, includeDeleted),
+      ),
+      (product) =>
+        product
+          ? Effect.succeed(product)
+          : Effect.fail(
+              new ProductNotFound({
+                productId: id,
+                message: 'Product not found',
+              }),
+            ),
+    );
   }
 
-  private async checkCategoryExistence(
+  private checkCategoryExists(
     categoryId: string,
-    errorType: ErrorType,
-  ): Promise<void> {
-    const exists = await this.categoriesService.existsById(categoryId);
+  ): Effect.Effect<void, CategoryNotFound | ProductsInfrastructureError> {
+    return Effect.flatMap(
+      productTryAsync('check category existence', () =>
+        this.categoriesService.existsById(categoryId),
+      ),
+      (exists) =>
+        exists
+          ? Effect.void
+          : Effect.fail(
+              new CategoryNotFound({
+                categoryId,
+                message: 'Category not found',
+              }),
+            ),
+    );
+  }
 
-    if (!exists) {
-      throw errorType === ErrorType.NOT_FOUND
-        ? new NotFoundException('Category not found')
-        : new BadRequestException('Category not found');
+  private ensureSkuAvailable(
+    sku: string,
+  ): Effect.Effect<void, ProductsInfrastructureError | SkuAlreadyExists> {
+    return Effect.flatMap(
+      productTryAsync('check sku existence', () => this.productRepository.findBySku(sku)),
+      (existingSku) =>
+        existingSku
+          ? Effect.fail(
+              new SkuAlreadyExists({
+                sku,
+                message: 'A product with this SKU already exists',
+              }),
+            )
+          : Effect.void,
+    );
+  }
+
+  private validatePriceNotBelowCost(
+    standardPrice: number | null | undefined,
+    standardCost: number | null | undefined,
+  ): Effect.Effect<void, PriceBelowCost> {
+    if (
+      standardPrice != null &&
+      standardCost != null &&
+      standardPrice < standardCost
+    ) {
+      return Effect.fail(
+        new PriceBelowCost({
+          standardPrice,
+          standardCost,
+          message: 'Standard price must be greater than or equal to standard cost',
+        }),
+      );
     }
+
+    return Effect.void;
   }
 }
