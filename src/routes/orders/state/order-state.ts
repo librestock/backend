@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { OrderStatus } from '@librestock/types/orders';
 import { type Order } from '../entities/order.entity';
 
@@ -9,9 +8,7 @@ export abstract class OrderState {
 
   validateTransition(target: OrderStatus): void {
     if (!this.validTransitions.includes(target)) {
-      throw new BadRequestException(
-        `Cannot transition from ${this.status} to ${target}`,
-      );
+      throw new Error(`Cannot transition from ${this.status} to ${target}`);
     }
   }
 

@@ -1,5 +1,18 @@
+import { Effect } from 'effect';
 import type { AreaResponseDto } from './dto';
 import type { Area } from './entities/area.entity';
+import { AreasInfrastructureError } from './areas.errors';
+
+export const areaTryAsync = <A>(action: string, run: () => Promise<A>) =>
+  Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new AreasInfrastructureError({
+        action,
+        cause,
+        message: `Areas service failed to ${action}`,
+      }),
+  });
 
 export function toAreaResponseDto(area: Area): AreaResponseDto {
   return {

@@ -1,5 +1,21 @@
+import { Effect } from 'effect';
 import type { StockMovementResponseDto } from './dto';
 import type { StockMovement } from './entities/stock-movement.entity';
+import { StockMovementsInfrastructureError } from './stock-movements.errors';
+
+export const stockMovementTryAsync = <A>(
+  action: string,
+  run: () => Promise<A>,
+) =>
+  Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new StockMovementsInfrastructureError({
+        action,
+        cause,
+        message: `Stock movements service failed to ${action}`,
+      }),
+  });
 
 export function toStockMovementResponseDto(
   sm: StockMovement,

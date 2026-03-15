@@ -1,5 +1,18 @@
+import { Effect } from 'effect';
 import type { SupplierResponseDto } from './dto';
 import type { Supplier } from './entities/supplier.entity';
+import { SuppliersInfrastructureError } from './suppliers.errors';
+
+export const supplierTryAsync = <A>(action: string, run: () => Promise<A>) =>
+  Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new SuppliersInfrastructureError({
+        action,
+        cause,
+        message: `Suppliers service failed to ${action}`,
+      }),
+  });
 
 export function toSupplierResponseDto(
   supplier: Supplier,

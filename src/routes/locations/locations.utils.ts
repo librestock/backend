@@ -1,5 +1,18 @@
+import { Effect } from 'effect';
 import type { LocationResponseDto } from './dto';
 import type { Location } from './entities/location.entity';
+import { LocationsInfrastructureError } from './locations.errors';
+
+export const locationTryAsync = <A>(action: string, run: () => Promise<A>) =>
+  Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new LocationsInfrastructureError({
+        action,
+        cause,
+        message: `Locations service failed to ${action}`,
+      }),
+  });
 
 export function toLocationResponseDto(location: Location): LocationResponseDto {
   return {

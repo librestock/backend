@@ -1,5 +1,18 @@
+import { Effect } from 'effect';
 import type { ClientResponseDto } from './dto';
 import type { Client } from './entities/client.entity';
+import { ClientsInfrastructureError } from './clients.errors';
+
+export const clientTryAsync = <A>(action: string, run: () => Promise<A>) =>
+  Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new ClientsInfrastructureError({
+        action,
+        cause,
+        message: `Clients service failed to ${action}`,
+      }),
+  });
 
 export function toClientResponseDto(client: Client): ClientResponseDto {
   return {

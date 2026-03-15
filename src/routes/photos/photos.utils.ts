@@ -1,5 +1,18 @@
+import { Effect } from 'effect';
 import type { PhotoResponseDto } from './dto';
 import type { Photo } from './entities/photo.entity';
+import { PhotosInfrastructureError } from './photos.errors';
+
+export const photoTryAsync = <A>(action: string, run: () => Promise<A>) =>
+  Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new PhotosInfrastructureError({
+        action,
+        cause,
+        message: `Photos service failed to ${action}`,
+      }),
+  });
 
 export function toPhotoResponseDto(photo: Photo): PhotoResponseDto {
   return {

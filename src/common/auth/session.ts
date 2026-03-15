@@ -1,13 +1,4 @@
-import type { Request } from 'express';
 import type { UserSession } from '@thallesp/nestjs-better-auth';
-
-export type AuthRequest = Request & {
-  session?: UserSession;
-};
-
-export const getUserSession = (request: Request): UserSession | undefined => {
-  return (request as AuthRequest).session;
-};
 
 export const getUserIdFromSession = (session: UserSession | undefined): string | null => {
   return session?.user?.id ?? null;

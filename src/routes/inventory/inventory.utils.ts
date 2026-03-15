@@ -1,5 +1,18 @@
+import { Effect } from 'effect';
 import type { InventoryResponseDto } from './dto';
 import type { Inventory } from './entities/inventory.entity';
+import { InventoryInfrastructureError } from './inventory.errors';
+
+export const inventoryTryAsync = <A>(action: string, run: () => Promise<A>) =>
+  Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new InventoryInfrastructureError({
+        action,
+        cause,
+        message: `Inventory service failed to ${action}`,
+      }),
+  });
 
 export function toInventoryResponseDto(
   inventory: Inventory,

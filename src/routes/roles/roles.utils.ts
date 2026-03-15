@@ -1,6 +1,19 @@
+import { Effect } from 'effect';
 import { type Permission, type Resource } from '@librestock/types/auth';
 import type { RoleResponseDto } from './dto';
 import type { RoleEntity } from './entities/role.entity';
+import { RolesInfrastructureError } from './roles.errors';
+
+export const roleTryAsync = <A>(action: string, run: () => Promise<A>) =>
+  Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new RolesInfrastructureError({
+        action,
+        cause,
+        message: `Roles service failed to ${action}`,
+      }),
+  });
 
 export function toRoleResponseDto(entity: RoleEntity): RoleResponseDto {
   return {
