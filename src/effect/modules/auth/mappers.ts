@@ -1,12 +1,10 @@
-import type { UserSession } from '@thallesp/nestjs-better-auth';
-import type { CurrentUserResponseDto } from '../../../routes/auth/dto/current-user-response.dto';
-import type { ProfileResponseDto } from '../../../routes/auth/dto/profile-response.dto';
-import type { SessionClaimsResponseDto } from '../../../routes/auth/dto/session-claims-response.dto';
+import type { UserSession } from '../../platform/auth/user-session';
+import type { CurrentUserResponseDto, ProfileResponseDto, SessionClaimsResponseDto } from '@librestock/types/auth';
 import {
   getSessionIdFromSession,
   getSessionTimingFromSession,
   getUserIdFromSession,
-} from '../../../common/auth/session';
+} from '../../platform/auth/session';
 import type { UserPermissions } from '../roles/service';
 
 export const toCurrentUserResponse = (

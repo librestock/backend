@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect';
-import { makeClientsService } from './service';
+import { ClientsService } from './service';
 import { ClientsRepository } from './repository';
 
 const makeClientEntity = (overrides: Record<string, any> = {}) => ({
@@ -21,28 +21,34 @@ const makeClientEntity = (overrides: Record<string, any> = {}) => ({
 });
 
 const makeMockRepository = (
-  overrides: Partial<Record<keyof import('./repository').ClientsRepository, jest.Mock>> = {},
+  overrides: Partial<Record<string, jest.Mock>> = {},
 ) => ({
-  findAllPaginated: jest.fn().mockResolvedValue({
-    data: [makeClientEntity()],
-    total: 1,
-    page: 1,
-    limit: 20,
-    total_pages: 1,
-  }),
-  findById: jest.fn().mockResolvedValue(makeClientEntity()),
-  findByEmail: jest.fn().mockResolvedValue(null),
+  findAllPaginated: jest.fn().mockReturnValue(
+    Effect.succeed({
+      data: [makeClientEntity()],
+      total: 1,
+      page: 1,
+      limit: 20,
+      total_pages: 1,
+    }),
+  ),
+  findById: jest.fn().mockReturnValue(Effect.succeed(makeClientEntity())),
+  findByEmail: jest.fn().mockReturnValue(Effect.succeed(null)),
   existsById: jest.fn().mockResolvedValue(true),
-  create: jest.fn().mockResolvedValue(makeClientEntity()),
-  update: jest.fn().mockResolvedValue(1),
-  delete: jest.fn().mockResolvedValue(undefined),
+  create: jest.fn().mockReturnValue(Effect.succeed(makeClientEntity())),
+  update: jest.fn().mockReturnValue(Effect.succeed(1)),
+  delete: jest.fn().mockReturnValue(Effect.succeed(undefined)),
   ...overrides,
 });
 
 const buildService = (repo = makeMockRepository()) =>
   Effect.runPromise(
-    makeClientsService.pipe(
-      Effect.provide(Layer.succeed(ClientsRepository, repo as any)),
+    ClientsService.pipe(
+      Effect.provide(
+        ClientsService.DefaultWithoutDependencies.pipe(
+          Layer.provide(Layer.succeed(ClientsRepository, repo as any)),
+        ),
+      ),
     ),
   );
 
@@ -68,7 +74,7 @@ describe('Effect ClientsService', () => {
     });
 
     it('fails with ClientNotFound', async () => {
-      const repo = makeMockRepository({ findById: jest.fn().mockResolvedValue(null) });
+      const repo = makeMockRepository({ findById: jest.fn().mockReturnValue(Effect.succeed(null)) });
       const service = await buildService(repo);
       const error = await fail(service.findOne('missing'));
       expect(error).toMatchObject({ _tag: 'ClientNotFound' });
@@ -90,7 +96,7 @@ describe('Effect ClientsService', () => {
 
     it('fails when email already exists', async () => {
       const repo = makeMockRepository({
-        findByEmail: jest.fn().mockResolvedValue(makeClientEntity()),
+        findByEmail: jest.fn().mockReturnValue(Effect.succeed(makeClientEntity())),
       });
       const service = await buildService(repo);
       const error = await fail(
@@ -122,8 +128,8 @@ describe('Effect ClientsService', () => {
 
     it('fails when email changed to existing', async () => {
       const repo = makeMockRepository({
-        findById: jest.fn().mockResolvedValue(makeClientEntity({ email: 'old@acme.com' })),
-        findByEmail: jest.fn().mockResolvedValue(makeClientEntity({ id: 'other' })),
+        findById: jest.fn().mockReturnValue(Effect.succeed(makeClientEntity({ email: 'old@acme.com' }))),
+        findByEmail: jest.fn().mockReturnValue(Effect.succeed(makeClientEntity({ id: 'other' }))),
       });
       const service = await buildService(repo);
       const error = await fail(
@@ -149,7 +155,7 @@ describe('Effect ClientsService', () => {
     });
 
     it('fails with ClientNotFound', async () => {
-      const repo = makeMockRepository({ findById: jest.fn().mockResolvedValue(null) });
+      const repo = makeMockRepository({ findById: jest.fn().mockReturnValue(Effect.succeed(null)) });
       const service = await buildService(repo);
       const error = await fail(service.delete('missing'));
       expect(error).toMatchObject({ _tag: 'ClientNotFound' });

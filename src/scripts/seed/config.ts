@@ -1,18 +1,18 @@
 import { LocationType } from '@librestock/types/locations';
 import { DataSource } from 'typeorm';
-import { Area } from '../../routes/areas/entities/area.entity';
-import { AuditLog } from '../../routes/audit-logs/entities/audit-log.entity';
-import { Category } from '../../routes/categories/entities/category.entity';
-import { Client } from '../../routes/clients/entities/client.entity';
-import { Inventory } from '../../routes/inventory/entities/inventory.entity';
-import { Location } from '../../routes/locations/entities/location.entity';
-import { OrderItem } from '../../routes/orders/entities/order-item.entity';
-import { Order } from '../../routes/orders/entities/order.entity';
-import { Photo } from '../../routes/photos/entities/photo.entity';
-import { Product } from '../../routes/products/entities/product.entity';
-import { StockMovement } from '../../routes/stock-movements/entities/stock-movement.entity';
-import { SupplierProduct } from '../../routes/suppliers/entities/supplier-product.entity';
-import { Supplier } from '../../routes/suppliers/entities/supplier.entity';
+import { Area } from '../../effect/modules/areas/entities/area.entity';
+import { AuditLog } from '../../effect/modules/audit-logs/entities/audit-log.entity';
+import { Category } from '../../effect/modules/categories/entities/category.entity';
+import { Client } from '../../effect/modules/clients/entities/client.entity';
+import { Inventory } from '../../effect/modules/inventory/entities/inventory.entity';
+import { Location } from '../../effect/modules/locations/entities/location.entity';
+import { OrderItem } from '../../effect/modules/orders/entities/order-item.entity';
+import { Order } from '../../effect/modules/orders/entities/order.entity';
+import { Photo } from '../../effect/modules/photos/entities/photo.entity';
+import { Product } from '../../effect/modules/products/entities/product.entity';
+import { StockMovement } from '../../effect/modules/stock-movements/entities/stock-movement.entity';
+import { SupplierProduct } from '../../effect/modules/suppliers/entities/supplier-product.entity';
+import { Supplier } from '../../effect/modules/suppliers/entities/supplier.entity';
 
 export const MOCK_USER_ID = '00000000-0000-0000-0000-000000000001';
 

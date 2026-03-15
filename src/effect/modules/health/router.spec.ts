@@ -1,9 +1,8 @@
-jest.mock('./layer', () => {
-  const { Context, Layer } = require('effect');
+jest.mock('./service', () => {
+  const { Context } = require('effect');
 
   return {
     HealthService: Context.GenericTag('@librestock/test/HealthService'),
-    healthLayer: Layer.empty,
   };
 });
 
@@ -15,7 +14,7 @@ jest.mock('uuid', () => ({
 import { Effect, Layer } from 'effect';
 import { HttpApp, HttpRouter } from '@effect/platform';
 import { healthRouter } from './router';
-import { HealthService } from './layer';
+import { HealthService } from './service';
 
 describe('healthRouter', () => {
   const makeHandler = (service: any) => {

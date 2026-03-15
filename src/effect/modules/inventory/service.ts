@@ -1,17 +1,17 @@
 import { Context, Effect } from 'effect';
 import type { Schema } from 'effect';
-import type { Inventory } from '../../../routes/inventory/entities/inventory.entity';
+import type { Inventory } from './entities/inventory.entity';
 import type {
   AdjustInventorySchema,
   CreateInventorySchema,
   InventoryQuerySchema,
   UpdateInventorySchema,
-} from '../../../routes/inventory/inventory.schema';
-import { toPaginatedResponse } from '../../../common/utils/pagination.utils';
+} from './inventory.schema';
+import { toPaginatedResponse } from '../../platform/pagination.utils';
 import {
   inventoryTryAsync,
   toInventoryResponseDto,
-} from '../../../routes/inventory/inventory.utils';
+} from './inventory.utils';
 import {
   InvalidInventoryArea,
   InvalidInventoryLocation,
@@ -23,12 +23,12 @@ import {
   InventoryNotFound,
   InventoryProductNotFound,
   InventoryQuantityAdjustmentFailed,
-} from '../../../routes/inventory/inventory.errors';
+} from './inventory.errors';
 import type {
   InventoryResponseDto,
   PaginatedInventoryResponseDto,
-} from '../../../routes/inventory/dto';
-import { AreaNotFound, AreasInfrastructureError } from '../../../routes/areas/areas.errors';
+} from '@librestock/types/inventory';
+import { AreaNotFound, AreasInfrastructureError } from '../areas/areas.errors';
 import { ProductsService } from '../products/service';
 import { LocationsService } from '../locations/service';
 import { AreasService } from '../areas/service';

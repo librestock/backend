@@ -1,6 +1,11 @@
 import { Headers, HttpServerRequest } from '@effect/platform';
 import { Effect, Option } from 'effect';
-import type { LinkDefinition } from '../../common/hateoas/hateoas-link.dto';
+
+export interface LinkDefinition {
+  rel: string;
+  href: string | ((data: any) => string);
+  method?: string;
+}
 
 const getProtocol = (request: HttpServerRequest.HttpServerRequest) => {
   const forwardedProtocol = Headers.get(request.headers, 'x-forwarded-proto');

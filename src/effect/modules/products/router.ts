@@ -12,12 +12,12 @@ import {
   BulkUpdateStatusSchema,
   BulkDeleteSchema,
   BulkRestoreSchema,
-} from '../../../routes/products/products.schema';
+} from './products.schema';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
 import { getOptionalSession } from '../../platform/session';
-import { productTryAsync } from '../../../routes/products/products.utils';
+import { productTryAsync } from './products.utils';
 import { ProductsService } from './service';
 
 type SearchParamsInput = Readonly<

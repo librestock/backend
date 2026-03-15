@@ -1,6 +1,6 @@
 import { Effect, Layer } from 'effect';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
-import { makeAuditLogsService } from './service';
+import { AuditLogsService } from './service';
 import { AuditLogsRepository } from './repository';
 
 const makeAuditLogEntity = (overrides: Record<string, any> = {}) => ({
@@ -17,25 +17,35 @@ const makeAuditLogEntity = (overrides: Record<string, any> = {}) => ({
 });
 
 const makeMockRepository = (
-  overrides: Partial<Record<keyof import('./repository').AuditLogsRepository, jest.Mock>> = {},
+  overrides: Record<string, jest.Mock> = {},
 ) => ({
-  findPaginated: jest.fn().mockResolvedValue({
-    data: [makeAuditLogEntity()],
-    total: 1,
-    page: 1,
-    limit: 20,
-    total_pages: 1,
-  }),
-  findById: jest.fn().mockResolvedValue(makeAuditLogEntity()),
-  findByEntityId: jest.fn().mockResolvedValue([makeAuditLogEntity()]),
-  findByUserId: jest.fn().mockResolvedValue([makeAuditLogEntity()]),
+  findPaginated: jest.fn().mockReturnValue(
+    Effect.succeed({
+      data: [makeAuditLogEntity()],
+      total: 1,
+      page: 1,
+      limit: 20,
+      total_pages: 1,
+    }),
+  ),
+  findById: jest.fn().mockReturnValue(Effect.succeed(makeAuditLogEntity())),
+  findByEntityId: jest
+    .fn()
+    .mockReturnValue(Effect.succeed([makeAuditLogEntity()])),
+  findByUserId: jest
+    .fn()
+    .mockReturnValue(Effect.succeed([makeAuditLogEntity()])),
   ...overrides,
 });
 
 const buildService = (repo = makeMockRepository()) =>
   Effect.runPromise(
-    makeAuditLogsService.pipe(
-      Effect.provide(Layer.succeed(AuditLogsRepository, repo as any)),
+    AuditLogsService.pipe(
+      Effect.provide(
+        AuditLogsService.DefaultWithoutDependencies.pipe(
+          Layer.provide(Layer.succeed(AuditLogsRepository, repo as any)),
+        ),
+      ),
     ),
   );
 
@@ -88,7 +98,7 @@ describe('Effect AuditLogsService', () => {
 
   it('fails with AuditLogNotFound when ID does not exist', async () => {
     const repo = makeMockRepository({
-      findById: jest.fn().mockResolvedValue(null),
+      findById: jest.fn().mockReturnValue(Effect.succeed(null)),
     });
     const service = await buildService(repo);
 

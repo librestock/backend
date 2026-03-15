@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect';
-import { makeSuppliersService } from './service';
+import { SuppliersService } from './service';
 import { SuppliersRepository } from './repository';
 
 const makeSupplierEntity = (overrides: Record<string, any> = {}) => ({
@@ -18,27 +18,33 @@ const makeSupplierEntity = (overrides: Record<string, any> = {}) => ({
 });
 
 const makeMockRepository = (
-  overrides: Partial<Record<keyof import('./repository').SuppliersRepository, jest.Mock>> = {},
+  overrides: Partial<Record<string, jest.Mock>> = {},
 ) => ({
-  findAllPaginated: jest.fn().mockResolvedValue({
-    data: [makeSupplierEntity()],
-    total: 1,
-    page: 1,
-    limit: 20,
-    total_pages: 1,
-  }),
-  findById: jest.fn().mockResolvedValue(makeSupplierEntity()),
-  existsById: jest.fn().mockResolvedValue(true),
-  create: jest.fn().mockResolvedValue(makeSupplierEntity()),
-  update: jest.fn().mockResolvedValue(1),
-  delete: jest.fn().mockResolvedValue(undefined),
+  findAllPaginated: jest.fn().mockReturnValue(
+    Effect.succeed({
+      data: [makeSupplierEntity()],
+      total: 1,
+      page: 1,
+      limit: 20,
+      total_pages: 1,
+    }),
+  ),
+  findById: jest.fn().mockReturnValue(Effect.succeed(makeSupplierEntity())),
+  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
+  create: jest.fn().mockReturnValue(Effect.succeed(makeSupplierEntity())),
+  update: jest.fn().mockReturnValue(Effect.succeed(1)),
+  delete: jest.fn().mockReturnValue(Effect.succeed(undefined)),
   ...overrides,
 });
 
 const buildService = (repo = makeMockRepository()) =>
   Effect.runPromise(
-    makeSuppliersService.pipe(
-      Effect.provide(Layer.succeed(SuppliersRepository, repo as any)),
+    SuppliersService.pipe(
+      Effect.provide(
+        SuppliersService.DefaultWithoutDependencies.pipe(
+          Layer.provide(Layer.succeed(SuppliersRepository, repo as any)),
+        ),
+      ),
     ),
   );
 
@@ -64,7 +70,7 @@ describe('Effect SuppliersService', () => {
     });
 
     it('fails with SupplierNotFound', async () => {
-      const repo = makeMockRepository({ findById: jest.fn().mockResolvedValue(null) });
+      const repo = makeMockRepository({ findById: jest.fn().mockReturnValue(Effect.succeed(null)) });
       const service = await buildService(repo);
       const error = await fail(service.findOne('missing'));
       expect(error).toMatchObject({ _tag: 'SupplierNotFound' });
@@ -105,7 +111,7 @@ describe('Effect SuppliersService', () => {
     });
 
     it('fails with SupplierNotFound', async () => {
-      const repo = makeMockRepository({ findById: jest.fn().mockResolvedValue(null) });
+      const repo = makeMockRepository({ findById: jest.fn().mockReturnValue(Effect.succeed(null)) });
       const service = await buildService(repo);
       const error = await fail(service.delete('missing'));
       expect(error).toMatchObject({ _tag: 'SupplierNotFound' });

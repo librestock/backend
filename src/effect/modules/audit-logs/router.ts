@@ -4,7 +4,7 @@ import {
   AuditEntityTypeSchema,
   AuditLogIdSchema,
   AuditLogQuerySchema,
-} from '../../../routes/audit-logs/audit-logs.schema';
+} from './audit-logs.schema';
 import { Permission, Resource } from '@librestock/types/auth';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';

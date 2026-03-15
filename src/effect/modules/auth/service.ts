@@ -1,7 +1,5 @@
 import { Context, Effect } from 'effect';
-import type { CurrentUserResponseDto } from '../../../routes/auth/dto/current-user-response.dto';
-import type { ProfileResponseDto } from '../../../routes/auth/dto/profile-response.dto';
-import type { SessionClaimsResponseDto } from '../../../routes/auth/dto/session-claims-response.dto';
+import type { CurrentUserResponseDto, ProfileResponseDto, SessionClaimsResponseDto } from '@librestock/types/auth';
 import { requireSession } from '../../platform/session';
 import { RolesService } from '../roles/service';
 import {

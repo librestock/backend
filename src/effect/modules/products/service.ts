@@ -8,10 +8,10 @@ import type {
   BulkUpdateStatusSchema,
   BulkDeleteSchema,
   BulkRestoreSchema,
-} from '../../../routes/products/products.schema';
-import type { ProductResponseDto } from '../../../routes/products/dto';
-import type { Product } from '../../../routes/products/entities/product.entity';
-import { toPaginatedResponse } from '../../../common/utils/pagination.utils';
+} from './products.schema';
+import type { ProductResponseDto } from '@librestock/types/products';
+import type { Product } from './entities/product.entity';
+import { toPaginatedResponse } from '../../platform/pagination.utils';
 import {
   addBulkFailure,
   addBulkSuccess,
@@ -20,13 +20,13 @@ import {
   findDuplicates,
   partitionByExistence,
   type BulkOperationResult,
-} from '../../../common/utils/bulk-operation.utils';
+} from '../../platform/bulk-operation.utils';
 import {
   productTryAsync,
   toCreateProductEntity,
   toProductResponseDto,
   toProductResponseDtoList,
-} from '../../../routes/products/products.utils';
+} from './products.utils';
 import {
   CategoryNotFound,
   PriceBelowCost,
@@ -34,14 +34,16 @@ import {
   ProductNotFound,
   ProductsInfrastructureError,
   SkuAlreadyExists,
-} from '../../../routes/products/products.errors';
+} from './products.errors';
 import { ProductsRepository } from './repository';
 import { CategoriesService } from '../categories/service';
 
 type ProductQueryDto = Schema.Schema.Type<typeof ProductQuerySchema>;
 type CreateProductDto = Schema.Schema.Type<typeof CreateProductSchema>;
 type UpdateProductDto = Schema.Schema.Type<typeof UpdateProductSchema>;
-type BulkCreateProductsDto = Schema.Schema.Type<typeof BulkCreateProductsSchema>;
+type BulkCreateProductsDto = Schema.Schema.Type<
+  typeof BulkCreateProductsSchema
+>;
 type BulkUpdateStatusDto = Schema.Schema.Type<typeof BulkUpdateStatusSchema>;
 type BulkDeleteDto = Schema.Schema.Type<typeof BulkDeleteSchema>;
 type BulkRestoreDto = Schema.Schema.Type<typeof BulkRestoreSchema>;
@@ -49,24 +51,42 @@ type BulkRestoreDto = Schema.Schema.Type<typeof BulkRestoreSchema>;
 export interface ProductsService {
   readonly findAllPaginated: (
     query: ProductQueryDto,
-  ) => Effect.Effect<{ data: ProductResponseDto[]; meta: any }, ProductsInfrastructureError>;
-  readonly findAll: () => Effect.Effect<ProductResponseDto[], ProductsInfrastructureError>;
+  ) => Effect.Effect<
+    { data: ProductResponseDto[]; meta: any },
+    ProductsInfrastructureError
+  >;
+  readonly findAll: () => Effect.Effect<
+    ProductResponseDto[],
+    ProductsInfrastructureError
+  >;
   readonly findOne: (
     id: string,
     includeDeleted?: boolean,
-  ) => Effect.Effect<ProductResponseDto, ProductNotFound | ProductsInfrastructureError>;
+  ) => Effect.Effect<
+    ProductResponseDto,
+    ProductNotFound | ProductsInfrastructureError
+  >;
   readonly findByCategory: (
     categoryId: string,
-  ) => Effect.Effect<ProductResponseDto[], CategoryNotFound | ProductsInfrastructureError>;
+  ) => Effect.Effect<
+    ProductResponseDto[],
+    CategoryNotFound | ProductsInfrastructureError
+  >;
   readonly findByCategoryTree: (
     categoryId: string,
-  ) => Effect.Effect<ProductResponseDto[], CategoryNotFound | ProductsInfrastructureError>;
+  ) => Effect.Effect<
+    ProductResponseDto[],
+    CategoryNotFound | ProductsInfrastructureError
+  >;
   readonly create: (
     dto: CreateProductDto,
     userId?: string,
   ) => Effect.Effect<
     ProductResponseDto,
-    CategoryNotFound | PriceBelowCost | ProductsInfrastructureError | SkuAlreadyExists
+    | CategoryNotFound
+    | PriceBelowCost
+    | ProductsInfrastructureError
+    | SkuAlreadyExists
   >;
   readonly bulkCreate: (
     bulkDto: BulkCreateProductsDto,
@@ -103,7 +123,9 @@ export interface ProductsService {
     ProductResponseDto,
     ProductNotDeleted | ProductNotFound | ProductsInfrastructureError
   >;
-  readonly bulkRestore: (bulkDto: BulkRestoreDto) => Promise<BulkOperationResult>;
+  readonly bulkRestore: (
+    bulkDto: BulkRestoreDto,
+  ) => Promise<BulkOperationResult>;
   readonly existsById: (id: string) => Promise<boolean>;
 }
 
@@ -120,11 +142,18 @@ export const makeProductsService = Effect.gen(function* () {
     includeDeleted = false,
   ): Effect.Effect<Product, ProductNotFound | ProductsInfrastructureError> =>
     Effect.flatMap(
-      productTryAsync('load product', () => repository.findById(id, includeDeleted)),
+      productTryAsync('load product', () =>
+        repository.findById(id, includeDeleted),
+      ),
       (product) =>
         product
           ? Effect.succeed(product)
-          : Effect.fail(new ProductNotFound({ productId: id, message: 'Product not found' })),
+          : Effect.fail(
+              new ProductNotFound({
+                productId: id,
+                message: 'Product not found',
+              }),
+            ),
     );
 
   const checkCategoryExists = (
@@ -137,7 +166,12 @@ export const makeProductsService = Effect.gen(function* () {
       (exists) =>
         exists
           ? Effect.void
-          : Effect.fail(new CategoryNotFound({ categoryId, message: 'Category not found' })),
+          : Effect.fail(
+              new CategoryNotFound({
+                categoryId,
+                message: 'Category not found',
+              }),
+            ),
     );
 
   const ensureSkuAvailable = (
@@ -147,7 +181,12 @@ export const makeProductsService = Effect.gen(function* () {
       productTryAsync('check sku existence', () => repository.findBySku(sku)),
       (existing) =>
         existing
-          ? Effect.fail(new SkuAlreadyExists({ sku, message: 'A product with this SKU already exists' }))
+          ? Effect.fail(
+              new SkuAlreadyExists({
+                sku,
+                message: 'A product with this SKU already exists',
+              }),
+            )
           : Effect.void,
     );
 
@@ -155,12 +194,17 @@ export const makeProductsService = Effect.gen(function* () {
     standardPrice: number | null | undefined,
     standardCost: number | null | undefined,
   ): Effect.Effect<void, PriceBelowCost> => {
-    if (standardPrice != null && standardCost != null && standardPrice < standardCost) {
+    if (
+      standardPrice != null &&
+      standardCost != null &&
+      standardPrice < standardCost
+    ) {
       return Effect.fail(
         new PriceBelowCost({
           standardPrice,
           standardCost,
-          message: 'Standard price must be greater than or equal to standard cost',
+          message:
+            'Standard price must be greater than or equal to standard cost',
         }),
       );
     }
@@ -170,7 +214,9 @@ export const makeProductsService = Effect.gen(function* () {
   return {
     findAllPaginated: (query) =>
       Effect.map(
-        productTryAsync('list products', () => repository.findAllPaginated(query)),
+        productTryAsync('list products', () =>
+          repository.findAllPaginated(query),
+        ),
         (result) => toPaginatedResponse(result, toProductResponseDto),
       ),
     findAll: () =>
@@ -183,8 +229,9 @@ export const makeProductsService = Effect.gen(function* () {
     findByCategory: (categoryId) =>
       Effect.gen(function* () {
         yield* checkCategoryExists(categoryId);
-        const products = yield* productTryAsync('list products by category', () =>
-          repository.findByCategoryId(categoryId),
+        const products = yield* productTryAsync(
+          'list products by category',
+          () => repository.findByCategoryId(categoryId),
         );
         return toProductResponseDtoList(products);
       }),
@@ -213,7 +260,9 @@ export const makeProductsService = Effect.gen(function* () {
           repository.create(entityData),
         );
         const productWithRelations = yield* Effect.flatMap(
-          productTryAsync('load created product', () => repository.findById(product.id)),
+          productTryAsync('load created product', () =>
+            repository.findById(product.id),
+          ),
           (p) =>
             p
               ? Effect.succeed(p)
@@ -230,13 +279,17 @@ export const makeProductsService = Effect.gen(function* () {
       const result = createEmptyBulkResult();
 
       // Validate all categories exist first
-      const categoryIds = [...new Set(bulkDto.products.map((p) => p.category_id))];
+      const categoryIds = [
+        ...new Set(bulkDto.products.map((p) => p.category_id)),
+      ];
       for (const categoryId of categoryIds) {
         const exists = await categoriesService.existsById(categoryId);
         if (!exists) {
           for (const product of bulkDto.products) {
             if (product.category_id === categoryId) {
-              addBulkFailure(result, `Category ${categoryId} not found`, { sku: product.sku });
+              addBulkFailure(result, `Category ${categoryId} not found`, {
+                sku: product.sku,
+              });
             }
           }
           return result;
@@ -250,7 +303,9 @@ export const makeProductsService = Effect.gen(function* () {
       if (duplicateSkus.length > 0) {
         for (const product of bulkDto.products) {
           if (duplicateSkus.includes(product.sku)) {
-            addBulkFailure(result, 'Duplicate SKU in request', { sku: product.sku });
+            addBulkFailure(result, 'Duplicate SKU in request', {
+              sku: product.sku,
+            });
           }
         }
       }
@@ -262,7 +317,9 @@ export const makeProductsService = Effect.gen(function* () {
         try {
           const existingSku = await repository.findBySku(productDto.sku);
           if (existingSku) {
-            addBulkFailure(result, 'A product with this SKU already exists', { sku: productDto.sku });
+            addBulkFailure(result, 'A product with this SKU already exists', {
+              sku: productDto.sku,
+            });
             continue;
           }
 
@@ -314,7 +371,10 @@ export const makeProductsService = Effect.gen(function* () {
       const ids = [...bulkDto.ids];
       const existingProducts = await repository.findByIds(ids);
       const existingIds = new Set(existingProducts.map((p) => p.id));
-      const { existing: idsToUpdate, notFound } = partitionByExistence(ids, existingIds);
+      const { existing: idsToUpdate, notFound } = partitionByExistence(
+        ids,
+        existingIds,
+      );
 
       addNotFoundFailures(result, notFound, 'Product');
 
@@ -333,9 +393,13 @@ export const makeProductsService = Effect.gen(function* () {
       Effect.gen(function* () {
         yield* getProductOrFail(id);
         if (permanent) {
-          yield* productTryAsync('hard delete product', () => repository.hardDelete(id));
+          yield* productTryAsync('hard delete product', () =>
+            repository.hardDelete(id),
+          );
         } else {
-          yield* productTryAsync('soft delete product', () => repository.softDelete(id, userId));
+          yield* productTryAsync('soft delete product', () =>
+            repository.softDelete(id, userId),
+          );
         }
       }),
     bulkDelete: async (bulkDto, userId) => {
@@ -344,7 +408,10 @@ export const makeProductsService = Effect.gen(function* () {
       const ids = [...bulkDto.ids];
       const existingProducts = await repository.findByIds(ids);
       const existingIds = new Set(existingProducts.map((p) => p.id));
-      const { existing: idsToDelete, notFound } = partitionByExistence(ids, existingIds);
+      const { existing: idsToDelete, notFound } = partitionByExistence(
+        ids,
+        existingIds,
+      );
 
       addNotFoundFailures(result, notFound, 'Product');
 
@@ -363,7 +430,10 @@ export const makeProductsService = Effect.gen(function* () {
         const product = yield* getProductOrFail(id, true);
         if (!product.deleted_at) {
           return yield* Effect.fail(
-            new ProductNotDeleted({ productId: id, message: 'Product is not deleted' }),
+            new ProductNotDeleted({
+              productId: id,
+              message: 'Product is not deleted',
+            }),
           );
         }
 
@@ -378,7 +448,10 @@ export const makeProductsService = Effect.gen(function* () {
       const ids = [...bulkDto.ids];
       const deletedProducts = await repository.findDeletedByIds(ids);
       const deletedIds = new Set(deletedProducts.map((p) => p.id));
-      const { existing: idsToRestore, notFound } = partitionByExistence(ids, deletedIds);
+      const { existing: idsToRestore, notFound } = partitionByExistence(
+        ids,
+        deletedIds,
+      );
 
       for (const id of notFound) {
         addBulkFailure(result, 'Product not found or not deleted', { id });

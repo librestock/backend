@@ -1,14 +1,14 @@
-import { Context, Effect } from 'effect';
-import { Repository } from 'typeorm';
+import { Effect } from 'effect';
 import {
   applyQuerySpecs,
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
   type QuerySpec,
   type RepositoryPaginatedResult,
-} from '../../../common/utils/query-spec.utils';
+} from '../../platform/query-spec.utils';
 import { TypeOrmDataSource } from '../../platform/typeorm';
-import { AuditLog } from '../../../routes/audit-logs/entities/audit-log.entity';
+import { AuditLog } from './entities/audit-log.entity';
+import { AuditLogsInfrastructureError } from './audit-logs.errors';
 import {
   AuditAction,
   AuditEntityType,
@@ -28,21 +28,16 @@ export interface AuditLogQueryOptions {
 
 export type PaginatedAuditLogs = RepositoryPaginatedResult<AuditLog>;
 
-export interface AuditLogsRepository {
-  readonly findPaginated: (
-    options: AuditLogQueryOptions,
-  ) => Promise<PaginatedAuditLogs>;
-  readonly findById: (id: string) => Promise<AuditLog | null>;
-  readonly findByEntityId: (
-    entityType: AuditEntityType,
-    entityId: string,
-  ) => Promise<AuditLog[]>;
-  readonly findByUserId: (userId: string) => Promise<AuditLog[]>;
-}
-
-export const AuditLogsRepository = Context.GenericTag<AuditLogsRepository>(
-  '@librestock/effect/AuditLogsRepository',
-);
+const tryAsync = <A>(action: string, run: () => Promise<A>) =>
+  Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new AuditLogsInfrastructureError({
+        action,
+        cause,
+        message: `Failed to ${action}`,
+      }),
+  });
 
 type AuditLogQueryBuilderInput = Omit<AuditLogQueryDto, 'from_date' | 'to_date'> & {
   readonly from_date?: Date;
@@ -96,47 +91,58 @@ const auditLogSortSpec: QuerySpec<AuditLog, AuditLogQueryBuilderInput> = (
   queryBuilder.orderBy('audit_log.created_at', 'DESC');
 };
 
-const createAuditLogsRepository = (
-  repository: Repository<AuditLog>,
-): AuditLogsRepository => ({
-  findPaginated: async (options) => {
-    const { page, limit, skip } = resolvePaginationWindow(
-      options.page,
-      options.limit,
-    );
-    const queryBuilder = applyQuerySpecs(
-      repository.createQueryBuilder('audit_log'),
-      {
-        ...options,
-        page,
-        limit,
-      },
-      [auditLogFilterSpec, auditLogSortSpec],
-    );
+export class AuditLogsRepository extends Effect.Service<AuditLogsRepository>()(
+  '@librestock/effect/AuditLogsRepository',
+  {
+    effect: Effect.gen(function* () {
+      const dataSource = yield* TypeOrmDataSource;
+      const repo = dataSource.getRepository(AuditLog);
 
-    const total = await queryBuilder.getCount();
-    const data = await queryBuilder.skip(skip).take(limit).getMany();
+      const findPaginated = (options: AuditLogQueryOptions) =>
+        tryAsync('query audit logs', async () => {
+          const { page, limit, skip } = resolvePaginationWindow(
+            options.page,
+            options.limit,
+          );
+          const queryBuilder = applyQuerySpecs(
+            repo.createQueryBuilder('audit_log'),
+            {
+              ...options,
+              page,
+              limit,
+            },
+            [auditLogFilterSpec, auditLogSortSpec],
+          );
 
-    return toRepositoryPaginatedResult(data, total, page, limit);
+          const total = await queryBuilder.getCount();
+          const data = await queryBuilder.skip(skip).take(limit).getMany();
+
+          return toRepositoryPaginatedResult(data, total, page, limit);
+        });
+
+      const findById = (id: string) =>
+        tryAsync('load audit log', () => repo.findOneBy({ id }));
+
+      const findByEntityId = (entityType: AuditEntityType, entityId: string) =>
+        tryAsync('load entity audit history', () =>
+          repo.find({
+            where: {
+              entity_type: entityType,
+              entity_id: entityId,
+            },
+            order: { created_at: 'DESC' },
+          }),
+        );
+
+      const findByUserId = (userId: string) =>
+        tryAsync('load user audit history', () =>
+          repo.find({
+            where: { user_id: userId },
+            order: { created_at: 'DESC' },
+          }),
+        );
+
+      return { findPaginated, findById, findByEntityId, findByUserId };
+    }),
   },
-  findById: (id) => repository.findOneBy({ id }),
-  findByEntityId: (entityType, entityId) =>
-    repository.find({
-      where: {
-        entity_type: entityType,
-        entity_id: entityId,
-      },
-      order: { created_at: 'DESC' },
-    }),
-  findByUserId: (userId) =>
-    repository.find({
-      where: { user_id: userId },
-      order: { created_at: 'DESC' },
-    }),
-});
-
-export const makeAuditLogsRepository = Effect.gen(function* () {
-  const dataSource = yield* TypeOrmDataSource;
-
-  return createAuditLogsRepository(dataSource.getRepository(AuditLog));
-});
+) {}

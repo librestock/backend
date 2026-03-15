@@ -7,7 +7,7 @@ import {
   LocationQuerySchema,
   CreateLocationSchema,
   UpdateLocationSchema,
-} from '../../../routes/locations/locations.schema';
+} from './locations.schema';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';

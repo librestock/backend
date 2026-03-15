@@ -1,7 +1,7 @@
 import { HttpServerError, HttpServerResponse } from '@effect/platform';
 import { Effect, Cause, ParseResult } from 'effect';
 import { TreeFormatter } from 'effect/ParseResult';
-import { isAppError } from '../../common/effect/errors';
+import { isAppError } from './domain-errors';
 import { getRequestContext } from './request-context';
 
 const STATUS_NAMES: Record<number, string> = {

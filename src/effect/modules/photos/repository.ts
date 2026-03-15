@@ -1,50 +1,70 @@
-import { Context, Effect } from 'effect';
-import { Repository } from 'typeorm';
+import { Effect } from 'effect';
 import { TypeOrmDataSource } from '../../platform/typeorm';
-import { Photo } from '../../../routes/photos/entities/photo.entity';
+import { Photo } from './entities/photo.entity';
+import { PhotosInfrastructureError } from './photos.errors';
 
-export interface PhotosRepository {
-  readonly findByProductId: (productId: string) => Promise<Photo[]>;
-  readonly findById: (id: string) => Promise<Photo | null>;
-  readonly create: (data: Partial<Photo>) => Promise<Photo>;
-  readonly delete: (id: string) => Promise<void>;
-  readonly countByProductId: (productId: string) => Promise<number>;
-}
+const tryAsync = <A>(action: string, run: () => Promise<A>) =>
+  Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new PhotosInfrastructureError({
+        action,
+        cause,
+        message: `Failed to ${action}`,
+      }),
+  });
 
-export const PhotosRepository = Context.GenericTag<PhotosRepository>(
+export class PhotosRepository extends Effect.Service<PhotosRepository>()(
   '@librestock/effect/PhotosRepository',
-);
+  {
+    effect: Effect.gen(function* () {
+      const dataSource = yield* TypeOrmDataSource;
+      const repo = dataSource.getRepository(Photo);
 
-const createPhotosRepository = (
-  repository: Repository<Photo>,
-): PhotosRepository => ({
-  findByProductId: async (productId) =>
-    repository
-      .createQueryBuilder('photo')
-      .where('photo.product_id = :productId', { productId })
-      .orderBy('photo.display_order', 'ASC')
-      .addOrderBy('photo.created_at', 'ASC')
-      .getMany(),
-  findById: (id) =>
-    repository
-      .createQueryBuilder('photo')
-      .where('photo.id = :id', { id })
-      .getOne(),
-  create: async (data) => {
-    const photo = repository.create(data);
-    return repository.save(photo);
-  },
-  delete: async (id) => {
-    await repository.delete(id);
-  },
-  countByProductId: async (productId) =>
-    repository
-      .createQueryBuilder('photo')
-      .where('photo.product_id = :productId', { productId })
-      .getCount(),
-});
+      const findByProductId = (productId: string) =>
+        tryAsync('list photos by product', () =>
+          repo
+            .createQueryBuilder('photo')
+            .where('photo.product_id = :productId', { productId })
+            .orderBy('photo.display_order', 'ASC')
+            .addOrderBy('photo.created_at', 'ASC')
+            .getMany(),
+        );
 
-export const makePhotosRepository = Effect.gen(function* () {
-  const dataSource = yield* TypeOrmDataSource;
-  return createPhotosRepository(dataSource.getRepository(Photo));
-});
+      const findById = (id: string) =>
+        tryAsync('load photo', () =>
+          repo
+            .createQueryBuilder('photo')
+            .where('photo.id = :id', { id })
+            .getOne(),
+        );
+
+      const create = (data: Partial<Photo>) =>
+        tryAsync('create photo', async () => {
+          const photo = repo.create(data);
+          return repo.save(photo);
+        });
+
+      const remove = (id: string) =>
+        tryAsync('delete photo metadata', async () => {
+          await repo.delete(id);
+        });
+
+      const countByProductId = (productId: string) =>
+        tryAsync('count photos by product', () =>
+          repo
+            .createQueryBuilder('photo')
+            .where('photo.product_id = :productId', { productId })
+            .getCount(),
+        );
+
+      return {
+        findByProductId,
+        findById,
+        create,
+        delete: remove,
+        countByProductId,
+      };
+    }),
+  },
+) {}

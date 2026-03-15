@@ -6,7 +6,7 @@ import {
   CreateStockMovementSchema,
   StockMovementIdSchema,
   StockMovementQuerySchema,
-} from '../../../routes/stock-movements/stock-movements.schema';
+} from './stock-movements.schema';
 import { requirePermission } from '../../platform/authorization';
 import { AuditLogWriter } from '../../platform/audit';
 import { respondJson } from '../../platform/errors';

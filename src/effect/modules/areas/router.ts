@@ -7,13 +7,15 @@ import {
   AreaQuerySchema,
   CreateAreaSchema,
   UpdateAreaSchema,
-} from '../../../routes/areas/areas.schema';
+} from './areas.schema';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
 import { AreasService } from './service';
 
-type SearchParamsInput = Readonly<Record<string, string | readonly string[] | undefined>>;
+type SearchParamsInput = Readonly<
+  Record<string, string | readonly string[] | undefined>
+>;
 
 const AreaPathParams = Schema.Struct({ id: AreaIdSchema });
 

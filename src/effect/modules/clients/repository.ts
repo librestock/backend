@@ -1,18 +1,29 @@
-import { Context, Effect } from 'effect';
-import { Repository } from 'typeorm';
+import { Effect } from 'effect';
 import {
   applyQuerySpecs,
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
   type QuerySpec,
   type RepositoryPaginatedResult,
-} from '../../../common/utils/query-spec.utils';
+} from '../../platform/query-spec.utils';
 import { TypeOrmDataSource } from '../../platform/typeorm';
-import { Client } from '../../../routes/clients/entities/client.entity';
+import { Client } from './entities/client.entity';
+import { ClientsInfrastructureError } from './clients.errors';
 import type { Schema } from 'effect';
-import type { ClientQuerySchema } from '../../../routes/clients/clients.schema';
+import type { ClientQuerySchema } from './clients.schema';
 
 type ClientQueryDto = Schema.Schema.Type<typeof ClientQuerySchema>;
+
+const tryAsync = <A>(action: string, run: () => Promise<A>) =>
+  Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new ClientsInfrastructureError({
+        action,
+        cause,
+        message: `Failed to ${action}`,
+      }),
+  });
 
 const clientFilterSpec: QuerySpec<Client, ClientQueryDto> = (qb, query) => {
   if (query.q) {
@@ -31,63 +42,68 @@ const clientSortSpec: QuerySpec<Client, ClientQueryDto> = (qb) => {
   qb.orderBy('client.company_name', 'ASC');
 };
 
-export interface ClientsRepository {
-  readonly findAllPaginated: (
-    query: ClientQueryDto,
-  ) => Promise<RepositoryPaginatedResult<Client>>;
-  readonly findById: (id: string) => Promise<Client | null>;
-  readonly findByEmail: (email: string) => Promise<Client | null>;
-  readonly existsById: (id: string) => Promise<boolean>;
-  readonly create: (data: Partial<Client>) => Promise<Client>;
-  readonly update: (id: string, data: Partial<Client>) => Promise<number>;
-  readonly delete: (id: string) => Promise<void>;
-}
-
-export const ClientsRepository = Context.GenericTag<ClientsRepository>(
+export class ClientsRepository extends Effect.Service<ClientsRepository>()(
   '@librestock/effect/ClientsRepository',
-);
+  {
+    effect: Effect.gen(function* () {
+      const dataSource = yield* TypeOrmDataSource;
+      const repo = dataSource.getRepository(Client);
 
-const createClientsRepository = (
-  repository: Repository<Client>,
-): ClientsRepository => ({
-  findAllPaginated: async (query) => {
-    const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
-    const qb = applyQuerySpecs(
-      repository.createQueryBuilder('client'),
-      query,
-      [clientFilterSpec, clientSortSpec],
-    );
-    const total = await qb.getCount();
-    const data = await qb.skip(skip).take(limit).getMany();
-    return toRepositoryPaginatedResult(data, total, page, limit);
-  },
-  findById: (id) =>
-    repository.createQueryBuilder('client').where('client.id = :id', { id }).getOne(),
-  findByEmail: (email) =>
-    repository.createQueryBuilder('client').where('client.email = :email', { email }).getOne(),
-  existsById: async (id) => {
-    const count = await repository.createQueryBuilder('client').where('client.id = :id', { id }).getCount();
-    return count > 0;
-  },
-  create: async (data) => {
-    const client = repository.create(data);
-    return repository.save(client);
-  },
-  update: async (id, data) => {
-    const result = await repository
-      .createQueryBuilder()
-      .update(Client)
-      .set(data)
-      .where('id = :id', { id })
-      .execute();
-    return result.affected ?? 0;
-  },
-  delete: async (id) => {
-    await repository.delete(id);
-  },
-});
+      const findAllPaginated = (
+        query: ClientQueryDto,
+      ): Effect.Effect<RepositoryPaginatedResult<Client>, ClientsInfrastructureError> =>
+        tryAsync('list clients', async () => {
+          const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
+          const qb = applyQuerySpecs(
+            repo.createQueryBuilder('client'),
+            query,
+            [clientFilterSpec, clientSortSpec],
+          );
+          const total = await qb.getCount();
+          const data = await qb.skip(skip).take(limit).getMany();
+          return toRepositoryPaginatedResult(data, total, page, limit);
+        });
 
-export const makeClientsRepository = Effect.gen(function* () {
-  const dataSource = yield* TypeOrmDataSource;
-  return createClientsRepository(dataSource.getRepository(Client));
-});
+      const findById = (id: string) =>
+        tryAsync('load client', () =>
+          repo.createQueryBuilder('client').where('client.id = :id', { id }).getOne(),
+        );
+
+      const findByEmail = (email: string) =>
+        tryAsync('load client by email', () =>
+          repo.createQueryBuilder('client').where('client.email = :email', { email }).getOne(),
+        );
+
+      const existsById = (id: string): Promise<boolean> =>
+        repo
+          .createQueryBuilder('client')
+          .where('client.id = :id', { id })
+          .getCount()
+          .then((count) => count > 0);
+
+      const create = (data: Partial<Client>) =>
+        tryAsync('create client', async () => {
+          const client = repo.create(data);
+          return repo.save(client);
+        });
+
+      const update = (id: string, data: Partial<Client>) =>
+        tryAsync('update client', async () => {
+          const result = await repo
+            .createQueryBuilder()
+            .update(Client)
+            .set(data)
+            .where('id = :id', { id })
+            .execute();
+          return result.affected ?? 0;
+        });
+
+      const remove = (id: string) =>
+        tryAsync('delete client', async () => {
+          await repo.delete(id);
+        });
+
+      return { findAllPaginated, findById, findByEmail, existsById, create, update, delete: remove };
+    }),
+  },
+) {}

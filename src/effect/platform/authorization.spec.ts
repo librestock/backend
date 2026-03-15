@@ -12,7 +12,7 @@ import { Effect, Layer } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
 import { requirePermission, PermissionDenied } from './authorization';
 import { RolesService } from '../modules/roles/service';
-import { RolesInfrastructureError } from '../../routes/roles/roles.errors';
+import { RolesInfrastructureError } from '../modules/roles/roles.errors';
 
 describe('requirePermission', () => {
   const run = <A, E>(effect: Effect.Effect<A, E, any>) =>

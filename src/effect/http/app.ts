@@ -104,7 +104,9 @@ const authRateLimitMiddleware = (httpApp: HttpApp.Default<any, any>) =>
 
     return Ref.modify(
       authRateLimitBuckets,
-      (currentBuckets): readonly [RateLimitOutcome, Map<string, RateLimitState>] => {
+      (
+        currentBuckets,
+      ): readonly [RateLimitOutcome, Map<string, RateLimitState>] => {
         const buckets = new Map(currentBuckets);
 
         for (const [bucketKey, bucket] of buckets.entries()) {
@@ -192,18 +194,16 @@ const authHandlerRouter = HttpRouter.empty.pipe(
   ),
 );
 
-const appRouter = HttpRouter.concatAll(healthRouter, authHandlerRouter, apiRouter).pipe(
-  HttpRouter.catchAllCause(respondCause),
-);
+const appRouter = HttpRouter.concatAll(
+  healthRouter,
+  authHandlerRouter,
+  apiRouter,
+).pipe(HttpRouter.catchAllCause(respondCause));
 
 const baseHttpApp = Effect.runSync(HttpRouter.toHttpApp(appRouter)).pipe(
   Effect.catchAllCause(respondCause),
 );
 
 export const httpApp = requestLoggingMiddleware(
-  securityHeadersMiddleware(
-    corsMiddleware(
-      bodyLimitMiddleware(baseHttpApp),
-    ),
-  ),
+  securityHeadersMiddleware(corsMiddleware(bodyLimitMiddleware(baseHttpApp))),
 );

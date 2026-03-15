@@ -1,7 +1,7 @@
 import { HttpRouter } from '@effect/platform';
 import { Effect } from 'effect';
 import { respondJson } from '../../platform/errors';
-import { HealthService } from './layer';
+import { HealthService } from './service';
 
 export const healthRouter = HttpRouter.empty.pipe(
   HttpRouter.get(

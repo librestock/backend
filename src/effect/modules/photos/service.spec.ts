@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect';
-import { makePhotosService } from './service';
+import { PhotosService } from './service';
 import { PhotosRepository } from './repository';
 
 const makePhotoEntity = (overrides: Record<string, any> = {}) => ({
@@ -16,22 +16,26 @@ const makePhotoEntity = (overrides: Record<string, any> = {}) => ({
 });
 
 const makeMockRepository = (
-  overrides: Partial<
-    Record<keyof import('./repository').PhotosRepository, jest.Mock>
-  > = {},
+  overrides: Record<string, jest.Mock> = {},
 ) => ({
-  findByProductId: jest.fn().mockResolvedValue([makePhotoEntity()]),
-  findById: jest.fn().mockResolvedValue(makePhotoEntity()),
-  create: jest.fn().mockResolvedValue(makePhotoEntity()),
-  delete: jest.fn().mockResolvedValue(undefined),
-  countByProductId: jest.fn().mockResolvedValue(0),
+  findByProductId: jest.fn().mockReturnValue(Effect.succeed([makePhotoEntity()])),
+  findById: jest.fn().mockReturnValue(Effect.succeed(makePhotoEntity())),
+  create: jest.fn().mockReturnValue(Effect.succeed(makePhotoEntity())),
+  delete: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+  countByProductId: jest.fn().mockReturnValue(Effect.succeed(0)),
   ...overrides,
 });
 
 const buildService = (repo = makeMockRepository()) =>
   Effect.runPromise(
-    makePhotosService.pipe(
-      Effect.provide(Layer.succeed(PhotosRepository, repo as any)),
+    PhotosService.pipe(
+      Effect.provide(
+        PhotosService.DefaultWithoutDependencies.pipe(
+          Layer.provide(
+            Layer.succeed(PhotosRepository, repo as any),
+          ),
+        ),
+      ),
     ),
   );
 
@@ -78,7 +82,7 @@ describe('Effect PhotosService', () => {
   describe('getFilePath', () => {
     it('fails with PhotoNotFound', async () => {
       const repo = makeMockRepository({
-        findById: jest.fn().mockResolvedValue(null),
+        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(repo);
       const error = await fail(service.getFilePath('missing'));
@@ -89,7 +93,7 @@ describe('Effect PhotosService', () => {
   describe('deletePhoto', () => {
     it('fails with PhotoNotFound', async () => {
       const repo = makeMockRepository({
-        findById: jest.fn().mockResolvedValue(null),
+        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(repo);
       const error = await fail(service.deletePhoto('missing'));

@@ -1,15 +1,14 @@
-import { Context, Effect } from 'effect';
-import { DataSource } from 'typeorm';
+import { Effect } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
-import type { CreateRoleDto, UpdateRoleDto, RoleResponseDto } from '../../../routes/roles/dto';
-import { RoleEntity } from '../../../routes/roles/entities/role.entity';
-import { roleTryAsync, toRoleResponseDto } from '../../../routes/roles/roles.utils';
+import type { CreateRoleDto, UpdateRoleDto, RoleResponseDto } from '@librestock/types/roles';
+import { RoleEntity } from './entities/role.entity';
+import { toRoleResponseDto } from './roles.utils';
 import {
   RoleNameAlreadyExists,
   RoleNotFound,
   RolesInfrastructureError,
   SystemRoleDeletionForbidden,
-} from '../../../routes/roles/roles.errors';
+} from './roles.errors';
 import { TypeOrmDataSource } from '../../platform/typeorm';
 import { RolesRepository } from './repository';
 
@@ -22,90 +21,6 @@ interface CacheEntry {
   readonly permissions: UserPermissions;
   readonly expiresAt: number;
 }
-
-export interface RolesService {
-  readonly findAll: () => Effect.Effect<RoleResponseDto[], RolesInfrastructureError>;
-  readonly findById: (
-    id: string,
-  ) => Effect.Effect<RoleResponseDto, RoleNotFound | RolesInfrastructureError>;
-  readonly create: (
-    dto: CreateRoleDto,
-  ) => Effect.Effect<
-    RoleResponseDto,
-    RoleNameAlreadyExists | RoleNotFound | RolesInfrastructureError
-  >;
-  readonly update: (
-    id: string,
-    dto: UpdateRoleDto,
-  ) => Effect.Effect<
-    RoleResponseDto,
-    RoleNameAlreadyExists | RoleNotFound | RolesInfrastructureError
-  >;
-  readonly delete: (
-    id: string,
-  ) => Effect.Effect<
-    void,
-    RoleNotFound | RolesInfrastructureError | SystemRoleDeletionForbidden
-  >;
-  readonly getPermissionsForUser: (
-    userId: string,
-  ) => Effect.Effect<UserPermissions, RolesInfrastructureError>;
-  readonly clearCacheForUser: (userId: string) => Effect.Effect<void>;
-  readonly clearAllCache: () => Effect.Effect<void>;
-  readonly seed: () => Effect.Effect<void, RolesInfrastructureError>;
-}
-
-export const RolesService = Context.GenericTag<RolesService>(
-  '@librestock/effect/RolesService',
-);
-
-const getRoleOrFail = (
-  repository: RolesRepository,
-  id: string,
-): Effect.Effect<RoleEntity, RoleNotFound | RolesInfrastructureError> =>
-  Effect.flatMap(
-    roleTryAsync('load role', () => repository.findById(id)),
-    (role) =>
-      role
-        ? Effect.succeed(role)
-        : Effect.fail(
-            new RoleNotFound({
-              id,
-              message: `Role with ID ${id} not found`,
-            }),
-          ),
-  );
-
-const fetchPermissionsFromDb = (
-  dataSource: DataSource,
-  userId: string,
-): Effect.Effect<UserPermissions, RolesInfrastructureError> =>
-  roleTryAsync('load user permissions', async () => {
-    const rows: { role_name: string; resource: string; permission: string }[] =
-      await dataSource.query(
-        `SELECT r.name AS role_name, rp.resource, rp.permission
-         FROM user_roles ur
-         JOIN roles r ON r.id = ur.role_id
-         JOIN role_permissions rp ON rp.role_id = ur.role_id
-         WHERE ur.user_id = $1`,
-        [userId],
-      );
-
-    const roleNames = [...new Set(rows.map((row) => row.role_name))];
-    const permissionMap: Record<string, Set<string>> = {};
-
-    for (const row of rows) {
-      const resourcePermissions = (permissionMap[row.resource] ??= new Set());
-      resourcePermissions.add(row.permission);
-    }
-
-    const permissions: Partial<Record<Resource, Permission[]>> = {};
-    for (const [resource, permissionSet] of Object.entries(permissionMap)) {
-      permissions[resource as Resource] = [...permissionSet] as Permission[];
-    }
-
-    return { roleNames, permissions };
-  });
 
 const seedDefinitions: {
   readonly name: string;
@@ -179,156 +94,196 @@ const seedDefinitions: {
   },
 ];
 
-export const makeRolesService = Effect.gen(function* () {
-  const repository = yield* RolesRepository;
-  const dataSource = yield* TypeOrmDataSource;
-  const cache = new Map<string, CacheEntry>();
-  const cacheTtlMs = 60_000;
+export class RolesService extends Effect.Service<RolesService>()(
+  '@librestock/effect/RolesService',
+  {
+    effect: Effect.gen(function* () {
+      const repository = yield* RolesRepository;
+      const dataSource = yield* TypeOrmDataSource;
+      const cache = new Map<string, CacheEntry>();
+      const cacheTtlMs = 60_000;
 
-  const clearCacheForUser = (userId: string) =>
-    Effect.sync(() => {
-      cache.delete(userId);
-    });
-
-  const clearAllCache = () =>
-    Effect.sync(() => {
-      cache.clear();
-    });
-
-  const getPermissionsForUser = (userId: string) =>
-    Effect.gen(function* () {
-      const cached = cache.get(userId);
-      if (cached && cached.expiresAt > Date.now()) {
-        return cached.permissions;
-      }
-
-      const permissions = yield* fetchPermissionsFromDb(dataSource, userId);
-      cache.set(userId, {
-        permissions,
-        expiresAt: Date.now() + cacheTtlMs,
-      });
-
-      return permissions;
-    });
-
-  return {
-    findAll: () =>
-      Effect.map(
-        roleTryAsync('list roles', () => repository.findAll()),
-        (roles) => roles.map(toRoleResponseDto),
-      ),
-    findById: (id) => Effect.map(getRoleOrFail(repository, id), toRoleResponseDto),
-    create: (dto) =>
-      Effect.gen(function* () {
-        const existing = yield* roleTryAsync('load role by name', () =>
-          repository.findByName(dto.name),
+      const getRoleOrFail = (
+        id: string,
+      ): Effect.Effect<RoleEntity, RoleNotFound | RolesInfrastructureError> =>
+        Effect.flatMap(repository.findById(id), (role) =>
+          role
+            ? Effect.succeed(role)
+            : Effect.fail(
+                new RoleNotFound({
+                  id,
+                  message: `Role with ID ${id} not found`,
+                }),
+              ),
         );
-        if (existing) {
-          return yield* Effect.fail(
-            new RoleNameAlreadyExists({
-              name: dto.name,
-              message: `Role with name "${dto.name}" already exists`,
+
+      const fetchPermissionsFromDb = (
+        userId: string,
+      ): Effect.Effect<UserPermissions, RolesInfrastructureError> =>
+        Effect.tryPromise({
+          try: async () => {
+            const rows: { role_name: string; resource: string; permission: string }[] =
+              await dataSource.query(
+                `SELECT r.name AS role_name, rp.resource, rp.permission
+                 FROM user_roles ur
+                 JOIN roles r ON r.id = ur.role_id
+                 JOIN role_permissions rp ON rp.role_id = ur.role_id
+                 WHERE ur.user_id = $1`,
+                [userId],
+              );
+
+            const roleNames = [...new Set(rows.map((row) => row.role_name))];
+            const permissionMap: Record<string, Set<string>> = {};
+
+            for (const row of rows) {
+              const resourcePermissions = (permissionMap[row.resource] ??= new Set());
+              resourcePermissions.add(row.permission);
+            }
+
+            const permissions: Partial<Record<Resource, Permission[]>> = {};
+            for (const [resource, permissionSet] of Object.entries(permissionMap)) {
+              permissions[resource as Resource] = [...permissionSet] as Permission[];
+            }
+
+            return { roleNames, permissions };
+          },
+          catch: (cause) =>
+            new RolesInfrastructureError({
+              action: 'load user permissions',
+              cause,
+              message: 'Failed to load user permissions',
             }),
-          );
-        }
+        });
 
-        const role = yield* roleTryAsync('create role', () =>
-          repository.create({
-            name: dto.name,
-            description: dto.description ?? null,
-            is_system: false,
-          }),
-        );
+      const clearCacheForUser = (userId: string) =>
+        Effect.sync(() => {
+          cache.delete(userId);
+        });
 
-        yield* roleTryAsync('replace role permissions', () =>
-          repository.replacePermissions(role.id, dto.permissions),
-        );
+      const clearAllCache = () =>
+        Effect.sync(() => {
+          cache.clear();
+        });
 
-        const created = yield* getRoleOrFail(repository, role.id);
-        return toRoleResponseDto(created);
-      }),
-    update: (id, dto) =>
-      Effect.gen(function* () {
-        const role = yield* getRoleOrFail(repository, id);
-
-        const nextName = dto.name;
-        if (nextName && nextName !== role.name) {
-          const existing = yield* roleTryAsync('load role by name', () =>
-            repository.findByName(nextName),
-          );
-          if (existing) {
-            return yield* Effect.fail(
-              new RoleNameAlreadyExists({
-                name: nextName,
-                message: `Role with name "${nextName}" already exists`,
-              }),
-            );
-          }
-        }
-
-        const updateData: Partial<RoleEntity> = {};
-        if (dto.name !== undefined) updateData.name = dto.name;
-        if (dto.description !== undefined) {
-          updateData.description = dto.description ?? null;
-        }
-
-        if (Object.keys(updateData).length > 0) {
-          yield* roleTryAsync('update role', () =>
-            repository.update(id, updateData),
-          );
-        }
-
-        if (dto.permissions !== undefined) {
-          const permissions = dto.permissions;
-          yield* roleTryAsync('replace role permissions', () =>
-            repository.replacePermissions(id, permissions),
-          );
-          yield* clearAllCache();
-        }
-
-        const updated = yield* getRoleOrFail(repository, id);
-        return toRoleResponseDto(updated);
-      }),
-    delete: (id) =>
-      Effect.gen(function* () {
-        const role = yield* getRoleOrFail(repository, id);
-        if (role.is_system) {
-          return yield* Effect.fail(
-            new SystemRoleDeletionForbidden({
-              id,
-              message: 'System roles cannot be deleted',
-            }),
-          );
-        }
-
-        yield* roleTryAsync('delete role', () => repository.delete(id));
-        yield* clearAllCache();
-      }),
-    getPermissionsForUser,
-    clearCacheForUser,
-    clearAllCache,
-    seed: () =>
-      Effect.forEach(seedDefinitions, (seed) =>
+      const getPermissionsForUser = (userId: string) =>
         Effect.gen(function* () {
-          const existing = yield* roleTryAsync('load role by name', () =>
-            repository.findByName(seed.name),
-          );
-          if (existing) {
-            return;
+          const cached = cache.get(userId);
+          if (cached && cached.expiresAt > Date.now()) {
+            return cached.permissions;
           }
 
-          const role = yield* roleTryAsync('create seed role', () =>
-            repository.create({
-              name: seed.name,
-              description: seed.description,
-              is_system: true,
-            }),
-          );
+          const permissions = yield* fetchPermissionsFromDb(userId);
+          cache.set(userId, {
+            permissions,
+            expiresAt: Date.now() + cacheTtlMs,
+          });
 
-          yield* roleTryAsync('create seed role permissions', () =>
-            repository.replacePermissions(role.id, seed.permissions),
-          );
-        }),
-      ).pipe(Effect.asVoid),
-  } satisfies RolesService;
-});
+          return permissions;
+        });
+
+      return {
+        findAll: () =>
+          Effect.map(repository.findAll(), (roles) =>
+            roles.map(toRoleResponseDto),
+          ),
+        findById: (id: string) =>
+          Effect.map(getRoleOrFail(id), toRoleResponseDto),
+        create: (dto: CreateRoleDto) =>
+          Effect.gen(function* () {
+            const existing = yield* repository.findByName(dto.name);
+            if (existing) {
+              return yield* Effect.fail(
+                new RoleNameAlreadyExists({
+                  name: dto.name,
+                  message: `Role with name "${dto.name}" already exists`,
+                }),
+              );
+            }
+
+            const role = yield* repository.create({
+              name: dto.name,
+              description: dto.description ?? null,
+              is_system: false,
+            });
+
+            yield* repository.replacePermissions(role.id, dto.permissions);
+
+            const created = yield* getRoleOrFail(role.id);
+            return toRoleResponseDto(created);
+          }),
+        update: (id: string, dto: UpdateRoleDto) =>
+          Effect.gen(function* () {
+            const role = yield* getRoleOrFail(id);
+
+            const nextName = dto.name;
+            if (nextName && nextName !== role.name) {
+              const existing = yield* repository.findByName(nextName);
+              if (existing) {
+                return yield* Effect.fail(
+                  new RoleNameAlreadyExists({
+                    name: nextName,
+                    message: `Role with name "${nextName}" already exists`,
+                  }),
+                );
+              }
+            }
+
+            const updateData: Partial<RoleEntity> = {};
+            if (dto.name !== undefined) updateData.name = dto.name;
+            if (dto.description !== undefined) {
+              updateData.description = dto.description ?? null;
+            }
+
+            if (Object.keys(updateData).length > 0) {
+              yield* repository.update(id, updateData);
+            }
+
+            if (dto.permissions !== undefined) {
+              const permissions = dto.permissions;
+              yield* repository.replacePermissions(id, permissions);
+              yield* clearAllCache();
+            }
+
+            const updated = yield* getRoleOrFail(id);
+            return toRoleResponseDto(updated);
+          }),
+        delete: (id: string) =>
+          Effect.gen(function* () {
+            const role = yield* getRoleOrFail(id);
+            if (role.is_system) {
+              return yield* Effect.fail(
+                new SystemRoleDeletionForbidden({
+                  id,
+                  message: 'System roles cannot be deleted',
+                }),
+              );
+            }
+
+            yield* repository.delete(id);
+            yield* clearAllCache();
+          }),
+        getPermissionsForUser,
+        clearCacheForUser,
+        clearAllCache,
+        seed: () =>
+          Effect.forEach(seedDefinitions, (seed) =>
+            Effect.gen(function* () {
+              const existing = yield* repository.findByName(seed.name);
+              if (existing) {
+                return;
+              }
+
+              const role = yield* repository.create({
+                name: seed.name,
+                description: seed.description,
+                is_system: true,
+              });
+
+              yield* repository.replacePermissions(role.id, seed.permissions);
+            }),
+          ).pipe(Effect.asVoid),
+      };
+    }),
+    dependencies: [RolesRepository.Default],
+  },
+) {}

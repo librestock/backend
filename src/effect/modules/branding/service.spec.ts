@@ -1,11 +1,11 @@
 import { Effect, Layer } from 'effect';
-import { makeBrandingService } from './service';
+import { BrandingService } from './service';
 import { TypeOrmDataSource } from '../../platform/typeorm';
 import {
   BRANDING_SETTINGS_ID,
   DEFAULT_BRANDING,
   POWERED_BY,
-} from '../../../routes/branding/branding.constants';
+} from './branding.constants';
 
 const makeBrandingEntity = (overrides: Record<string, any> = {}) => ({
   id: BRANDING_SETTINGS_ID,
@@ -32,8 +32,12 @@ const buildService = (repoMock = makeMockRepository()) => {
   } as any;
 
   return Effect.runPromise(
-    makeBrandingService.pipe(
-      Effect.provide(Layer.succeed(TypeOrmDataSource, dataSource)),
+    BrandingService.pipe(
+      Effect.provide(
+        BrandingService.Default.pipe(
+          Layer.provide(Layer.succeed(TypeOrmDataSource, dataSource)),
+        ),
+      ),
     ),
   );
 };

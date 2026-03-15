@@ -10,24 +10,23 @@ import {
   TypeOrmInitializationError,
   typeOrmLayer,
 } from './platform/typeorm';
-import { healthLayer } from './modules/health/layer';
-import { rolesLayer } from './modules/roles/layer';
+import { HealthService } from './modules/health/service';
+import { RolesService } from './modules/roles/service';
 import { authLayer } from './modules/auth/layer';
 import { usersLayer } from './modules/users/layer';
-import { auditLogsLayer } from './modules/audit-logs/layer';
-import { brandingLayer } from './modules/branding/layer';
-import { locationsLayer } from './modules/locations/layer';
-import { categoriesLayer } from './modules/categories/layer';
+import { AuditLogsService } from './modules/audit-logs/service';
+import { BrandingService } from './modules/branding/service';
+import { LocationsService } from './modules/locations/service';
+import { CategoriesService } from './modules/categories/service';
 import { areasLayer } from './modules/areas/layer';
-import { clientsLayer } from './modules/clients/layer';
-import { suppliersLayer } from './modules/suppliers/layer';
+import { ClientsService } from './modules/clients/service';
+import { SuppliersService } from './modules/suppliers/service';
 import { productsLayer } from './modules/products/layer';
-import { photosLayer } from './modules/photos/layer';
+import { PhotosService } from './modules/photos/service';
 import { stockMovementsLayer } from './modules/stock-movements/layer';
 import { inventoryLayer } from './modules/inventory/layer';
 import { ordersLayer } from './modules/orders/layer';
-import { RolesService } from './modules/roles/service';
-import type { RolesInfrastructureError } from '../routes/roles/roles.errors';
+import type { RolesInfrastructureError } from './modules/roles/roles.errors';
 import { BetterAuth } from './platform/better-auth';
 
 const VALID_NODE_ENVS = ['development', 'staging', 'production'] as const;
@@ -44,7 +43,7 @@ const port = Number(process.env.PORT ?? 8080);
 
 const platformLayer = Layer.mergeAll(typeOrmLayer, betterAuthLayer);
 
-const rolesApplicationLayer = rolesLayer.pipe(Layer.provide(platformLayer));
+const rolesApplicationLayer = RolesService.Default.pipe(Layer.provide(platformLayer));
 const authApplicationLayer = authLayer.pipe(
   Layer.provide(rolesApplicationLayer),
 );
@@ -77,24 +76,24 @@ const betterAuthMigrationLayer = Layer.effectDiscard(
         }),
     });
   }),
-);
+).pipe(Layer.provide(platformLayer));
 
 // Phase 2 layers
-const auditLogsApplicationLayer = auditLogsLayer.pipe(Layer.provide(platformLayer));
-const brandingApplicationLayer = brandingLayer.pipe(Layer.provide(platformLayer));
-const locationsApplicationLayer = locationsLayer.pipe(Layer.provide(platformLayer));
-const categoriesApplicationLayer = categoriesLayer.pipe(Layer.provide(platformLayer));
+const auditLogsApplicationLayer = AuditLogsService.Default.pipe(Layer.provide(platformLayer));
+const brandingApplicationLayer = BrandingService.Default.pipe(Layer.provide(platformLayer));
+const locationsApplicationLayer = LocationsService.Default.pipe(Layer.provide(platformLayer));
+const categoriesApplicationLayer = CategoriesService.Default.pipe(Layer.provide(platformLayer));
 const areasApplicationLayer = areasLayer.pipe(
   Layer.provide(Layer.mergeAll(platformLayer, locationsApplicationLayer)),
 );
 
 // Phase 3 layers
-const clientsApplicationLayer = clientsLayer.pipe(Layer.provide(platformLayer));
-const suppliersApplicationLayer = suppliersLayer.pipe(Layer.provide(platformLayer));
+const clientsApplicationLayer = ClientsService.Default.pipe(Layer.provide(platformLayer));
+const suppliersApplicationLayer = SuppliersService.Default.pipe(Layer.provide(platformLayer));
 const productsApplicationLayer = productsLayer.pipe(
   Layer.provide(Layer.mergeAll(platformLayer, categoriesApplicationLayer)),
 );
-const photosApplicationLayer = photosLayer.pipe(Layer.provide(platformLayer));
+const photosApplicationLayer = PhotosService.Default.pipe(Layer.provide(platformLayer));
 
 // Phase 4 layers
 const stockMovementsApplicationLayer = stockMovementsLayer.pipe(
@@ -124,8 +123,8 @@ const ordersApplicationLayer = ordersLayer.pipe(
 
 const applicationLayer = Layer.mergeAll(
   platformLayer,
-  auditLayer,
-  healthLayer,
+  auditLayer.pipe(Layer.provide(platformLayer)),
+  HealthService.Default,
   rolesApplicationLayer,
   authApplicationLayer,
   usersApplicationLayer,

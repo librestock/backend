@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect';
-import { makeCategoriesService } from './service';
+import { CategoriesService } from './service';
 import { CategoriesRepository } from './repository';
 
 const makeCategoryEntity = (overrides: Record<string, any> = {}) => ({
@@ -13,24 +13,30 @@ const makeCategoryEntity = (overrides: Record<string, any> = {}) => ({
 });
 
 const makeMockRepository = (
-  overrides: Partial<Record<keyof import('./repository').CategoriesRepository, jest.Mock>> = {},
+  overrides: Record<string, jest.Mock> = {},
 ) => ({
-  findAll: jest.fn().mockResolvedValue([makeCategoryEntity()]),
-  findById: jest.fn().mockResolvedValue(makeCategoryEntity()),
-  existsById: jest.fn().mockResolvedValue(true),
-  existsByName: jest.fn().mockResolvedValue(false),
-  create: jest.fn().mockResolvedValue(makeCategoryEntity()),
-  update: jest.fn().mockResolvedValue(1),
-  delete: jest.fn().mockResolvedValue(undefined),
-  findOne: jest.fn().mockResolvedValue(null),
-  findAllDescendantIds: jest.fn().mockResolvedValue([]),
+  findAll: jest.fn().mockReturnValue(Effect.succeed([makeCategoryEntity()])),
+  findById: jest.fn().mockReturnValue(Effect.succeed(makeCategoryEntity())),
+  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
+  existsByName: jest.fn().mockReturnValue(Effect.succeed(false)),
+  create: jest.fn().mockReturnValue(Effect.succeed(makeCategoryEntity())),
+  update: jest.fn().mockReturnValue(Effect.succeed(1)),
+  delete: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+  findOne: jest.fn().mockReturnValue(Effect.succeed(null)),
+  findAllDescendantIds: jest.fn().mockReturnValue(Effect.succeed([])),
   ...overrides,
 });
 
 const buildService = (repo = makeMockRepository()) =>
   Effect.runPromise(
-    makeCategoriesService.pipe(
-      Effect.provide(Layer.succeed(CategoriesRepository, repo as any)),
+    CategoriesService.pipe(
+      Effect.provide(
+        CategoriesService.DefaultWithoutDependencies.pipe(
+          Layer.provide(
+            Layer.succeed(CategoriesRepository, repo as any),
+          ),
+        ),
+      ),
     ),
   );
 
@@ -42,14 +48,16 @@ describe('Effect CategoriesService', () => {
   describe('findAll (tree)', () => {
     it('builds a tree from flat categories', async () => {
       const repo = makeMockRepository({
-        findAll: jest.fn().mockResolvedValue([
-          makeCategoryEntity({ id: 'cat-1', name: 'Root', parent_id: null }),
-          makeCategoryEntity({
-            id: 'cat-2',
-            name: 'Child',
-            parent_id: 'cat-1',
-          }),
-        ]),
+        findAll: jest.fn().mockReturnValue(
+          Effect.succeed([
+            makeCategoryEntity({ id: 'cat-1', name: 'Root', parent_id: null }),
+            makeCategoryEntity({
+              id: 'cat-2',
+              name: 'Child',
+              parent_id: 'cat-1',
+            }),
+          ]),
+        ),
       });
       const service = await buildService(repo);
       const result = await run(service.findAll());
@@ -62,7 +70,7 @@ describe('Effect CategoriesService', () => {
 
     it('returns empty array for no categories', async () => {
       const repo = makeMockRepository({
-        findAll: jest.fn().mockResolvedValue([]),
+        findAll: jest.fn().mockReturnValue(Effect.succeed([])),
       });
       const service = await buildService(repo);
       const result = await run(service.findAll());
@@ -83,7 +91,7 @@ describe('Effect CategoriesService', () => {
 
     it('validates parent existence', async () => {
       const repo = makeMockRepository({
-        existsById: jest.fn().mockResolvedValue(false),
+        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
       });
       const service = await buildService(repo);
 
@@ -99,7 +107,7 @@ describe('Effect CategoriesService', () => {
 
     it('rejects duplicate name in same scope', async () => {
       const repo = makeMockRepository({
-        existsByName: jest.fn().mockResolvedValue(true),
+        existsByName: jest.fn().mockReturnValue(Effect.succeed(true)),
       });
       const service = await buildService(repo);
 
@@ -116,8 +124,8 @@ describe('Effect CategoriesService', () => {
       const repo = makeMockRepository({
         findById: jest
           .fn()
-          .mockResolvedValueOnce(makeCategoryEntity())
-          .mockResolvedValueOnce(makeCategoryEntity({ name: 'Updated' })),
+          .mockReturnValueOnce(Effect.succeed(makeCategoryEntity()))
+          .mockReturnValueOnce(Effect.succeed(makeCategoryEntity({ name: 'Updated' }))),
       });
       const service = await buildService(repo);
 
@@ -139,12 +147,11 @@ describe('Effect CategoriesService', () => {
     });
 
     it('detects circular references', async () => {
-      // cat-1 -> cat-2 -> cat-3, trying to set cat-1.parent = cat-3
       const repo = makeMockRepository({
-        findById: jest.fn().mockResolvedValue(makeCategoryEntity()),
+        findById: jest.fn().mockReturnValue(Effect.succeed(makeCategoryEntity())),
         findOne: jest
           .fn()
-          .mockResolvedValueOnce({ parent_id: 'cat-1' }) // cat-3's parent is cat-1 (cycle!)
+          .mockReturnValueOnce(Effect.succeed({ parent_id: 'cat-1' })),
       });
       const service = await buildService(repo);
 
@@ -167,7 +174,7 @@ describe('Effect CategoriesService', () => {
 
     it('fails with CategoryNotFound', async () => {
       const repo = makeMockRepository({
-        findById: jest.fn().mockResolvedValue(null),
+        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(repo);
 
@@ -188,7 +195,7 @@ describe('Effect CategoriesService', () => {
 
     it('fails with CategoryNotFound', async () => {
       const repo = makeMockRepository({
-        findById: jest.fn().mockResolvedValue(null),
+        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(repo);
 

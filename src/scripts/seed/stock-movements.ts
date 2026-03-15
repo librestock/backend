@@ -1,10 +1,10 @@
 import { faker } from '@faker-js/faker';
 import { LocationType } from '@librestock/types/locations';
 import { StockMovementReason } from '@librestock/types/stock-movements';
-import { type Location } from '../../routes/locations/entities/location.entity';
-import { type Order } from '../../routes/orders/entities/order.entity';
-import { type Product } from '../../routes/products/entities/product.entity';
-import { StockMovement } from '../../routes/stock-movements/entities/stock-movement.entity';
+import { type Location } from '../../effect/modules/locations/entities/location.entity';
+import { type Order } from '../../effect/modules/orders/entities/order.entity';
+import { type Product } from '../../effect/modules/products/entities/product.entity';
+import { StockMovement } from '../../effect/modules/stock-movements/entities/stock-movement.entity';
 import { MOCK_USER_ID, SEED_CONFIG } from './config';
 import { registry } from './registry';
 

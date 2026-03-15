@@ -1,8 +1,8 @@
 import { Context, Effect } from 'effect';
 import { DataSource, In, Repository } from 'typeorm';
 import { TypeOrmDataSource } from '../../platform/typeorm';
-import { UserRoleEntity } from '../../../routes/users/entities/user-role.entity';
-import { RoleEntity } from '../../../routes/roles/entities/role.entity';
+import { UserRoleEntity } from './entities/user-role.entity';
+import { RoleEntity } from '../roles/entities/role.entity';
 
 export interface UsersRepository {
   readonly findRoleAssignments: (userIds: string[]) => Promise<UserRoleEntity[]>;

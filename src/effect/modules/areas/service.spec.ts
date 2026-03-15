@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect';
-import { makeAreasService } from './service';
+import { AreasService } from './service';
 import { AreasRepository } from './repository';
 import { LocationsService } from '../locations/service';
 
@@ -19,35 +19,42 @@ const makeAreaEntity = (overrides: Record<string, any> = {}) => ({
 });
 
 const makeMockAreasRepository = (
-  overrides: Partial<Record<keyof import('./repository').AreasRepository, jest.Mock>> = {},
+  overrides: Record<string, jest.Mock> = {},
 ) => ({
-  create: jest.fn().mockResolvedValue(makeAreaEntity()),
-  findAll: jest.fn().mockResolvedValue([makeAreaEntity()]),
-  findById: jest.fn().mockResolvedValue(makeAreaEntity()),
-  findByIdWithChildren: jest.fn().mockResolvedValue(
-    makeAreaEntity({ children: [] }),
-  ),
-  findHierarchyByLocationId: jest.fn().mockResolvedValue([makeAreaEntity()]),
-  update: jest.fn().mockResolvedValue(makeAreaEntity()),
-  delete: jest.fn().mockResolvedValue(true),
-  existsById: jest.fn().mockResolvedValue(true),
+  create: jest.fn().mockReturnValue(Effect.succeed(makeAreaEntity())),
+  findAll: jest.fn().mockReturnValue(Effect.succeed([makeAreaEntity()])),
+  findById: jest.fn().mockReturnValue(Effect.succeed(makeAreaEntity())),
+  findByIdWithChildren: jest
+    .fn()
+    .mockReturnValue(Effect.succeed(makeAreaEntity({ children: [] }))),
+  findHierarchyByLocationId: jest
+    .fn()
+    .mockReturnValue(Effect.succeed([makeAreaEntity()])),
+  update: jest.fn().mockReturnValue(Effect.succeed(makeAreaEntity())),
+  delete: jest.fn().mockReturnValue(Effect.succeed(true)),
+  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
   ...overrides,
 });
 
-const makeMockLocationsService = () => ({
-  existsById: jest.fn().mockResolvedValue(true),
-} as any);
+const makeMockLocationsService = () =>
+  ({
+    existsById: jest.fn().mockResolvedValue(true),
+  }) as any;
 
 const buildService = (
   areasRepo = makeMockAreasRepository(),
   locationsService = makeMockLocationsService(),
 ) =>
   Effect.runPromise(
-    makeAreasService.pipe(
+    AreasService.pipe(
       Effect.provide(
-        Layer.mergeAll(
-          Layer.succeed(AreasRepository, areasRepo as any),
-          Layer.succeed(LocationsService, locationsService),
+        AreasService.DefaultWithoutDependencies.pipe(
+          Layer.provide(
+            Layer.mergeAll(
+              Layer.succeed(AreasRepository, areasRepo as any),
+              Layer.succeed(LocationsService, locationsService),
+            ),
+          ),
         ),
       ),
     ),
@@ -72,7 +79,9 @@ describe('Effect AreasService', () => {
     });
 
     it('fails when location does not exist', async () => {
-      const locationsService = { existsById: jest.fn().mockResolvedValue(false) } as any;
+      const locationsService = {
+        existsById: jest.fn().mockResolvedValue(false),
+      } as any;
       const service = await buildService(undefined, locationsService);
 
       const error = await fail(
@@ -84,7 +93,7 @@ describe('Effect AreasService', () => {
 
     it('fails when parent area does not exist', async () => {
       const repo = makeMockAreasRepository({
-        findById: jest.fn().mockResolvedValue(null),
+        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(repo);
 
@@ -101,9 +110,11 @@ describe('Effect AreasService', () => {
 
     it('fails when parent is in a different location', async () => {
       const repo = makeMockAreasRepository({
-        findById: jest.fn().mockResolvedValue(
-          makeAreaEntity({ location_id: 'loc-other' }),
-        ),
+        findById: jest
+          .fn()
+          .mockReturnValue(
+            Effect.succeed(makeAreaEntity({ location_id: 'loc-other' })),
+          ),
       });
       const service = await buildService(repo);
 
@@ -153,7 +164,7 @@ describe('Effect AreasService', () => {
 
     it('fails with AreaNotFound', async () => {
       const repo = makeMockAreasRepository({
-        findById: jest.fn().mockResolvedValue(null),
+        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(repo);
 
@@ -186,8 +197,14 @@ describe('Effect AreasService', () => {
       const repo = makeMockAreasRepository({
         findById: jest
           .fn()
-          .mockResolvedValueOnce(makeAreaEntity({ location_id: 'loc-1' }))
-          .mockResolvedValueOnce(makeAreaEntity({ id: 'area-2', location_id: 'loc-other' })),
+          .mockReturnValueOnce(
+            Effect.succeed(makeAreaEntity({ location_id: 'loc-1' })),
+          )
+          .mockReturnValueOnce(
+            Effect.succeed(
+              makeAreaEntity({ id: 'area-2', location_id: 'loc-other' }),
+            ),
+          ),
       });
       const service = await buildService(repo);
 
@@ -199,15 +216,38 @@ describe('Effect AreasService', () => {
     });
 
     it('detects circular references', async () => {
-      // area-1, trying to set parent to area-2, but area-2's parent is area-1
       const repo = makeMockAreasRepository({
         findById: jest
           .fn()
-          .mockResolvedValueOnce(makeAreaEntity({ id: 'area-1', location_id: 'loc-1' }))
-          .mockResolvedValueOnce(makeAreaEntity({ id: 'area-2', location_id: 'loc-1' }))
+          .mockReturnValueOnce(
+            Effect.succeed(
+              makeAreaEntity({ id: 'area-1', location_id: 'loc-1' }),
+            ),
+          )
+          .mockReturnValueOnce(
+            Effect.succeed(
+              makeAreaEntity({ id: 'area-2', location_id: 'loc-1' }),
+            ),
+          )
           // wouldCreateCircularReference walks: area-2's parent chain
-          .mockResolvedValueOnce(makeAreaEntity({ id: 'area-2', parent_id: 'area-1', location_id: 'loc-1' }))
-          .mockResolvedValueOnce(makeAreaEntity({ id: 'area-1', parent_id: null, location_id: 'loc-1' })),
+          .mockReturnValueOnce(
+            Effect.succeed(
+              makeAreaEntity({
+                id: 'area-2',
+                parent_id: 'area-1',
+                location_id: 'loc-1',
+              }),
+            ),
+          )
+          .mockReturnValueOnce(
+            Effect.succeed(
+              makeAreaEntity({
+                id: 'area-1',
+                parent_id: null,
+                location_id: 'loc-1',
+              }),
+            ),
+          ),
       });
       const service = await buildService(repo);
 
@@ -231,7 +271,7 @@ describe('Effect AreasService', () => {
 
     it('fails with AreaNotFound when area does not exist', async () => {
       const repo = makeMockAreasRepository({
-        existsById: jest.fn().mockResolvedValue(false),
+        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
       });
       const service = await buildService(repo);
 

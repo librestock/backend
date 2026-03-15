@@ -7,22 +7,22 @@ import {
   UpdateOrderSchema,
   UpdateOrderStatusSchema,
 } from '@librestock/types/orders';
-import { toPaginatedResponse } from '../../../common/utils/pagination.utils';
+import { toPaginatedResponse } from '../../platform/pagination.utils';
 import type {
   OrderResponseDto,
   PaginatedOrdersResponseDto,
-} from '../../../routes/orders/dto';
+} from '@librestock/types/orders';
 import {
   CannotDeleteNonDraftOrder,
   ClientNotFound,
   InvalidOrderStatusTransition,
   OrderNotFound,
   OrdersInfrastructureError,
-} from '../../../routes/orders/orders.errors';
-import { OrderUtils } from '../../../routes/orders/orders.utils';
-import { getOrderState } from '../../../routes/orders/state/order-state';
-import type { Order } from '../../../routes/orders/entities/order.entity';
-import { ProductNotFound } from '../../../routes/products/products.errors';
+} from './orders.errors';
+import { OrderUtils } from './orders.utils';
+import { getOrderState } from './state/order-state';
+import type { Order } from './entities/order.entity';
+import { ProductNotFound } from '../products/products.errors';
 import { ClientsService } from '../clients/service';
 import { ProductsService } from '../products/service';
 import { OrderItemsRepository, OrdersRepository } from './repository';

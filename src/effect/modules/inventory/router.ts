@@ -8,7 +8,7 @@ import {
   InventoryIdSchema,
   InventoryQuerySchema,
   UpdateInventorySchema,
-} from '../../../routes/inventory/inventory.schema';
+} from './inventory.schema';
 import { requirePermission } from '../../platform/authorization';
 import { AuditLogWriter } from '../../platform/audit';
 import { respondJson } from '../../platform/errors';

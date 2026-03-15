@@ -6,10 +6,10 @@ import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
   type RepositoryPaginatedResult,
-} from '../../../common/utils/query-spec.utils';
+} from '../../platform/query-spec.utils';
 import { TypeOrmDataSource } from '../../platform/typeorm';
-import { Order } from '../../../routes/orders/entities/order.entity';
-import { OrderItem } from '../../../routes/orders/entities/order-item.entity';
+import { Order } from './entities/order.entity';
+import { OrderItem } from './entities/order-item.entity';
 
 type OrderQueryDto = Schema.Schema.Type<typeof OrderQuerySchema>;
 

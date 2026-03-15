@@ -1,4 +1,5 @@
-import { HttpApp, HttpMiddleware, HttpServerResponse } from '@effect/platform';
+import { HttpServerResponse } from '@effect/platform';
+import type { HttpApp } from '@effect/platform';
 import { Effect } from 'effect';
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -18,8 +19,7 @@ const SECURITY_HEADERS: Record<string, string> = {
     : {}),
 };
 
-export const securityHeadersMiddleware = HttpMiddleware.make((httpApp) =>
-  HttpApp.withPreResponseHandler(httpApp, (_request, response) =>
-    Effect.succeed(HttpServerResponse.setHeaders(response, SECURITY_HEADERS)),
-  ),
-);
+export const securityHeadersMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>): HttpApp.Default<E, R> =>
+  Effect.map(httpApp, (response) =>
+    HttpServerResponse.setHeaders(response, SECURITY_HEADERS),
+  );

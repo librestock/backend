@@ -63,16 +63,8 @@ const checkBetterAuth = Effect.gen(function* () {
   };
 });
 
-export interface HealthService {
-  readonly live: Effect.Effect<HealthCheckResponse, never, any>;
-  readonly ready: Effect.Effect<HealthCheckResponse, never, any>;
-  readonly healthCheck: Effect.Effect<HealthCheckResponse, never, any>;
-}
-
-export const makeHealthService = (): HealthService => ({
-  live: Effect.succeed(
-    makeHealthResponse({}),
-  ),
+export const makeHealthService = () => ({
+  live: Effect.succeed(makeHealthResponse({})),
   ready: checkDatabase.pipe(
     Effect.catchAll((failure) => Effect.succeed(failure)),
     Effect.map((database) => makeHealthResponse({ database })),
@@ -86,3 +78,10 @@ export const makeHealthService = (): HealthService => ({
     ),
   }).pipe(Effect.map(makeHealthResponse)),
 });
+
+export class HealthService extends Effect.Service<HealthService>()(
+  '@librestock/effect/HealthService',
+  {
+    succeed: makeHealthService(),
+  },
+) {}

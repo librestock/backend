@@ -2,12 +2,12 @@ import { faker } from '@faker-js/faker';
 import { ClientStatus } from '@librestock/types/clients';
 import { type LocationType } from '@librestock/types/locations';
 import type { DeepPartial } from 'typeorm';
-import type { Client } from '../../../routes/clients/entities/client.entity';
-import type { Inventory } from '../../../routes/inventory/entities/inventory.entity';
-import type { Location } from '../../../routes/locations/entities/location.entity';
-import type { Product } from '../../../routes/products/entities/product.entity';
-import type { SupplierProduct } from '../../../routes/suppliers/entities/supplier-product.entity';
-import type { Supplier } from '../../../routes/suppliers/entities/supplier.entity';
+import type { Client } from '../../../effect/modules/clients/entities/client.entity';
+import type { Inventory } from '../../../effect/modules/inventory/entities/inventory.entity';
+import type { Location } from '../../../effect/modules/locations/entities/location.entity';
+import type { Product } from '../../../effect/modules/products/entities/product.entity';
+import type { SupplierProduct } from '../../../effect/modules/suppliers/entities/supplier-product.entity';
+import type { Supplier } from '../../../effect/modules/suppliers/entities/supplier.entity';
 import { MOCK_USER_ID, YACHT_NAMES } from '../config';
 
 // Each factory returns a DeepPartial<Entity> — compatible with repo.create().

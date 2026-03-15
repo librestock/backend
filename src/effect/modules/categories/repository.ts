@@ -1,75 +1,101 @@
-import { Context, Effect } from 'effect';
-import { Repository } from 'typeorm';
+import { Effect } from 'effect';
 import { TypeOrmDataSource } from '../../platform/typeorm';
-import { Category } from '../../../routes/categories/entities/category.entity';
+import { Category } from './entities/category.entity';
+import { CategoriesInfrastructureError } from './categories.errors';
 
-export interface CategoriesRepository {
-  readonly findAll: () => Promise<Category[]>;
-  readonly findById: (id: string) => Promise<Category | null>;
-  readonly existsById: (id: string) => Promise<boolean>;
-  readonly existsByName: (name: string, parentId?: string | null) => Promise<boolean>;
-  readonly create: (data: Partial<Category>) => Promise<Category>;
-  readonly update: (id: string, data: Partial<Category>) => Promise<number>;
-  readonly delete: (id: string) => Promise<void>;
-  readonly findOne: (options: any) => Promise<Category | null>;
-  readonly findAllDescendantIds: (parentId: string) => Promise<string[]>;
-}
+const tryAsync = <A>(action: string, run: () => Promise<A>) =>
+  Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new CategoriesInfrastructureError({
+        action,
+        cause,
+        message: `Failed to ${action}`,
+      }),
+  });
 
-export const CategoriesRepository = Context.GenericTag<CategoriesRepository>(
+export class CategoriesRepository extends Effect.Service<CategoriesRepository>()(
   '@librestock/effect/CategoriesRepository',
-);
+  {
+    effect: Effect.gen(function* () {
+      const dataSource = yield* TypeOrmDataSource;
+      const repo = dataSource.getRepository(Category);
 
-const createCategoriesRepository = (
-  repository: Repository<Category>,
-): CategoriesRepository => ({
-  findAll: () => repository.find({ order: { name: 'ASC' } }),
-  findById: (id) => repository.findOneBy({ id }),
-  existsById: (id) => repository.existsBy({ id }),
-  existsByName: async (name, parentId) => {
-    const count = await repository.countBy({
-      name,
-      parent_id: parentId ?? undefined,
-    });
-    return count > 0;
-  },
-  create: async (data) => {
-    const category = repository.create(data);
-    return repository.save(category);
-  },
-  update: async (id, data) => {
-    const result = await repository
-      .createQueryBuilder()
-      .update(Category)
-      .set(data)
-      .where('id = :id', { id })
-      .execute();
-    return result.affected ?? 0;
-  },
-  delete: async (id) => {
-    await repository.delete(id);
-  },
-  findOne: (options) => repository.findOne(options),
-  findAllDescendantIds: async (parentId) => {
-    const allCategories = await repository.find({
-      select: ['id', 'parent_id'],
-    });
+      const findAll = () =>
+        tryAsync('list categories', () =>
+          repo.find({ order: { name: 'ASC' } }),
+        );
 
-    const childIds: string[] = [];
-    const findChildren = (currentParentId: string) => {
-      for (const category of allCategories) {
-        if (category.parent_id === currentParentId) {
-          childIds.push(category.id);
-          findChildren(category.id);
-        }
-      }
-    };
-    findChildren(parentId);
-    return childIds;
+      const findById = (id: string) =>
+        tryAsync('load category', () => repo.findOneBy({ id }));
+
+      const existsById = (id: string) =>
+        tryAsync('check category existence', () => repo.existsBy({ id }));
+
+      const existsByName = (name: string, parentId?: string | null) =>
+        tryAsync('check category name uniqueness', async () => {
+          const count = await repo.countBy({
+            name,
+            parent_id: parentId ?? undefined,
+          });
+          return count > 0;
+        });
+
+      const create = (data: Partial<Category>) =>
+        tryAsync('create category', async () => {
+          const category = repo.create(data);
+          return repo.save(category);
+        });
+
+      const update = (id: string, data: Partial<Category>) =>
+        tryAsync('update category', async () => {
+          const result = await repo
+            .createQueryBuilder()
+            .update(Category)
+            .set(data)
+            .where('id = :id', { id })
+            .execute();
+          return result.affected ?? 0;
+        });
+
+      const remove = (id: string) =>
+        tryAsync('delete category', async () => {
+          await repo.delete(id);
+        });
+
+      const findOne = (options: any) =>
+        tryAsync('load category', () => repo.findOne(options));
+
+      const findAllDescendantIds = (parentId: string) =>
+        tryAsync('find descendant categories', async () => {
+          const allCategories = await repo.find({
+            select: ['id', 'parent_id'],
+          });
+
+          const childIds: string[] = [];
+          const findChildren = (currentParentId: string) => {
+            for (const category of allCategories) {
+              if (category.parent_id === currentParentId) {
+                childIds.push(category.id);
+                findChildren(category.id);
+              }
+            }
+          };
+          findChildren(parentId);
+          return childIds;
+        });
+
+      return {
+        findAll,
+        findById,
+        existsById,
+        existsByName,
+        create,
+        update,
+        delete: remove,
+        findOne,
+        findAllDescendantIds,
+      };
+    }),
   },
-});
-
-export const makeCategoriesRepository = Effect.gen(function* () {
-  const dataSource = yield* TypeOrmDataSource;
-
-  return createCategoriesRepository(dataSource.getRepository(Category));
-});
+) {}

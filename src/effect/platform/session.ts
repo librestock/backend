@@ -1,6 +1,6 @@
 import { HttpServerRequest } from '@effect/platform';
 import { Data, Effect } from 'effect';
-import type { UserSession } from '@thallesp/nestjs-better-auth';
+import type { UserSession } from './auth/user-session';
 import { BetterAuth } from './better-auth';
 
 export class SessionUnauthorized extends Data.TaggedError('SessionUnauthorized')<{

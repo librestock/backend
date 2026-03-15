@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect';
-import { makeLocationsService } from './service';
+import { LocationsService } from './service';
 import { LocationsRepository } from './repository';
 
 const makeLocationEntity = (overrides: Record<string, any> = {}) => ({
@@ -16,28 +16,36 @@ const makeLocationEntity = (overrides: Record<string, any> = {}) => ({
 });
 
 const makeMockRepository = (
-  overrides: Partial<Record<keyof import('./repository').LocationsRepository, jest.Mock>> = {},
+  overrides: Record<string, jest.Mock> = {},
 ) => ({
-  findAllPaginated: jest.fn().mockResolvedValue({
-    data: [makeLocationEntity()],
-    total: 1,
-    page: 1,
-    limit: 20,
-    total_pages: 1,
-  }),
-  findAll: jest.fn().mockResolvedValue([makeLocationEntity()]),
-  findById: jest.fn().mockResolvedValue(makeLocationEntity()),
-  existsById: jest.fn().mockResolvedValue(true),
-  create: jest.fn().mockResolvedValue(makeLocationEntity()),
-  update: jest.fn().mockResolvedValue(1),
-  delete: jest.fn().mockResolvedValue(undefined),
+  findAllPaginated: jest.fn().mockReturnValue(
+    Effect.succeed({
+      data: [makeLocationEntity()],
+      total: 1,
+      page: 1,
+      limit: 20,
+      total_pages: 1,
+    }),
+  ),
+  findAll: jest.fn().mockReturnValue(Effect.succeed([makeLocationEntity()])),
+  findById: jest.fn().mockReturnValue(Effect.succeed(makeLocationEntity())),
+  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
+  create: jest.fn().mockReturnValue(Effect.succeed(makeLocationEntity())),
+  update: jest.fn().mockReturnValue(Effect.succeed(1)),
+  delete: jest.fn().mockReturnValue(Effect.succeed(undefined)),
   ...overrides,
 });
 
 const buildService = (repo = makeMockRepository()) =>
   Effect.runPromise(
-    makeLocationsService.pipe(
-      Effect.provide(Layer.succeed(LocationsRepository, repo as any)),
+    LocationsService.pipe(
+      Effect.provide(
+        LocationsService.DefaultWithoutDependencies.pipe(
+          Layer.provide(
+            Layer.succeed(LocationsRepository, repo as any),
+          ),
+        ),
+      ),
     ),
   );
 
@@ -72,7 +80,7 @@ describe('Effect LocationsService', () => {
 
   it('fails with LocationNotFound when location does not exist', async () => {
     const repo = makeMockRepository({
-      findById: jest.fn().mockResolvedValue(null),
+      findById: jest.fn().mockReturnValue(Effect.succeed(null)),
     });
     const service = await buildService(repo);
 
@@ -114,9 +122,9 @@ describe('Effect LocationsService', () => {
     const repo = makeMockRepository({
       findById: jest
         .fn()
-        .mockResolvedValueOnce(makeLocationEntity())
-        .mockResolvedValueOnce(
-          makeLocationEntity({ name: 'Updated' }),
+        .mockReturnValueOnce(Effect.succeed(makeLocationEntity()))
+        .mockReturnValueOnce(
+          Effect.succeed(makeLocationEntity({ name: 'Updated' })),
         ),
     });
     const service = await buildService(repo);
@@ -140,7 +148,7 @@ describe('Effect LocationsService', () => {
 
   it('fails with LocationNotFound when deleting nonexistent location', async () => {
     const repo = makeMockRepository({
-      findById: jest.fn().mockResolvedValue(null),
+      findById: jest.fn().mockReturnValue(Effect.succeed(null)),
     });
     const service = await buildService(repo);
 

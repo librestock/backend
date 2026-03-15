@@ -1,9 +1,7 @@
 import { Context, Effect } from 'effect';
-import type { UserQueryDto } from '../../../routes/users/dto/user-query.dto';
-import type { UserResponseDto } from '../../../routes/users/dto/user-response.dto';
-import type { BanUserDto } from '../../../routes/users/dto/ban-user.dto';
-import { UserNotFound, UsersInfrastructureError } from '../../../routes/users/users.errors';
-import { userTryAsync } from '../../../routes/users/users.utils';
+import type { UserQueryDto, UserResponseDto, BanUserDto } from '@librestock/types/users';
+import { UserNotFound, UsersInfrastructureError } from './users.errors';
+import { userTryAsync } from './users.utils';
 import { BetterAuth } from '../../platform/better-auth';
 import { RolesService } from '../roles/service';
 import { UsersRepository } from './repository';

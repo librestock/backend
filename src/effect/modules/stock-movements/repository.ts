@@ -6,12 +6,12 @@ import {
   toRepositoryPaginatedResult,
   type QuerySpec,
   type RepositoryPaginatedResult,
-} from '../../../common/utils/query-spec.utils';
-import { StockMovement } from '../../../routes/stock-movements/entities/stock-movement.entity';
+} from '../../platform/query-spec.utils';
+import { StockMovement } from './entities/stock-movement.entity';
 import type { Schema } from 'effect';
 import type {
   StockMovementQuerySchema,
-} from '../../../routes/stock-movements/stock-movements.schema';
+} from './stock-movements.schema';
 import { TypeOrmDataSource } from '../../platform/typeorm';
 
 type StockMovementQueryDto = Schema.Schema.Type<typeof StockMovementQuerySchema>;

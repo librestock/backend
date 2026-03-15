@@ -1,15 +1,15 @@
 import { Context, Effect } from 'effect';
 import type { Schema } from 'effect';
-import type { StockMovement } from '../../../routes/stock-movements/entities/stock-movement.entity';
+import type { StockMovement } from './entities/stock-movement.entity';
 import type {
   CreateStockMovementSchema,
   StockMovementQuerySchema,
-} from '../../../routes/stock-movements/stock-movements.schema';
-import { toPaginatedResponse } from '../../../common/utils/pagination.utils';
+} from './stock-movements.schema';
+import { toPaginatedResponse } from '../../platform/pagination.utils';
 import {
   stockMovementTryAsync,
   toStockMovementResponseDto,
-} from '../../../routes/stock-movements/stock-movements.utils';
+} from './stock-movements.utils';
 import {
   InvalidDestinationLocation,
   InvalidSourceLocation,
@@ -18,11 +18,11 @@ import {
   StockMovementNotFound,
   StockMovementProductNotFound,
   StockMovementsInfrastructureError,
-} from '../../../routes/stock-movements/stock-movements.errors';
+} from './stock-movements.errors';
 import type {
   PaginatedStockMovementsResponseDto,
   StockMovementResponseDto,
-} from '../../../routes/stock-movements/dto';
+} from '@librestock/types/stock-movements';
 import { ProductsService } from '../products/service';
 import { LocationsService } from '../locations/service';
 import { StockMovementsRepository } from './repository';

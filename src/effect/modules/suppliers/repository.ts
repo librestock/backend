@@ -1,16 +1,16 @@
-import { Context, Effect } from 'effect';
-import { Repository } from 'typeorm';
+import { Effect } from 'effect';
 import {
   applyQuerySpecs,
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
   type QuerySpec,
   type RepositoryPaginatedResult,
-} from '../../../common/utils/query-spec.utils';
+} from '../../platform/query-spec.utils';
 import { TypeOrmDataSource } from '../../platform/typeorm';
-import { Supplier } from '../../../routes/suppliers/entities/supplier.entity';
+import { Supplier } from './entities/supplier.entity';
+import { SuppliersInfrastructureError } from './suppliers.errors';
 import type { Schema } from 'effect';
-import type { SupplierQuerySchema } from '../../../routes/suppliers/suppliers.schema';
+import type { SupplierQuerySchema } from './suppliers.schema';
 
 type SupplierQueryDto = Schema.Schema.Type<typeof SupplierQuerySchema>;
 
@@ -27,60 +27,73 @@ const supplierSortSpec: QuerySpec<Supplier, SupplierQueryDto> = (qb) => {
   qb.orderBy('supplier.name', 'ASC');
 };
 
-export interface SuppliersRepository {
-  readonly findAllPaginated: (
-    query: SupplierQueryDto,
-  ) => Promise<RepositoryPaginatedResult<Supplier>>;
-  readonly findById: (id: string) => Promise<Supplier | null>;
-  readonly existsById: (id: string) => Promise<boolean>;
-  readonly create: (data: Partial<Supplier>) => Promise<Supplier>;
-  readonly update: (id: string, data: Partial<Supplier>) => Promise<number>;
-  readonly delete: (id: string) => Promise<void>;
-}
+const tryAsync = <A>(action: string, run: () => Promise<A>) =>
+  Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new SuppliersInfrastructureError({
+        action,
+        cause,
+        message: `Failed to ${action}`,
+      }),
+  });
 
-export const SuppliersRepository = Context.GenericTag<SuppliersRepository>(
+export class SuppliersRepository extends Effect.Service<SuppliersRepository>()(
   '@librestock/effect/SuppliersRepository',
-);
+  {
+    effect: Effect.gen(function* () {
+      const dataSource = yield* TypeOrmDataSource;
+      const repo = dataSource.getRepository(Supplier);
 
-const createSuppliersRepository = (
-  repository: Repository<Supplier>,
-): SuppliersRepository => ({
-  findAllPaginated: async (query) => {
-    const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
-    const qb = applyQuerySpecs(
-      repository.createQueryBuilder('supplier'),
-      query,
-      [supplierFilterSpec, supplierSortSpec],
-    );
-    const total = await qb.getCount();
-    const data = await qb.skip(skip).take(limit).getMany();
-    return toRepositoryPaginatedResult(data, total, page, limit);
-  },
-  findById: (id) =>
-    repository.createQueryBuilder('supplier').where('supplier.id = :id', { id }).getOne(),
-  existsById: async (id) => {
-    const count = await repository.createQueryBuilder('supplier').where('supplier.id = :id', { id }).getCount();
-    return count > 0;
-  },
-  create: async (data) => {
-    const supplier = repository.create(data);
-    return repository.save(supplier);
-  },
-  update: async (id, data) => {
-    const result = await repository
-      .createQueryBuilder()
-      .update(Supplier)
-      .set(data)
-      .where('id = :id', { id })
-      .execute();
-    return result.affected ?? 0;
-  },
-  delete: async (id) => {
-    await repository.delete(id);
-  },
-});
+      const findAllPaginated = (
+        query: SupplierQueryDto,
+      ) =>
+        tryAsync('list suppliers', async () => {
+          const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
+          const qb = applyQuerySpecs(
+            repo.createQueryBuilder('supplier'),
+            query,
+            [supplierFilterSpec, supplierSortSpec],
+          );
+          const total = await qb.getCount();
+          const data = await qb.skip(skip).take(limit).getMany();
+          return toRepositoryPaginatedResult(data, total, page, limit);
+        });
 
-export const makeSuppliersRepository = Effect.gen(function* () {
-  const dataSource = yield* TypeOrmDataSource;
-  return createSuppliersRepository(dataSource.getRepository(Supplier));
-});
+      const findById = (id: string) =>
+        tryAsync('load supplier', () =>
+          repo.createQueryBuilder('supplier').where('supplier.id = :id', { id }).getOne(),
+        );
+
+      const existsById = (id: string) =>
+        tryAsync('check supplier existence', async () => {
+          const count = await repo.createQueryBuilder('supplier').where('supplier.id = :id', { id }).getCount();
+          return count > 0;
+        });
+
+      const create = (data: Partial<Supplier>) =>
+        tryAsync('create supplier', async () => {
+          const supplier = repo.create(data);
+          return repo.save(supplier);
+        });
+
+      const update = (id: string, data: Partial<Supplier>) =>
+        tryAsync('update supplier', async () => {
+          const result = await repo
+            .createQueryBuilder()
+            .update(Supplier)
+            .set(data)
+            .where('id = :id', { id })
+            .execute();
+          return result.affected ?? 0;
+        });
+
+      const remove = (id: string) =>
+        tryAsync('delete supplier', async () => {
+          await repo.delete(id);
+        });
+
+      return { findAllPaginated, findById, existsById, create, update, delete: remove };
+    }),
+  },
+) {}

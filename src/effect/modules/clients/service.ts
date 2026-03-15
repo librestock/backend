@@ -1,97 +1,73 @@
-import { Context, Effect } from 'effect';
+import { Effect } from 'effect';
 import type { Schema } from 'effect';
-import type { ClientResponseDto } from '../../../routes/clients/dto';
+import type { ClientResponseDto } from '@librestock/types/clients';
 import type {
   ClientQuerySchema,
   CreateClientSchema,
   UpdateClientSchema,
-} from '../../../routes/clients/clients.schema';
-import { toPaginatedResponse } from '../../../common/utils/pagination.utils';
-import { clientTryAsync, toClientResponseDto } from '../../../routes/clients/clients.utils';
+} from './clients.schema';
+import { toPaginatedResponse } from '../../platform/pagination.utils';
+import { toClientResponseDto } from './clients.utils';
 import {
   ClientEmailAlreadyExists,
   ClientNotFound,
   ClientsInfrastructureError,
-} from '../../../routes/clients/clients.errors';
-import type { Client } from '../../../routes/clients/entities/client.entity';
+} from './clients.errors';
+import type { Client } from './entities/client.entity';
 import { ClientsRepository } from './repository';
 
 type ClientQueryDto = Schema.Schema.Type<typeof ClientQuerySchema>;
 type CreateClientDto = Schema.Schema.Type<typeof CreateClientSchema>;
 type UpdateClientDto = Schema.Schema.Type<typeof UpdateClientSchema>;
 
-export interface ClientsService {
-  readonly findAllPaginated: (
-    query: ClientQueryDto,
-  ) => Effect.Effect<
-    { data: ClientResponseDto[]; meta: any },
-    ClientsInfrastructureError
-  >;
-  readonly findOne: (
-    id: string,
-  ) => Effect.Effect<ClientResponseDto, ClientNotFound | ClientsInfrastructureError>;
-  readonly create: (
-    dto: CreateClientDto,
-  ) => Effect.Effect<
-    ClientResponseDto,
-    ClientEmailAlreadyExists | ClientsInfrastructureError
-  >;
-  readonly update: (
-    id: string,
-    dto: UpdateClientDto,
-  ) => Effect.Effect<
-    ClientResponseDto,
-    ClientEmailAlreadyExists | ClientNotFound | ClientsInfrastructureError
-  >;
-  readonly delete: (
-    id: string,
-  ) => Effect.Effect<void, ClientNotFound | ClientsInfrastructureError>;
-  readonly existsById: (id: string) => Promise<boolean>;
-}
-
-export const ClientsService = Context.GenericTag<ClientsService>(
+export class ClientsService extends Effect.Service<ClientsService>()(
   '@librestock/effect/ClientsService',
-);
+  {
+    effect: Effect.gen(function* () {
+      const repository = yield* ClientsRepository;
 
-const getClientOrFail = (
-  repository: ClientsRepository,
-  id: string,
-): Effect.Effect<Client, ClientNotFound | ClientsInfrastructureError> =>
-  Effect.flatMap(
-    clientTryAsync('load client', () => repository.findById(id)),
-    (client) =>
-      client
-        ? Effect.succeed(client)
-        : Effect.fail(new ClientNotFound({ id, message: 'Client not found' })),
-  );
-
-export const makeClientsService = Effect.gen(function* () {
-  const repository = yield* ClientsRepository;
-
-  return {
-    findAllPaginated: (query) =>
-      Effect.map(
-        clientTryAsync('list clients', () => repository.findAllPaginated(query)),
-        (result) => toPaginatedResponse(result, toClientResponseDto),
-      ),
-    findOne: (id) =>
-      Effect.map(getClientOrFail(repository, id), toClientResponseDto),
-    create: (dto) =>
-      Effect.gen(function* () {
-        const existing = yield* clientTryAsync('load client by email', () =>
-          repository.findByEmail(dto.email),
+      const getClientOrFail = (
+        id: string,
+      ): Effect.Effect<Client, ClientNotFound | ClientsInfrastructureError> =>
+        Effect.flatMap(repository.findById(id), (client) =>
+          client
+            ? Effect.succeed(client)
+            : Effect.fail(new ClientNotFound({ id, message: 'Client not found' })),
         );
-        if (existing) {
-          return yield* Effect.fail(
-            new ClientEmailAlreadyExists({
-              email: dto.email,
-              message: 'A client with this email already exists',
-            }),
-          );
-        }
 
-        const client = yield* clientTryAsync('create client', () =>
-          repository.create({
+      const findAllPaginated = (
+        query: ClientQueryDto,
+      ): Effect.Effect<
+        { data: ClientResponseDto[]; meta: any },
+        ClientsInfrastructureError
+      > =>
+        Effect.map(repository.findAllPaginated(query), (result) =>
+          toPaginatedResponse(result, toClientResponseDto),
+        );
+
+      const findOne = (
+        id: string,
+      ): Effect.Effect<ClientResponseDto, ClientNotFound | ClientsInfrastructureError> =>
+        Effect.map(getClientOrFail(id), toClientResponseDto);
+
+      const create = (
+        dto: CreateClientDto,
+      ): Effect.Effect<
+        ClientResponseDto,
+        ClientEmailAlreadyExists | ClientsInfrastructureError
+      > =>
+        Effect.gen(function* () {
+          const existing = yield* repository.findByEmail(dto.email);
+          if (existing) {
+            return yield* Effect.fail(
+              new ClientEmailAlreadyExists({
+                email: dto.email,
+                message: 'A client with this email already exists',
+              }),
+            );
+          }
+
+          const client = yield* repository.create({
             company_name: dto.company_name,
             contact_person: dto.contact_person,
             email: dto.email,
@@ -103,45 +79,56 @@ export const makeClientsService = Effect.gen(function* () {
             payment_terms: dto.payment_terms ?? null,
             credit_limit: dto.credit_limit ?? null,
             notes: dto.notes ?? null,
-          }),
-        );
+          });
 
-        return toClientResponseDto(client);
-      }),
-    update: (id, dto) =>
-      Effect.gen(function* () {
-        const client = yield* getClientOrFail(repository, id);
-
-        if (Object.keys(dto).length === 0) {
           return toClientResponseDto(client);
-        }
+        });
 
-        if (dto.email && dto.email !== client.email) {
-          const existing = yield* clientTryAsync('load client by email', () =>
-            repository.findByEmail(dto.email!),
-          );
-          if (existing) {
-            return yield* Effect.fail(
-              new ClientEmailAlreadyExists({
-                email: dto.email,
-                message: 'A client with this email already exists',
-              }),
-            );
+      const update = (
+        id: string,
+        dto: UpdateClientDto,
+      ): Effect.Effect<
+        ClientResponseDto,
+        ClientEmailAlreadyExists | ClientNotFound | ClientsInfrastructureError
+      > =>
+        Effect.gen(function* () {
+          const client = yield* getClientOrFail(id);
+
+          if (Object.keys(dto).length === 0) {
+            return toClientResponseDto(client);
           }
-        }
 
-        yield* clientTryAsync('update client', () =>
-          repository.update(id, dto),
-        );
+          if (dto.email && dto.email !== client.email) {
+            const existing = yield* repository.findByEmail(dto.email!);
+            if (existing) {
+              return yield* Effect.fail(
+                new ClientEmailAlreadyExists({
+                  email: dto.email,
+                  message: 'A client with this email already exists',
+                }),
+              );
+            }
+          }
 
-        const updated = yield* getClientOrFail(repository, id);
-        return toClientResponseDto(updated);
-      }),
-    delete: (id) =>
-      Effect.gen(function* () {
-        yield* getClientOrFail(repository, id);
-        yield* clientTryAsync('delete client', () => repository.delete(id));
-      }),
-    existsById: (id) => repository.existsById(id),
-  } satisfies ClientsService;
-});
+          yield* repository.update(id, dto);
+
+          const updated = yield* getClientOrFail(id);
+          return toClientResponseDto(updated);
+        });
+
+      const remove = (
+        id: string,
+      ): Effect.Effect<void, ClientNotFound | ClientsInfrastructureError> =>
+        Effect.gen(function* () {
+          yield* getClientOrFail(id);
+          yield* repository.delete(id);
+        });
+
+      const existsById = (id: string): Promise<boolean> =>
+        repository.existsById(id);
+
+      return { findAllPaginated, findOne, create, update, delete: remove, existsById };
+    }),
+    dependencies: [ClientsRepository.Default],
+  },
+) {}

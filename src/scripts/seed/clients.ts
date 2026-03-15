@@ -1,4 +1,4 @@
-import { Client } from '../../routes/clients/entities/client.entity';
+import { Client } from '../../effect/modules/clients/entities/client.entity';
 import { SEED_CONFIG } from './config';
 import { buildClient } from './factories';
 import { registry } from './registry';

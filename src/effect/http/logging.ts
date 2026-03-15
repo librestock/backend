@@ -1,5 +1,5 @@
 import { Context, Effect } from 'effect';
-import { HttpApp, HttpMiddleware } from '@effect/platform';
+import type { HttpApp } from '@effect/platform';
 import * as HttpServerRequest from '@effect/platform/HttpServerRequest';
 
 const stripQueryString = (url: string) => {
@@ -7,7 +7,7 @@ const stripQueryString = (url: string) => {
   return queryIndex >= 0 ? url.slice(0, queryIndex) : url;
 };
 
-export const requestLoggingMiddleware = HttpMiddleware.make((httpApp) =>
+export const requestLoggingMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>): HttpApp.Default<E, R | HttpServerRequest.HttpServerRequest> =>
   Effect.withFiberRuntime((fiber) => {
     const request = Context.unsafeGet(
       fiber.currentContext,
@@ -22,27 +22,24 @@ export const requestLoggingMiddleware = HttpMiddleware.make((httpApp) =>
     const path = stripQueryString(request.url);
     const userAgent = request.headers['user-agent'] ?? 'unknown';
 
-    return HttpApp.withPreResponseHandler(httpApp, (_request, response) =>
-      Effect.sync(() => {
-        const payload = {
-          message: 'HTTP request',
-          requestId,
-          method: request.method,
-          path,
-          statusCode: response.status,
-          duration: `${Date.now() - startTime}ms`,
-          userAgent,
-        };
-        const serialized = JSON.stringify(payload);
+    return Effect.map(httpApp, (response) => {
+      const payload = {
+        message: 'HTTP request',
+        requestId,
+        method: request.method,
+        path,
+        statusCode: response.status,
+        duration: `${Date.now() - startTime}ms`,
+        userAgent,
+      };
+      const serialized = JSON.stringify(payload);
 
-        if (response.status >= 500) {
-          console.error(serialized);
-        } else {
-          console.log(serialized);
-        }
+      if (response.status >= 500) {
+        console.error(serialized);
+      } else {
+        console.log(serialized);
+      }
 
-        return response;
-      }),
-    );
-  }),
-);
+      return response;
+    });
+  });

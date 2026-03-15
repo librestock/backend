@@ -1,9 +1,9 @@
 import { Effect, Layer } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
-import { makeRolesService } from './service';
+import { RolesService } from './service';
 import { RolesRepository } from './repository';
 import { TypeOrmDataSource } from '../../platform/typeorm';
-import { SystemRoleDeletionForbidden } from '../../../routes/roles/roles.errors';
+import { SystemRoleDeletionForbidden } from './roles.errors';
 
 describe('Effect RolesService', () => {
   const makeService = async (
@@ -11,11 +11,15 @@ describe('Effect RolesService', () => {
     dataSource: { query: jest.Mock },
   ) =>
     Effect.runPromise(
-      makeRolesService.pipe(
+      RolesService.pipe(
         Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(RolesRepository, repository as any),
-            Layer.succeed(TypeOrmDataSource, dataSource as any),
+          RolesService.DefaultWithoutDependencies.pipe(
+            Layer.provide(
+              Layer.mergeAll(
+                Layer.succeed(RolesRepository, repository as any),
+                Layer.succeed(TypeOrmDataSource, dataSource as any),
+              ),
+            ),
           ),
         ),
       ),
@@ -44,24 +48,28 @@ describe('Effect RolesService', () => {
   it('creates a role', async () => {
     const repository = {
       findAll: jest.fn(),
-      findById: jest.fn().mockResolvedValue({
-        ...roleEntity,
-        id: 'role-2',
-        name: 'Manager',
-        description: 'Warehouse manager',
-        is_system: false,
-      }),
-      findByName: jest.fn().mockResolvedValue(null),
-      create: jest.fn().mockResolvedValue({
-        ...roleEntity,
-        id: 'role-2',
-        name: 'Manager',
-        description: 'Warehouse manager',
-        is_system: false,
-      }),
+      findById: jest.fn().mockReturnValue(
+        Effect.succeed({
+          ...roleEntity,
+          id: 'role-2',
+          name: 'Manager',
+          description: 'Warehouse manager',
+          is_system: false,
+        }),
+      ),
+      findByName: jest.fn().mockReturnValue(Effect.succeed(null)),
+      create: jest.fn().mockReturnValue(
+        Effect.succeed({
+          ...roleEntity,
+          id: 'role-2',
+          name: 'Manager',
+          description: 'Warehouse manager',
+          is_system: false,
+        }),
+      ),
       update: jest.fn(),
       delete: jest.fn(),
-      replacePermissions: jest.fn().mockResolvedValue(undefined),
+      replacePermissions: jest.fn().mockReturnValue(Effect.succeed(undefined)),
     };
     const dataSource = { query: jest.fn() };
     const service = await makeService(repository, dataSource);
@@ -88,7 +96,7 @@ describe('Effect RolesService', () => {
     const repository = {
       findAll: jest.fn(),
       findById: jest.fn(),
-      findByName: jest.fn().mockResolvedValue(roleEntity),
+      findByName: jest.fn().mockReturnValue(Effect.succeed(roleEntity)),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
@@ -114,25 +122,29 @@ describe('Effect RolesService', () => {
       findAll: jest.fn(),
       findById: jest
         .fn()
-        .mockResolvedValueOnce({
-          ...roleEntity,
-          id: 'role-2',
-          name: 'Manager',
-          description: 'Old',
-          is_system: false,
-        })
-        .mockResolvedValueOnce({
-          ...roleEntity,
-          id: 'role-2',
-          name: 'Manager Updated',
-          description: 'New',
-          is_system: false,
-        }),
-      findByName: jest.fn().mockResolvedValue(null),
+        .mockReturnValueOnce(
+          Effect.succeed({
+            ...roleEntity,
+            id: 'role-2',
+            name: 'Manager',
+            description: 'Old',
+            is_system: false,
+          }),
+        )
+        .mockReturnValueOnce(
+          Effect.succeed({
+            ...roleEntity,
+            id: 'role-2',
+            name: 'Manager Updated',
+            description: 'New',
+            is_system: false,
+          }),
+        ),
+      findByName: jest.fn().mockReturnValue(Effect.succeed(null)),
       create: jest.fn(),
-      update: jest.fn().mockResolvedValue(undefined),
+      update: jest.fn().mockReturnValue(Effect.succeed(undefined)),
       delete: jest.fn(),
-      replacePermissions: jest.fn().mockResolvedValue(undefined),
+      replacePermissions: jest.fn().mockReturnValue(Effect.succeed(undefined)),
     };
     const service = await makeService(repository, { query: jest.fn() });
 
@@ -157,7 +169,7 @@ describe('Effect RolesService', () => {
   it('prevents deleting a system role', async () => {
     const repository = {
       findAll: jest.fn(),
-      findById: jest.fn().mockResolvedValue(roleEntity),
+      findById: jest.fn().mockReturnValue(Effect.succeed(roleEntity)),
       findByName: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),

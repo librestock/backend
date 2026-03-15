@@ -6,7 +6,7 @@ import {
   CategoryIdSchema,
   CreateCategorySchema,
   UpdateCategorySchema,
-} from '../../../routes/categories/categories.schema';
+} from './categories.schema';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';

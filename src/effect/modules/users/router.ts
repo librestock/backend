@@ -1,14 +1,14 @@
 import { HttpRouter, HttpServerRequest } from '@effect/platform';
 import { Effect, Schema } from 'effect';
-import type { UserQueryDto } from '../../../routes/users/dto/user-query.dto';
+import type { UserQueryDto } from '@librestock/types/users';
 import { Permission, Resource } from '@librestock/types/auth';
 import {
   BanUserSchema,
   UpdateUserRolesSchema,
   UserIdSchema,
   UserQuerySchema,
-} from '../../../routes/users/users.schema';
-import { toPaginatedResponse } from '../../../common/utils/pagination.utils';
+} from './users.schema';
+import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { requirePermission } from '../../platform/authorization';
 import { respondEmpty, respondJson } from '../../platform/errors';
 import { getRequestHeaders } from '../../platform/session';

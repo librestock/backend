@@ -7,7 +7,7 @@ import {
   ClientQuerySchema,
   CreateClientSchema,
   UpdateClientSchema,
-} from '../../../routes/clients/clients.schema';
+} from './clients.schema';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';

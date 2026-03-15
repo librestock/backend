@@ -1,8 +1,10 @@
 {
-  "extends": "@librestock/tsconfig/nestjs.json",
+  "extends": "@librestock/tsconfig/base.json",
   "compilerOptions": {
     "outDir": "./dist",
     "baseUrl": "./",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "paths": {
       "effect": ["./node_modules/effect"],
       "effect/*": ["./node_modules/effect/*"]

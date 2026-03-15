@@ -10,11 +10,11 @@ import { Permission, Resource } from '@librestock/types/auth';
 import {
   PhotoIdSchema,
   PhotoProductIdSchema,
-} from '../../../routes/photos/photos.schema';
+} from './photos.schema';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson, respondCause } from '../../platform/errors';
 import { getOptionalSession } from '../../platform/session';
-import { photoTryAsync } from '../../../routes/photos/photos.utils';
+import { PhotosInfrastructureError } from './photos.errors';
 import { PhotosService } from './service';
 
 const PhotoPathParams = Schema.Struct({ id: PhotoIdSchema });
@@ -38,12 +38,24 @@ export const productPhotosRouter = HttpRouter.empty.pipe(
       const photosService = yield* PhotosService;
 
       // PersistedFile has a `path` to a temp file on disk
-      const buffer = yield* photoTryAsync('read uploaded file', () =>
-        readFile(file.path),
-      );
-      const fileStats = yield* photoTryAsync('stat uploaded file', () =>
-        stat(file.path),
-      );
+      const buffer = yield* Effect.tryPromise({
+        try: () => readFile(file.path),
+        catch: (cause) =>
+          new PhotosInfrastructureError({
+            action: 'read uploaded file',
+            cause,
+            message: 'Failed to read uploaded file',
+          }),
+      });
+      const fileStats = yield* Effect.tryPromise({
+        try: () => stat(file.path),
+        catch: (cause) =>
+          new PhotosInfrastructureError({
+            action: 'stat uploaded file',
+            cause,
+            message: 'Failed to stat uploaded file',
+          }),
+      });
 
       const result = yield* photosService.uploadPhoto(
         productId,

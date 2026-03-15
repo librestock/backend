@@ -7,7 +7,7 @@ import {
   SupplierQuerySchema,
   CreateSupplierSchema,
   UpdateSupplierSchema,
-} from '../../../routes/suppliers/suppliers.schema';
+} from './suppliers.schema';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';

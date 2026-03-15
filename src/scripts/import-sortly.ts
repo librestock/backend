@@ -2,13 +2,13 @@ import * as fs from 'node:fs';
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
 import { parse } from 'csv-parse/sync';
-import { Category } from '../routes/categories/entities/category.entity';
-import { Product } from '../routes/products/entities/product.entity';
-import { Location } from '../routes/locations/entities/location.entity';
-import { Inventory } from '../routes/inventory/entities/inventory.entity';
-import { StockMovement } from '../routes/stock-movements/entities/stock-movement.entity';
-import { StockMovementReason } from '../common/enums/stock-movement-reason.enum';
-import { LocationType } from '../common/enums/location-type.enum';
+import { Category } from '../effect/modules/categories/entities/category.entity';
+import { Product } from '../effect/modules/products/entities/product.entity';
+import { Location } from '../effect/modules/locations/entities/location.entity';
+import { Inventory } from '../effect/modules/inventory/entities/inventory.entity';
+import { StockMovement } from '../effect/modules/stock-movements/entities/stock-movement.entity';
+import { StockMovementReason } from '@librestock/types/stock-movements';
+import { LocationType } from '@librestock/types/locations';
 
 config();
 

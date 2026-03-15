@@ -4,11 +4,11 @@ import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
   type RepositoryPaginatedResult,
-} from '../../../common/utils/query-spec.utils';
+} from '../../platform/query-spec.utils';
 import { TypeOrmDataSource } from '../../platform/typeorm';
-import { Product } from '../../../routes/products/entities/product.entity';
+import { Product } from './entities/product.entity';
 import type { Schema } from 'effect';
-import type { ProductQuerySchema } from '../../../routes/products/products.schema';
+import type { ProductQuerySchema } from './products.schema';
 
 type ProductQueryDto = Schema.Schema.Type<typeof ProductQuerySchema>;
 

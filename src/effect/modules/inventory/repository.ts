@@ -6,13 +6,13 @@ import {
   toRepositoryPaginatedResult,
   type QuerySpec,
   type RepositoryPaginatedResult,
-} from '../../../common/utils/query-spec.utils';
+} from '../../platform/query-spec.utils';
 import type { Schema } from 'effect';
 import type {
   InventoryQuerySchema,
-} from '../../../routes/inventory/inventory.schema';
-import { InventorySortField } from '../../../routes/inventory/dto';
-import { Inventory } from '../../../routes/inventory/entities/inventory.entity';
+} from './inventory.schema';
+import { InventorySortField } from '@librestock/types/inventory';
+import { Inventory } from './entities/inventory.entity';
 import { TypeOrmDataSource } from '../../platform/typeorm';
 
 type InventoryQueryDto = Schema.Schema.Type<typeof InventoryQuerySchema>;

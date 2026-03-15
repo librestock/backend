@@ -6,8 +6,8 @@ import {
   CreateRoleSchema,
   RoleIdSchema,
   UpdateRoleSchema,
-} from '../../../routes/roles/roles.schema';
-import type { UpdateRoleDto } from '../../../routes/roles/dto/update-role.dto';
+} from './roles.schema';
+import type { UpdateRoleDto } from '@librestock/types/roles';
 import { requirePermission } from '../../platform/authorization';
 import { respondEmpty, respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
