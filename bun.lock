@@ -8,7 +8,7 @@
         "@effect/platform": "^0.94.5",
         "@effect/platform-bun": "^0.87.1",
         "@effect/schema": "^0.75.5",
-        "@librestock/types": "link:../packages/types",
+        "@librestock/types": "file:../packages/types",
         "better-auth": "1.4.18",
         "csv-parse": "^6.1.0",
         "dotenv": "^16.6.1",
@@ -228,7 +228,7 @@
 
     "@librestock/tsconfig": ["@librestock/tsconfig@1.1.5", "", {}, "sha512-lN8mFJWG/2hTtTuiK4/yWSEWtwviLsQhC6uW71tSllHbvMk/S0gk5DLmrehrNrEsmql8YybThVXdEjdFNl+VhQ=="],
 
-    "@librestock/types": ["@librestock/types@link:../packages/types", {}],
+    "@librestock/types": ["@librestock/types@file:../packages/types", { "dependencies": { "zod": "^4.3.6" }, "devDependencies": { "effect": "^3.19.19", "typescript": "^5.9.3" }, "peerDependencies": { "effect": "^3.19.0" } }],
 
     "@msgpackr-extract/msgpackr-extract-darwin-arm64": ["@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.3", "", { "os": "darwin", "cpu": "arm64" }, "sha512-QZHtlVgbAdy2zAqNA9Gu1UpIuI8Xvsd1v8ic6B2pZmeFnFcMWiPLfWXh7TVw4eGEZ/C9TH281KwhVoeQUKbyjw=="],
 

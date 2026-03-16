@@ -1,33 +1,32 @@
-import 'dotenv/config';
 import { HttpServer } from '@effect/platform';
 import { BunHttpServer, BunRuntime } from '@effect/platform-bun';
+import 'dotenv/config';
 import { Effect, Layer } from 'effect';
 import { httpApp } from './http/app';
+import { AuditLogsService } from './modules/audit-logs/service';
+import { authLayer } from './modules/auth/layer';
+import { BrandingService } from './modules/branding/service';
+import { CategoriesService } from './modules/categories/service';
+import { ClientsService } from './modules/clients/service';
+import { HealthService } from './modules/health/service';
+import { inventoryLayer } from './modules/inventory/layer';
+import { LocationsService } from './modules/locations/service';
+import { ordersLayer } from './modules/orders/layer';
+import { PhotosService } from './modules/photos/service';
+import { productsLayer } from './modules/products/layer';
+import type { RolesInfrastructureError } from './modules/roles/roles.errors';
+import { RolesService } from './modules/roles/service';
+import { stockMovementsLayer } from './modules/stock-movements/layer';
+import { SuppliersService } from './modules/suppliers/service';
+import { usersLayer } from './modules/users/layer';
 import { auditLayer } from './platform/audit';
-import { betterAuthLayer } from './platform/better-auth';
+import { BetterAuth, betterAuthLayer } from './platform/better-auth';
 import {
   TypeOrmDataSource,
   TypeOrmInitializationError,
   typeOrmLayer,
 } from './platform/typeorm';
-import { HealthService } from './modules/health/service';
-import { RolesService } from './modules/roles/service';
-import { authLayer } from './modules/auth/layer';
-import { usersLayer } from './modules/users/layer';
-import { AuditLogsService } from './modules/audit-logs/service';
-import { BrandingService } from './modules/branding/service';
-import { LocationsService } from './modules/locations/service';
-import { CategoriesService } from './modules/categories/service';
-import { areasLayer } from './modules/areas/layer';
-import { ClientsService } from './modules/clients/service';
-import { SuppliersService } from './modules/suppliers/service';
-import { productsLayer } from './modules/products/layer';
-import { PhotosService } from './modules/photos/service';
-import { stockMovementsLayer } from './modules/stock-movements/layer';
-import { inventoryLayer } from './modules/inventory/layer';
-import { ordersLayer } from './modules/orders/layer';
-import type { RolesInfrastructureError } from './modules/roles/roles.errors';
-import { BetterAuth } from './platform/better-auth';
+import { AreasService } from './modules/areas/service';
 
 const VALID_NODE_ENVS = ['development', 'staging', 'production'] as const;
 const nodeEnv = process.env.NODE_ENV ?? 'development';
@@ -43,7 +42,9 @@ const port = Number(process.env.PORT ?? 8080);
 
 const platformLayer = Layer.mergeAll(typeOrmLayer, betterAuthLayer);
 
-const rolesApplicationLayer = RolesService.Default.pipe(Layer.provide(platformLayer));
+const rolesApplicationLayer = RolesService.Default.pipe(
+  Layer.provide(platformLayer),
+);
 const authApplicationLayer = authLayer.pipe(
   Layer.provide(rolesApplicationLayer),
 );
@@ -79,21 +80,35 @@ const betterAuthMigrationLayer = Layer.effectDiscard(
 ).pipe(Layer.provide(platformLayer));
 
 // Phase 2 layers
-const auditLogsApplicationLayer = AuditLogsService.Default.pipe(Layer.provide(platformLayer));
-const brandingApplicationLayer = BrandingService.Default.pipe(Layer.provide(platformLayer));
-const locationsApplicationLayer = LocationsService.Default.pipe(Layer.provide(platformLayer));
-const categoriesApplicationLayer = CategoriesService.Default.pipe(Layer.provide(platformLayer));
-const areasApplicationLayer = areasLayer.pipe(
+const auditLogsApplicationLayer = AuditLogsService.Default.pipe(
+  Layer.provide(platformLayer),
+);
+const brandingApplicationLayer = BrandingService.Default.pipe(
+  Layer.provide(platformLayer),
+);
+const locationsApplicationLayer = LocationsService.Default.pipe(
+  Layer.provide(platformLayer),
+);
+const categoriesApplicationLayer = CategoriesService.Default.pipe(
+  Layer.provide(platformLayer),
+);
+const areasApplicationLayer = AreasService.Default.pipe(
   Layer.provide(Layer.mergeAll(platformLayer, locationsApplicationLayer)),
 );
 
 // Phase 3 layers
-const clientsApplicationLayer = ClientsService.Default.pipe(Layer.provide(platformLayer));
-const suppliersApplicationLayer = SuppliersService.Default.pipe(Layer.provide(platformLayer));
+const clientsApplicationLayer = ClientsService.Default.pipe(
+  Layer.provide(platformLayer),
+);
+const suppliersApplicationLayer = SuppliersService.Default.pipe(
+  Layer.provide(platformLayer),
+);
 const productsApplicationLayer = productsLayer.pipe(
   Layer.provide(Layer.mergeAll(platformLayer, categoriesApplicationLayer)),
 );
-const photosApplicationLayer = PhotosService.Default.pipe(Layer.provide(platformLayer));
+const photosApplicationLayer = PhotosService.Default.pipe(
+  Layer.provide(platformLayer),
+);
 
 // Phase 4 layers
 const stockMovementsApplicationLayer = stockMovementsLayer.pipe(
@@ -117,7 +132,11 @@ const inventoryApplicationLayer = inventoryLayer.pipe(
 );
 const ordersApplicationLayer = ordersLayer.pipe(
   Layer.provide(
-    Layer.mergeAll(platformLayer, clientsApplicationLayer, productsApplicationLayer),
+    Layer.mergeAll(
+      platformLayer,
+      clientsApplicationLayer,
+      productsApplicationLayer,
+    ),
   ),
 );
 

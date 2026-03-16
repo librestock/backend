@@ -27,7 +27,7 @@
     "@effect/platform": "^0.94.5",
     "@effect/platform-bun": "^0.87.1",
     "@effect/schema": "^0.75.5",
-    "@librestock/types": "link:../packages/types",
+    "@librestock/types": "file:../packages/types",
     "better-auth": "1.4.18",
     "csv-parse": "^6.1.0",
     "dotenv": "^16.6.1",
