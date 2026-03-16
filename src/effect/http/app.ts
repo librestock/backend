@@ -59,7 +59,7 @@ const authRateLimitBuckets = GlobalValue.globalValue(
   () => Effect.runSync(Ref.make(new Map<string, RateLimitState>())),
 );
 
-const bodyLimitMiddleware = (httpApp: HttpApp.Default<any, any>) =>
+const bodyLimitMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>) =>
   Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) => {
     const contentLengthHeader = request.headers['content-length'];
     const contentLength =
@@ -96,7 +96,7 @@ const getClientIp = (request: HttpServerRequest.HttpServerRequest) => {
   return Option.getOrElse(request.remoteAddress, () => 'unknown');
 };
 
-const authRateLimitMiddleware = (httpApp: HttpApp.Default<any, any>) =>
+const authRateLimitMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>) =>
   Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) => {
     const now = Date.now();
     const path = stripQueryString(request.url);

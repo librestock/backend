@@ -92,8 +92,7 @@ export class LocationsService extends Effect.Service<LocationsService>()(
           yield* repository.delete(id);
         });
 
-      const existsById = (id: string): Promise<boolean> =>
-        Effect.runPromise(repository.existsById(id));
+      const existsById = (id: string) => repository.existsById(id);
 
       return {
         findAllPaginated,

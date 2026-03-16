@@ -34,7 +34,7 @@ const makeMockRepository = (
   ),
   findById: jest.fn().mockReturnValue(Effect.succeed(makeClientEntity())),
   findByEmail: jest.fn().mockReturnValue(Effect.succeed(null)),
-  existsById: jest.fn().mockResolvedValue(true),
+  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
   create: jest.fn().mockReturnValue(Effect.succeed(makeClientEntity())),
   update: jest.fn().mockReturnValue(Effect.succeed(1)),
   delete: jest.fn().mockReturnValue(Effect.succeed(undefined)),
@@ -166,7 +166,7 @@ describe('Effect ClientsService', () => {
     it('delegates to repository', async () => {
       const repo = makeMockRepository();
       const service = await buildService(repo);
-      const result = await service.existsById('client-1');
+      const result = await Effect.runPromise(service.existsById('client-1'));
       expect(result).toBe(true);
     });
   });

@@ -219,11 +219,10 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
           yield* repository.delete(id);
         });
 
-      const existsById = (id: string): Promise<boolean> =>
-        Effect.runPromise(repository.existsById(id));
+      const existsById = (id: string) => repository.existsById(id);
 
-      const findAllDescendantIds = (parentId: string): Promise<string[]> =>
-        Effect.runPromise(repository.findAllDescendantIds(parentId));
+      const findAllDescendantIds = (parentId: string) =>
+        repository.findAllDescendantIds(parentId);
 
       return {
         findAll,

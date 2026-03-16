@@ -4,7 +4,6 @@ import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
   type QuerySpec,
-  type RepositoryPaginatedResult,
 } from '../../platform/query-spec.utils';
 import { TypeOrmDataSource } from '../../platform/typeorm';
 import { Supplier } from './entities/supplier.entity';

@@ -48,15 +48,16 @@ export class PhotosService extends Effect.Service<PhotosService>()(
 
       const ensureUploadsDir = () => mkdir(uploadsDir, { recursive: true });
 
-      const safeUnlink = async (storagePath: string) => {
-        try {
-          await unlink(storagePath);
-        } catch (error: unknown) {
-          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-            throw error;
-          }
-        }
-      };
+      const safeUnlink = (storagePath: string) =>
+        Effect.tryPromise({
+          try: () => unlink(storagePath),
+          catch: (error) => error,
+        }).pipe(
+          Effect.catchIf(
+            (error) => (error as NodeJS.ErrnoException).code === 'ENOENT',
+            () => Effect.void,
+          ),
+        );
 
       const getExtFromMime = (mimetype: string): string =>
         MIME_EXT_MAP[mimetype] ?? '.bin';
@@ -129,10 +130,7 @@ export class PhotosService extends Effect.Service<PhotosService>()(
             }),
             (error) =>
               Effect.flatMap(
-                Effect.tryPromise({
-                  try: () => safeUnlink(storagePath),
-                  catch: () => error,
-                }),
+                safeUnlink(storagePath).pipe(Effect.catchAll(() => Effect.void)),
                 () => Effect.fail(error),
               ),
           );
@@ -193,15 +191,17 @@ export class PhotosService extends Effect.Service<PhotosService>()(
       ): Effect.Effect<void, PhotoNotFound | PhotosInfrastructureError> =>
         Effect.gen(function* () {
           const photo = yield* findPhotoOrFail(id);
-          yield* Effect.tryPromise({
-            try: () => safeUnlink(photo.storage_path),
-            catch: (cause) =>
-              new PhotosInfrastructureError({
-                action: 'delete photo file',
-                cause,
-                message: 'Failed to delete photo file',
-              }),
-          });
+          yield* safeUnlink(photo.storage_path).pipe(
+            Effect.catchAll((cause) =>
+              Effect.fail(
+                new PhotosInfrastructureError({
+                  action: 'delete photo file',
+                  cause,
+                  message: 'Failed to delete photo file',
+                }),
+              ),
+            ),
+          );
           yield* repository.delete(id);
         });
 

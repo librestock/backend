@@ -1,11 +1,9 @@
-import { Context, Effect } from 'effect';
-import { Repository } from 'typeorm';
+import { Effect } from 'effect';
 import {
   applyQuerySpecs,
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
   type QuerySpec,
-  type RepositoryPaginatedResult,
 } from '../../platform/query-spec.utils';
 import { StockMovement } from './entities/stock-movement.entity';
 import type { Schema } from 'effect';
@@ -13,22 +11,20 @@ import type {
   StockMovementQuerySchema,
 } from './stock-movements.schema';
 import { TypeOrmDataSource } from '../../platform/typeorm';
+import { StockMovementsInfrastructureError } from './stock-movements.errors';
 
 type StockMovementQueryDto = Schema.Schema.Type<typeof StockMovementQuerySchema>;
 
-export interface StockMovementsRepository {
-  readonly findAllPaginated: (
-    query: StockMovementQueryDto,
-  ) => Promise<RepositoryPaginatedResult<StockMovement>>;
-  readonly findById: (id: string) => Promise<StockMovement | null>;
-  readonly findByProductId: (productId: string) => Promise<StockMovement[]>;
-  readonly findByLocationId: (locationId: string) => Promise<StockMovement[]>;
-  readonly create: (data: Partial<StockMovement>) => Promise<StockMovement>;
-}
-
-export const StockMovementsRepository = Context.GenericTag<StockMovementsRepository>(
-  '@librestock/effect/StockMovementsRepository',
-);
+const tryAsync = <A>(action: string, run: () => Promise<A>) =>
+  Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new StockMovementsInfrastructureError({
+        action,
+        cause,
+        message: `Failed to ${action}`,
+      }),
+  });
 
 const stockMovementFilterSpec: QuerySpec<StockMovement, StockMovementQueryDto> = (
   queryBuilder,
@@ -70,64 +66,84 @@ const stockMovementSortSpec: QuerySpec<StockMovement, StockMovementQueryDto> = (
   queryBuilder.orderBy('sm.created_at', 'DESC');
 };
 
-const createStockMovementsRepository = (
-  repository: Repository<StockMovement>,
-): StockMovementsRepository => ({
-  findAllPaginated: async (query) => {
-    const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
+export class StockMovementsRepository extends Effect.Service<StockMovementsRepository>()(
+  '@librestock/effect/StockMovementsRepository',
+  {
+    effect: Effect.gen(function* () {
+      const dataSource = yield* TypeOrmDataSource;
+      const repository = dataSource.getRepository(StockMovement);
 
-    const qb = applyQuerySpecs(
-      repository
-        .createQueryBuilder('sm')
-        .leftJoinAndSelect('sm.product', 'product')
-        .leftJoinAndSelect('sm.fromLocation', 'fromLocation')
-        .leftJoinAndSelect('sm.toLocation', 'toLocation'),
-      query,
-      [stockMovementFilterSpec, stockMovementSortSpec],
-    );
+      const findAllPaginated = (query: StockMovementQueryDto) =>
+        tryAsync('list stock movements paginated', async () => {
+          const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
 
-    const total = await qb.getCount();
-    const data = await qb.skip(skip).take(limit).getMany();
+          const qb = applyQuerySpecs(
+            repository
+              .createQueryBuilder('sm')
+              .leftJoinAndSelect('sm.product', 'product')
+              .leftJoinAndSelect('sm.fromLocation', 'fromLocation')
+              .leftJoinAndSelect('sm.toLocation', 'toLocation'),
+            query,
+            [stockMovementFilterSpec, stockMovementSortSpec],
+          );
 
-    return toRepositoryPaginatedResult(data, total, page, limit);
+          const total = await qb.getCount();
+          const data = await qb.skip(skip).take(limit).getMany();
+
+          return toRepositoryPaginatedResult(data, total, page, limit);
+        });
+
+      const findById = (id: string) =>
+        tryAsync('find stock movement by id', () =>
+          repository
+            .createQueryBuilder('sm')
+            .leftJoinAndSelect('sm.product', 'product')
+            .leftJoinAndSelect('sm.fromLocation', 'fromLocation')
+            .leftJoinAndSelect('sm.toLocation', 'toLocation')
+            .where('sm.id = :id', { id })
+            .getOne(),
+        );
+
+      const findByProductId = (productId: string) =>
+        tryAsync('find stock movements by product', () =>
+          repository
+            .createQueryBuilder('sm')
+            .leftJoinAndSelect('sm.product', 'product')
+            .leftJoinAndSelect('sm.fromLocation', 'fromLocation')
+            .leftJoinAndSelect('sm.toLocation', 'toLocation')
+            .where('sm.product_id = :productId', { productId })
+            .orderBy('sm.created_at', 'DESC')
+            .getMany(),
+        );
+
+      const findByLocationId = (locationId: string) =>
+        tryAsync('find stock movements by location', () =>
+          repository
+            .createQueryBuilder('sm')
+            .leftJoinAndSelect('sm.product', 'product')
+            .leftJoinAndSelect('sm.fromLocation', 'fromLocation')
+            .leftJoinAndSelect('sm.toLocation', 'toLocation')
+            .where(
+              '(sm.from_location_id = :locationId OR sm.to_location_id = :locationId)',
+              { locationId },
+            )
+            .orderBy('sm.created_at', 'DESC')
+            .getMany(),
+        );
+
+      const create = (data: Partial<StockMovement>) =>
+        tryAsync('create stock movement', async () => {
+          const stockMovement = repository.create(data);
+          return repository.save(stockMovement);
+        });
+
+      return {
+        findAllPaginated,
+        findById,
+        findByProductId,
+        findByLocationId,
+        create,
+      };
+    }),
   },
-  findById: (id) =>
-    repository
-      .createQueryBuilder('sm')
-      .leftJoinAndSelect('sm.product', 'product')
-      .leftJoinAndSelect('sm.fromLocation', 'fromLocation')
-      .leftJoinAndSelect('sm.toLocation', 'toLocation')
-      .where('sm.id = :id', { id })
-      .getOne(),
-  findByProductId: (productId) =>
-    repository
-      .createQueryBuilder('sm')
-      .leftJoinAndSelect('sm.product', 'product')
-      .leftJoinAndSelect('sm.fromLocation', 'fromLocation')
-      .leftJoinAndSelect('sm.toLocation', 'toLocation')
-      .where('sm.product_id = :productId', { productId })
-      .orderBy('sm.created_at', 'DESC')
-      .getMany(),
-  findByLocationId: (locationId) =>
-    repository
-      .createQueryBuilder('sm')
-      .leftJoinAndSelect('sm.product', 'product')
-      .leftJoinAndSelect('sm.fromLocation', 'fromLocation')
-      .leftJoinAndSelect('sm.toLocation', 'toLocation')
-      .where(
-        '(sm.from_location_id = :locationId OR sm.to_location_id = :locationId)',
-        { locationId },
-      )
-      .orderBy('sm.created_at', 'DESC')
-      .getMany(),
-  create: async (data) => {
-    const stockMovement = repository.create(data);
-    return repository.save(stockMovement);
-  },
-});
-
-export const makeStockMovementsRepository = Effect.gen(function* () {
-  const dataSource = yield* TypeOrmDataSource;
-
-  return createStockMovementsRepository(dataSource.getRepository(StockMovement));
-});
+) {}

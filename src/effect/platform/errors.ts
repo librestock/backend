@@ -117,7 +117,10 @@ export const respondCause = <E>(cause: Cause.Cause<E>) =>
     const details = toErrorDetails(firstError, path);
 
     if (details.statusCode >= 500) {
-      console.error(`[effect-http] ${details.statusCode} ${path}`, firstError);
+      yield* Effect.logError({
+        message: `[effect-http] ${details.statusCode} ${path}`,
+        error: firstError,
+      });
     }
 
     const response = HttpServerResponse.unsafeJson(

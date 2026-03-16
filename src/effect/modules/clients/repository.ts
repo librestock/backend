@@ -74,12 +74,14 @@ export class ClientsRepository extends Effect.Service<ClientsRepository>()(
           repo.createQueryBuilder('client').where('client.email = :email', { email }).getOne(),
         );
 
-      const existsById = (id: string): Promise<boolean> =>
-        repo
-          .createQueryBuilder('client')
-          .where('client.id = :id', { id })
-          .getCount()
-          .then((count) => count > 0);
+      const existsById = (id: string) =>
+        tryAsync('check client existence', async () => {
+          const count = await repo
+            .createQueryBuilder('client')
+            .where('client.id = :id', { id })
+            .getCount();
+          return count > 0;
+        });
 
       const create = (data: Partial<Client>) =>
         tryAsync('create client', async () => {

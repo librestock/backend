@@ -56,25 +56,9 @@ export class AreasService extends Effect.Service<AreasService>()(
           return false;
         });
 
-      const create = (
-        dto: CreateAreaDto,
-      ): Effect.Effect<
-        AreaResponseDto,
-        | AreaLocationNotFound
-        | AreaParentLocationMismatch
-        | AreasInfrastructureError
-        | ParentAreaNotFound
-      > =>
+      const create = (dto: CreateAreaDto) =>
         Effect.gen(function* () {
-          const locationExists = yield* Effect.tryPromise({
-            try: () => locationsService.existsById(dto.location_id),
-            catch: (cause) =>
-              new AreasInfrastructureError({
-                action: 'check location existence',
-                cause,
-                message: 'Failed to check location existence',
-              }),
-          });
+          const locationExists = yield* locationsService.existsById(dto.location_id);
           if (!locationExists) {
             return yield* Effect.fail(
               new AreaLocationNotFound({
@@ -249,6 +233,6 @@ export class AreasService extends Effect.Service<AreasService>()(
         delete: remove,
       };
     }),
-    dependencies: [AreasRepository.Default],
+    dependencies: [AreasRepository.Default, LocationsService.Default],
   },
 ) {}

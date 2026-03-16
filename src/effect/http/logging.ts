@@ -1,4 +1,4 @@
-import { Context, Effect } from 'effect';
+import { Effect } from 'effect';
 import type { HttpApp } from '@effect/platform';
 import * as HttpServerRequest from '@effect/platform/HttpServerRequest';
 
@@ -8,11 +8,7 @@ const stripQueryString = (url: string) => {
 };
 
 export const requestLoggingMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>): HttpApp.Default<E, R | HttpServerRequest.HttpServerRequest> =>
-  Effect.withFiberRuntime((fiber) => {
-    const request = Context.unsafeGet(
-      fiber.currentContext,
-      HttpServerRequest.HttpServerRequest,
-    );
+  Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) => {
     const startTime = Date.now();
     const requestIdHeader = request.headers['x-request-id'];
     const requestId =
@@ -22,7 +18,7 @@ export const requestLoggingMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>): 
     const path = stripQueryString(request.url);
     const userAgent = request.headers['user-agent'] ?? 'unknown';
 
-    return Effect.map(httpApp, (response) => {
+    return Effect.flatMap(httpApp, (response) => {
       const payload = {
         message: 'HTTP request',
         requestId,
@@ -32,14 +28,11 @@ export const requestLoggingMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>): 
         duration: `${Date.now() - startTime}ms`,
         userAgent,
       };
-      const serialized = JSON.stringify(payload);
 
-      if (response.status >= 500) {
-        console.error(serialized);
-      } else {
-        console.log(serialized);
-      }
+      const log = response.status >= 500
+        ? Effect.logError(payload)
+        : Effect.log(payload);
 
-      return response;
+      return Effect.as(log, response);
     });
   });

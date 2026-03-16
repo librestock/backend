@@ -9,7 +9,7 @@ jest.mock('../../platform/better-auth', () => {
 
 import { Effect, Layer } from 'effect';
 import { BetterAuth } from '../../platform/better-auth';
-import { makeUsersService } from './service';
+import { UsersService } from './service';
 import { UsersRepository } from './repository';
 import { RolesService } from '../roles/service';
 
@@ -28,12 +28,16 @@ describe('Effect UsersService', () => {
     rolesService: any;
   }) =>
     Effect.runPromise(
-      makeUsersService.pipe(
+      UsersService.pipe(
         Effect.provide(
-          Layer.mergeAll(
-            Layer.succeed(BetterAuth, betterAuth),
-            Layer.succeed(UsersRepository, usersRepository),
-            Layer.succeed(RolesService, rolesService),
+          UsersService.DefaultWithoutDependencies.pipe(
+            Layer.provide(
+              Layer.mergeAll(
+                Layer.succeed(BetterAuth, betterAuth),
+                Layer.succeed(UsersRepository, usersRepository),
+                Layer.succeed(RolesService, rolesService),
+              ),
+            ),
           ),
         ),
       ),
@@ -55,24 +59,24 @@ describe('Effect UsersService', () => {
   it('lists users and merges role names', async () => {
     const betterAuth = {
       api: {
-        listUsers: jest.fn().mockResolvedValue({
+        listUsers: jest.fn().mockReturnValue(Effect.succeed({
           users: [betterAuthUser],
           total: 1,
-        }),
+        })),
       },
     };
     const usersRepository = {
-      findRoleAssignments: jest.fn().mockResolvedValue([
+      findRoleAssignments: jest.fn().mockReturnValue(Effect.succeed([
         {
           user_id: 'user-1',
           role: { name: 'Admin' },
         },
-      ]),
-      findUserRoles: jest.fn(),
-      replaceUserRoles: jest.fn(),
-      hasAdminRole: jest.fn(),
-      syncBetterAuthRole: jest.fn(),
-      deleteUserRoles: jest.fn(),
+      ])),
+      findUserRoles: jest.fn().mockReturnValue(Effect.succeed([])),
+      replaceUserRoles: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+      hasAdminRole: jest.fn().mockReturnValue(Effect.succeed(false)),
+      syncBetterAuthRole: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+      deleteUserRoles: jest.fn().mockReturnValue(Effect.succeed(undefined)),
     };
     const rolesService = {
       clearCacheForUser: jest.fn().mockReturnValue(Effect.void),
@@ -92,22 +96,22 @@ describe('Effect UsersService', () => {
   it('gets a single user with roles', async () => {
     const betterAuth = {
       api: {
-        listUsers: jest.fn().mockResolvedValue({
+        listUsers: jest.fn().mockReturnValue(Effect.succeed({
           users: [betterAuthUser],
-        }),
+        })),
       },
     };
     const usersRepository = {
-      findRoleAssignments: jest.fn(),
-      findUserRoles: jest.fn().mockResolvedValue([
+      findRoleAssignments: jest.fn().mockReturnValue(Effect.succeed([])),
+      findUserRoles: jest.fn().mockReturnValue(Effect.succeed([
         {
           role: { name: 'Admin' },
         },
-      ]),
-      replaceUserRoles: jest.fn(),
-      hasAdminRole: jest.fn(),
-      syncBetterAuthRole: jest.fn(),
-      deleteUserRoles: jest.fn(),
+      ])),
+      replaceUserRoles: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+      hasAdminRole: jest.fn().mockReturnValue(Effect.succeed(false)),
+      syncBetterAuthRole: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+      deleteUserRoles: jest.fn().mockReturnValue(Effect.succeed(undefined)),
     };
     const rolesService = {
       clearCacheForUser: jest.fn().mockReturnValue(Effect.void),
@@ -129,21 +133,21 @@ describe('Effect UsersService', () => {
       api: {
         listUsers: jest
           .fn()
-          .mockResolvedValueOnce({ users: [betterAuthUser] })
-          .mockResolvedValueOnce({ users: [betterAuthUser] }),
+          .mockReturnValueOnce(Effect.succeed({ users: [betterAuthUser] }))
+          .mockReturnValueOnce(Effect.succeed({ users: [betterAuthUser] })),
       },
     };
     const usersRepository = {
-      findRoleAssignments: jest.fn(),
-      findUserRoles: jest.fn().mockResolvedValue([
+      findRoleAssignments: jest.fn().mockReturnValue(Effect.succeed([])),
+      findUserRoles: jest.fn().mockReturnValue(Effect.succeed([
         {
           role: { name: 'Admin' },
         },
-      ]),
-      replaceUserRoles: jest.fn().mockResolvedValue(undefined),
-      hasAdminRole: jest.fn().mockResolvedValue(true),
-      syncBetterAuthRole: jest.fn().mockResolvedValue(undefined),
-      deleteUserRoles: jest.fn(),
+      ])),
+      replaceUserRoles: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+      hasAdminRole: jest.fn().mockReturnValue(Effect.succeed(true)),
+      syncBetterAuthRole: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+      deleteUserRoles: jest.fn().mockReturnValue(Effect.succeed(undefined)),
     };
     const rolesService = {
       clearCacheForUser: jest.fn().mockReturnValue(Effect.void),
@@ -171,18 +175,18 @@ describe('Effect UsersService', () => {
       api: {
         listUsers: jest
           .fn()
-          .mockResolvedValue({ users: [betterAuthUser] }),
-        banUser: jest.fn().mockResolvedValue(undefined),
-        unbanUser: jest.fn().mockResolvedValue(undefined),
+          .mockReturnValue(Effect.succeed({ users: [betterAuthUser] })),
+        banUser: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+        unbanUser: jest.fn().mockReturnValue(Effect.succeed(undefined)),
       },
     };
     const usersRepository = {
-      findRoleAssignments: jest.fn(),
-      findUserRoles: jest.fn().mockResolvedValue([]),
-      replaceUserRoles: jest.fn(),
-      hasAdminRole: jest.fn(),
-      syncBetterAuthRole: jest.fn(),
-      deleteUserRoles: jest.fn(),
+      findRoleAssignments: jest.fn().mockReturnValue(Effect.succeed([])),
+      findUserRoles: jest.fn().mockReturnValue(Effect.succeed([])),
+      replaceUserRoles: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+      hasAdminRole: jest.fn().mockReturnValue(Effect.succeed(false)),
+      syncBetterAuthRole: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+      deleteUserRoles: jest.fn().mockReturnValue(Effect.succeed(undefined)),
     };
     const rolesService = {
       clearCacheForUser: jest.fn().mockReturnValue(Effect.void),
@@ -215,17 +219,17 @@ describe('Effect UsersService', () => {
   it('revokes user sessions', async () => {
     const betterAuth = {
       api: {
-        listUsers: jest.fn().mockResolvedValue({ users: [betterAuthUser] }),
-        revokeUserSessions: jest.fn().mockResolvedValue(undefined),
+        listUsers: jest.fn().mockReturnValue(Effect.succeed({ users: [betterAuthUser] })),
+        revokeUserSessions: jest.fn().mockReturnValue(Effect.succeed(undefined)),
       },
     };
     const usersRepository = {
-      findRoleAssignments: jest.fn(),
-      findUserRoles: jest.fn().mockResolvedValue([]),
-      replaceUserRoles: jest.fn(),
-      hasAdminRole: jest.fn(),
-      syncBetterAuthRole: jest.fn(),
-      deleteUserRoles: jest.fn(),
+      findRoleAssignments: jest.fn().mockReturnValue(Effect.succeed([])),
+      findUserRoles: jest.fn().mockReturnValue(Effect.succeed([])),
+      replaceUserRoles: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+      hasAdminRole: jest.fn().mockReturnValue(Effect.succeed(false)),
+      syncBetterAuthRole: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+      deleteUserRoles: jest.fn().mockReturnValue(Effect.succeed(undefined)),
     };
     const rolesService = {
       clearCacheForUser: jest.fn().mockReturnValue(Effect.void),

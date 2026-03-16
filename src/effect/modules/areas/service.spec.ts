@@ -38,7 +38,7 @@ const makeMockAreasRepository = (
 
 const makeMockLocationsService = () =>
   ({
-    existsById: jest.fn().mockResolvedValue(true),
+    existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
   }) as any;
 
 const buildService = (
@@ -80,7 +80,7 @@ describe('Effect AreasService', () => {
 
     it('fails when location does not exist', async () => {
       const locationsService = {
-        existsById: jest.fn().mockResolvedValue(false),
+        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
       } as any;
       const service = await buildService(undefined, locationsService);
 

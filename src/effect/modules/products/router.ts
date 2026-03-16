@@ -17,7 +17,6 @@ import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
 import { getOptionalSession } from '../../platform/session';
-import { productTryAsync } from './products.utils';
 import { ProductsService } from './service';
 
 type SearchParamsInput = Readonly<
@@ -73,9 +72,7 @@ export const productsRouter = HttpRouter.empty.pipe(
       const session = yield* getOptionalSession;
       const userId = session?.user.id;
       const productsService = yield* ProductsService;
-      const result = yield* productTryAsync('bulk create products', () =>
-        productsService.bulkCreate(dto, userId),
-      );
+      const result = yield* productsService.bulkCreate(dto, userId);
       const auditLogWriter = yield* AuditLogWriter;
       if (result.succeeded.length > 0) {
         yield* auditLogWriter.log({
@@ -139,9 +136,7 @@ export const productsRouter = HttpRouter.empty.pipe(
       const session = yield* getOptionalSession;
       const userId = session?.user.id;
       const productsService = yield* ProductsService;
-      const result = yield* productTryAsync('bulk update status', () =>
-        productsService.bulkUpdateStatus(dto, userId),
-      );
+      const result = yield* productsService.bulkUpdateStatus(dto, userId);
       const auditLogWriter = yield* AuditLogWriter;
       if (result.succeeded.length > 0) {
         yield* auditLogWriter.log({
@@ -159,9 +154,7 @@ export const productsRouter = HttpRouter.empty.pipe(
       yield* requirePermission(Resource.PRODUCTS, Permission.WRITE);
       const dto = yield* HttpServerRequest.schemaBodyJson(BulkRestoreSchema);
       const productsService = yield* ProductsService;
-      const result = yield* productTryAsync('bulk restore products', () =>
-        productsService.bulkRestore(dto),
-      );
+      const result = yield* productsService.bulkRestore(dto);
       const auditLogWriter = yield* AuditLogWriter;
       if (result.succeeded.length > 0) {
         yield* auditLogWriter.log({
@@ -182,9 +175,7 @@ export const productsRouter = HttpRouter.empty.pipe(
       const session = yield* getOptionalSession;
       const userId = session?.user.id;
       const productsService = yield* ProductsService;
-      const result = yield* productTryAsync('bulk delete products', () =>
-        productsService.bulkDelete(dto, userId),
-      );
+      const result = yield* productsService.bulkDelete(dto, userId);
       const auditLogWriter = yield* AuditLogWriter;
       if (result.succeeded.length > 0) {
         yield* auditLogWriter.log({

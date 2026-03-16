@@ -122,7 +122,7 @@ describe('Effect SuppliersService', () => {
     it('delegates to repository', async () => {
       const repo = makeMockRepository();
       const service = await buildService(repo);
-      const result = await service.existsById('supplier-1');
+      const result = await Effect.runPromise(service.existsById('supplier-1'));
       expect(result).toBe(true);
     });
   });
