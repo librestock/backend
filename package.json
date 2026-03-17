@@ -45,6 +45,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/pg": "^8.16.0",
     "eslint": "^9.39.2",
+    "eslint-import-resolver-node": "^0.3.9",
     "globals": "^17.3.0",
     "jest": "^30.2.0",
     "js-yaml": "^4.1.1",

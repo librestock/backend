@@ -22,6 +22,20 @@ jobs:
           repository: librestock/packages
           path: packages
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Build shared types package
+        working-directory: packages
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir types build
+
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -49,6 +63,20 @@ jobs:
           repository: librestock/packages
           path: packages
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Build shared types package
+        working-directory: packages
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir types build
+
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -72,6 +100,20 @@ jobs:
         with:
           repository: librestock/packages
           path: packages
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Build shared types package
+        working-directory: packages
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir types build
 
       - uses: oven-sh/setup-bun@v2
         with:
