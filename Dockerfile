@@ -1,29 +1,21 @@
-# Dockerfile for @librestock/api (NestJS)
+FROM oven/bun:1 AS builder
+WORKDIR /workspace
 
-# Base stage with pnpm
-FROM node:24-alpine AS base
-RUN corepack enable && corepack prepare pnpm@10 --activate
+COPY packages/types ./packages/types
+COPY backend/package.json ./backend/package.json
+COPY backend/bun.lock ./backend/bun.lock
+
+WORKDIR /workspace/backend
+RUN bun install --frozen-lockfile
+
+COPY backend ./.
+RUN bun run build
+
+FROM oven/bun:1 AS production
 WORKDIR /app
-
-# Development stage - for local dev with hot reload
-FROM base AS development
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
-COPY . .
-CMD ["pnpm", "start:dev"]
-
-# Build stage
-FROM base AS builder
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
-COPY . .
-RUN pnpm build
-
-# Production stage
-FROM base AS production
 ENV NODE_ENV=production
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --prod
-COPY --from=builder /app/dist ./dist
+
+COPY --from=builder /workspace/backend/dist ./dist
+
 EXPOSE 8080
-CMD ["node", "dist/main"]
+CMD ["bun", "dist/effect/main.js"]

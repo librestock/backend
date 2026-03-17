@@ -17,6 +17,11 @@ jobs:
         with:
           path: backend
 
+      - uses: actions/checkout@v4
+        with:
+          repository: librestock/packages
+          path: packages
+
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -39,6 +44,11 @@ jobs:
         with:
           path: backend
 
+      - uses: actions/checkout@v4
+        with:
+          repository: librestock/packages
+          path: packages
+
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -57,6 +67,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: backend
+
+      - uses: actions/checkout@v4
+        with:
+          repository: librestock/packages
+          path: packages
 
       - uses: oven-sh/setup-bun@v2
         with:
