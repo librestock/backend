@@ -1,10 +1,10 @@
 import { faker } from '@faker-js/faker';
 import { ClientStatus } from '@librestock/types/clients';
 import { OrderStatus } from '@librestock/types/orders';
-import { type Client } from '../../routes/clients/entities/client.entity';
-import { OrderItem } from '../../routes/orders/entities/order-item.entity';
-import { Order } from '../../routes/orders/entities/order.entity';
-import { type Product } from '../../routes/products/entities/product.entity';
+import { type Client } from '../../effect/modules/clients/entities/client.entity';
+import { OrderItem } from '../../effect/modules/orders/entities/order-item.entity';
+import { Order } from '../../effect/modules/orders/entities/order.entity';
+import { type Product } from '../../effect/modules/products/entities/product.entity';
 import { MOCK_USER_ID, SEED_CONFIG } from './config';
 import { registry } from './registry';
 

@@ -1,4 +1,3 @@
-import { type TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { type DataSourceOptions } from 'typeorm';
 import {
   getSSLConfig,
@@ -43,17 +42,4 @@ export function makeTypeOrmDataSourceOptions(
     password: params.password,
     database: params.database,
   } as DataSourceOptions;
-}
-
-export function makeNestTypeOrmOptions(): TypeOrmModuleOptions {
-  const isProduction = process.env.NODE_ENV === 'production';
-  const synchronize = !isProduction && process.env.DB_SYNCHRONIZE === 'true';
-
-  return {
-    ...makeTypeOrmDataSourceOptions({
-      migrationsRun: isProduction,
-      synchronize,
-      logging: process.env.NODE_ENV === 'development',
-    }),
-  } as TypeOrmModuleOptions;
 }

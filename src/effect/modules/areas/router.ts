@@ -1,0 +1,107 @@
+import { HttpRouter, HttpServerRequest } from '@effect/platform';
+import { Effect, Schema } from 'effect';
+import { Permission, Resource } from '@librestock/types/auth';
+import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { requirePermission } from '../../platform/authorization';
+import { respondJson } from '../../platform/errors';
+import { AuditLogWriter } from '../../platform/audit';
+import {
+  AreaIdSchema,
+  AreaQuerySchema,
+  CreateAreaSchema,
+  UpdateAreaSchema,
+} from './areas.schema';
+import { AreasService } from './service';
+
+type SearchParamsInput = Readonly<
+  Record<string, string | readonly string[] | undefined>
+>;
+
+const AreaPathParams = Schema.Struct({ id: AreaIdSchema });
+
+export const areasRouter = HttpRouter.empty.pipe(
+  HttpRouter.post(
+    '/',
+    Effect.gen(function* () {
+      yield* requirePermission(Resource.LOCATIONS, Permission.WRITE);
+      const dto = yield* HttpServerRequest.schemaBodyJson(CreateAreaSchema);
+      const areasService = yield* AreasService;
+      const result = yield* areasService.create(dto);
+      const auditLogWriter = yield* AuditLogWriter;
+      yield* auditLogWriter.log({
+        action: AuditAction.CREATE,
+        entityType: AuditEntityType.AREA,
+        entityId: result.id,
+      });
+      return yield* respondJson(Effect.succeed(result), { status: 201 });
+    }),
+  ),
+  HttpRouter.get(
+    '/',
+    Effect.gen(function* () {
+      yield* requirePermission(Resource.LOCATIONS, Permission.READ);
+      const query = yield* HttpServerRequest.schemaSearchParams(
+        AreaQuerySchema as unknown as Schema.Schema<
+          Schema.Schema.Type<typeof AreaQuerySchema>,
+          SearchParamsInput
+        >,
+      );
+      const areasService = yield* AreasService;
+      return yield* respondJson(areasService.findAll(query));
+    }),
+  ),
+  HttpRouter.get(
+    '/:id/children',
+    Effect.gen(function* () {
+      yield* requirePermission(Resource.LOCATIONS, Permission.READ);
+      const { id } = yield* HttpRouter.schemaPathParams(AreaPathParams);
+      const areasService = yield* AreasService;
+      return yield* respondJson(areasService.findByIdWithChildren(id));
+    }),
+  ),
+  HttpRouter.get(
+    '/:id',
+    Effect.gen(function* () {
+      yield* requirePermission(Resource.LOCATIONS, Permission.READ);
+      const { id } = yield* HttpRouter.schemaPathParams(AreaPathParams);
+      const areasService = yield* AreasService;
+      return yield* respondJson(areasService.findById(id));
+    }),
+  ),
+  HttpRouter.put(
+    '/:id',
+    Effect.gen(function* () {
+      yield* requirePermission(Resource.LOCATIONS, Permission.WRITE);
+      const { id } = yield* HttpRouter.schemaPathParams(AreaPathParams);
+      const dto = yield* HttpServerRequest.schemaBodyJson(UpdateAreaSchema);
+      const areasService = yield* AreasService;
+      const result = yield* areasService.update(id, dto);
+      const auditLogWriter = yield* AuditLogWriter;
+      yield* auditLogWriter.log({
+        action: AuditAction.UPDATE,
+        entityType: AuditEntityType.AREA,
+        entityId: id,
+      });
+      return yield* respondJson(Effect.succeed(result));
+    }),
+  ),
+  HttpRouter.del(
+    '/:id',
+    Effect.gen(function* () {
+      yield* requirePermission(Resource.LOCATIONS, Permission.WRITE);
+      const { id } = yield* HttpRouter.schemaPathParams(AreaPathParams);
+      const areasService = yield* AreasService;
+      yield* areasService.delete(id);
+      const auditLogWriter = yield* AuditLogWriter;
+      yield* auditLogWriter.log({
+        action: AuditAction.DELETE,
+        entityType: AuditEntityType.AREA,
+        entityId: id,
+      });
+      return yield* respondJson(
+        Effect.succeed({ message: 'Area deleted successfully' }),
+      );
+    }),
+  ),
+  HttpRouter.prefixAll('/areas'),
+);

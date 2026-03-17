@@ -1,14 +1,14 @@
 import * as fs from 'node:fs';
-import { DataSource } from 'typeorm';
+import { DataSource, type DataSourceOptions } from 'typeorm';
 import { config } from 'dotenv';
 import { parse } from 'csv-parse/sync';
-import { Category } from '../routes/categories/entities/category.entity';
-import { Product } from '../routes/products/entities/product.entity';
-import { Location } from '../routes/locations/entities/location.entity';
-import { Inventory } from '../routes/inventory/entities/inventory.entity';
-import { StockMovement } from '../routes/stock-movements/entities/stock-movement.entity';
-import { StockMovementReason } from '../common/enums/stock-movement-reason.enum';
-import { LocationType } from '../common/enums/location-type.enum';
+import { StockMovementReason } from '@librestock/types/stock-movements';
+import { LocationType } from '@librestock/types/locations';
+import { Category } from '../effect/modules/categories/entities/category.entity';
+import { Product } from '../effect/modules/products/entities/product.entity';
+import { Location } from '../effect/modules/locations/entities/location.entity';
+import { Inventory } from '../effect/modules/inventory/entities/inventory.entity';
+import { StockMovement } from '../effect/modules/stock-movements/entities/stock-movement.entity';
 
 config();
 
@@ -52,22 +52,23 @@ interface ImportStats {
 }
 
 async function createDataSource(): Promise<DataSource> {
-  const dataSourceConfig: any = {
-    type: 'postgres',
-    entities: [Category, Product, Location, Inventory, StockMovement],
-    synchronize: false,
-  };
-
-  if (process.env.DATABASE_URL) {
-    dataSourceConfig.url = process.env.DATABASE_URL;
-  } else {
-    dataSourceConfig.host = process.env.PGHOST ?? 'localhost';
-    dataSourceConfig.port = Number.parseInt(process.env.PGPORT ?? '5432');
-    dataSourceConfig.username = process.env.PGUSER;
-    dataSourceConfig.password = process.env.PGPASSWORD;
-    dataSourceConfig.database =
-      process.env.PGDATABASE ?? 'librestock_inventory';
-  }
+  const dataSourceConfig: DataSourceOptions = process.env.DATABASE_URL
+    ? {
+        type: 'postgres',
+        entities: [Category, Product, Location, Inventory, StockMovement],
+        synchronize: false,
+        url: process.env.DATABASE_URL,
+      }
+    : {
+        type: 'postgres',
+        entities: [Category, Product, Location, Inventory, StockMovement],
+        synchronize: false,
+        host: process.env.PGHOST ?? 'localhost',
+        port: Number.parseInt(process.env.PGPORT ?? '5432'),
+        username: process.env.PGUSER,
+        password: process.env.PGPASSWORD,
+        database: process.env.PGDATABASE ?? 'librestock_inventory',
+      };
 
   const dataSource = new DataSource(dataSourceConfig);
   await dataSource.initialize();

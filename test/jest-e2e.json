@@ -12,7 +12,6 @@
     "^src/auth$": "<rootDir>/mocks/auth.mock.ts",
     "^better-auth$": "<rootDir>/mocks/better-auth.mock.ts",
     "^better-auth/plugins$": "<rootDir>/mocks/better-auth-plugins.mock.ts",
-    "^uuid$": "<rootDir>/mocks/uuid.mock.ts",
-    "^@thallesp/nestjs-better-auth$": "<rootDir>/mocks/nestjs-better-auth.mock.ts"
+    "^uuid$": "<rootDir>/mocks/uuid.mock.ts"
   }
 }

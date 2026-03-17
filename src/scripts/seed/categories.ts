@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { Category } from '../../routes/categories/entities/category.entity';
+import { Category } from '../../effect/modules/categories/entities/category.entity';
 import { SEED_CONFIG, YACHT_CATEGORIES } from './config';
 import { registry } from './registry';
 

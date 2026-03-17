@@ -1,12 +1,12 @@
 import { faker } from '@faker-js/faker';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import { OrderStatus } from '@librestock/types/orders';
-import { AuditLog } from '../../routes/audit-logs/entities/audit-log.entity';
-import { type Category } from '../../routes/categories/entities/category.entity';
-import { type Location } from '../../routes/locations/entities/location.entity';
-import { type Order } from '../../routes/orders/entities/order.entity';
-import { type Product } from '../../routes/products/entities/product.entity';
-import { type Supplier } from '../../routes/suppliers/entities/supplier.entity';
+import { AuditLog } from '../../effect/modules/audit-logs/entities/audit-log.entity';
+import { type Category } from '../../effect/modules/categories/entities/category.entity';
+import { type Location } from '../../effect/modules/locations/entities/location.entity';
+import { type Order } from '../../effect/modules/orders/entities/order.entity';
+import { type Product } from '../../effect/modules/products/entities/product.entity';
+import { type Supplier } from '../../effect/modules/suppliers/entities/supplier.entity';
 import { MOCK_USER_ID, SEED_CONFIG } from './config';
 import { registry } from './registry';
 

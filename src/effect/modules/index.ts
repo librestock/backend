@@ -1,0 +1,65 @@
+import { HttpRouter, HttpServerResponse } from '@effect/platform';
+import { authRouter } from './auth/router';
+import { rolesRouter } from './roles/router';
+import { usersRouter } from './users/router';
+import { auditLogsRouter } from './audit-logs/router';
+import { brandingRouter } from './branding/router';
+import { locationsRouter } from './locations/router';
+import { categoriesRouter } from './categories/router';
+import { areasRouter } from './areas/router';
+import { clientsRouter } from './clients/router';
+import { suppliersRouter } from './suppliers/router';
+import { productsRouter } from './products/router';
+import { productPhotosRouter, photosRouter } from './photos/router';
+import { stockMovementsRouter } from './stock-movements/router';
+import { inventoryRouter } from './inventory/router';
+import { ordersRouter } from './orders/router';
+
+export const moduleCounterparts = [
+  'health',
+  'auth',
+  'roles',
+  'users',
+  'audit-logs',
+  'branding',
+  'locations',
+  'categories',
+  'areas',
+  'clients',
+  'suppliers',
+  'products',
+  'photos',
+  'stock-movements',
+  'inventory',
+  'orders',
+] as const;
+
+const migrationRouter = HttpRouter.empty.pipe(
+  HttpRouter.get(
+    '/_migration',
+    HttpServerResponse.unsafeJson({
+      runtime: 'effect-bun',
+      modules: moduleCounterparts,
+    }),
+  ),
+);
+
+export const apiRouter = HttpRouter.concatAll(
+  migrationRouter,
+  authRouter,
+  rolesRouter,
+  usersRouter,
+  auditLogsRouter,
+  brandingRouter,
+  locationsRouter,
+  categoriesRouter,
+  areasRouter,
+  clientsRouter,
+  suppliersRouter,
+  productsRouter,
+  productPhotosRouter,
+  photosRouter,
+  stockMovementsRouter,
+  inventoryRouter,
+  ordersRouter,
+).pipe(HttpRouter.prefixAll('/api/v1'));
