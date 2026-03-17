@@ -1,7 +1,7 @@
 import { Data, Effect } from 'effect';
 import type { Permission, Resource } from '@librestock/types/auth';
-import { requireSession } from './session';
 import { RolesService } from '../modules/roles/service';
+import { requireSession } from './session';
 
 export class PermissionDenied extends Data.TaggedError('PermissionDenied')<{
   readonly message: string;

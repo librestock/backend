@@ -1,7 +1,7 @@
 import { Effect, Layer } from 'effect';
+import { LocationsService } from '../locations/service';
 import { AreasService } from './service';
 import { AreasRepository } from './repository';
-import { LocationsService } from '../locations/service';
 
 const makeAreaEntity = (overrides: Record<string, any> = {}) => ({
   id: 'area-1',

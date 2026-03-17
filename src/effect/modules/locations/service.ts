@@ -1,5 +1,4 @@
 import { Effect } from 'effect';
-import { toPaginatedResponse } from '../../platform/pagination.utils';
 import type {
   CreateLocationDto,
   UpdateLocationDto,
@@ -7,10 +6,11 @@ import type {
   LocationResponseDto,
   PaginatedLocationsResponseDto,
 } from '@librestock/types/locations';
+import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { toLocationResponseDto } from './locations.utils';
 import {
   LocationNotFound,
-  LocationsInfrastructureError,
+  type LocationsInfrastructureError,
 } from './locations.errors';
 import type { Location } from './entities/location.entity';
 import { LocationsRepository } from './repository';

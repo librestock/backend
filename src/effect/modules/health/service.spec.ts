@@ -1,16 +1,17 @@
+import { Effect, Layer } from 'effect';
+import { TypeOrmDataSource } from '../../platform/typeorm';
+import { BetterAuth } from '../../platform/better-auth';
+import { makeHealthService } from './service';
+
 jest.mock('../../platform/better-auth', () => {
-  const { Context, Layer } = require('effect');
+  const { Context, Layer } =
+    jest.requireActual<typeof import('effect')>('effect');
 
   return {
     BetterAuth: Context.GenericTag('@librestock/test/BetterAuth'),
     betterAuthLayer: Layer.empty,
   };
 });
-
-import { Effect, Layer } from 'effect';
-import { makeHealthService } from './service';
-import { TypeOrmDataSource } from '../../platform/typeorm';
-import { BetterAuth } from '../../platform/better-auth';
 
 describe('makeHealthService', () => {
   const originalBetterAuthSecret = process.env.BETTER_AUTH_SECRET;

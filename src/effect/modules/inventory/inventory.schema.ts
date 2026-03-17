@@ -1,7 +1,6 @@
 import { Schema } from 'effect';
-import { LimitSchema, NullableTrimmedString, PageSchema } from '@librestock/types/common';
+import { LimitSchema, NullableTrimmedString, PageSchema, SortOrder  } from '@librestock/types/common';
 import { InventorySortField } from '@librestock/types/inventory';
-import { SortOrder } from '@librestock/types/common';
 
 const QueryBooleanSchema = Schema.Union(Schema.Boolean, Schema.BooleanFromString);
 const InventorySortFieldValues = [

@@ -7,13 +7,13 @@ import {
 } from '@effect/platform';
 import { Effect, Schema } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
+import { requirePermission } from '../../platform/authorization';
+import { respondJson, respondCause } from '../../platform/errors';
+import { getOptionalSession } from '../../platform/session';
 import {
   PhotoIdSchema,
   PhotoProductIdSchema,
 } from './photos.schema';
-import { requirePermission } from '../../platform/authorization';
-import { respondJson, respondCause } from '../../platform/errors';
-import { getOptionalSession } from '../../platform/session';
 import { PhotosInfrastructureError } from './photos.errors';
 import { PhotosService } from './service';
 
@@ -32,7 +32,7 @@ export const productPhotosRouter = HttpRouter.empty.pipe(
       const { productId } =
         yield* HttpRouter.schemaPathParams(ProductIdPathParams);
       const parts = yield* HttpServerRequest.schemaBodyMultipart(UploadSchema);
-      const file = parts.file;
+      const {file} = parts;
       const session = yield* getOptionalSession;
       const userId = session?.user.id;
       const photosService = yield* PhotosService;

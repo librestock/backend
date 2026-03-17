@@ -62,7 +62,7 @@ const getPreflightHeaders = (
 
 export const corsMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>): HttpApp.Default<E, R | HttpServerRequest.HttpServerRequest> =>
   Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) => {
-    const origin = request.headers['origin'];
+    const {origin} = request.headers;
 
     if (request.method === 'OPTIONS' && origin && isAllowedOrigin(origin)) {
       const accessControlRequestHeaders =

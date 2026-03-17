@@ -1,9 +1,9 @@
 import { Effect, Layer } from 'effect';
 import { StockMovementReason } from '@librestock/types/stock-movements';
-import { makeStockMovementsService } from './service';
-import { StockMovementsRepository } from './repository';
 import { ProductsService } from '../products/service';
 import { LocationsService } from '../locations/service';
+import { StockMovementsService } from './service';
+import { StockMovementsRepository } from './repository';
 
 const makeStockMovementEntity = (overrides: Record<string, any> = {}) => ({
   id: 'stock-movement-1',
@@ -38,31 +38,33 @@ const makeStockMovementEntity = (overrides: Record<string, any> = {}) => ({
 const makeMockRepository = (
   overrides: Partial<Record<keyof import('./repository').StockMovementsRepository, jest.Mock>> = {},
 ) => ({
-  findAllPaginated: jest.fn().mockResolvedValue({
-    data: [makeStockMovementEntity()],
-    total: 1,
-    page: 1,
-    limit: 20,
-    total_pages: 1,
-  }),
-  findById: jest.fn().mockResolvedValue(makeStockMovementEntity()),
-  findByProductId: jest.fn().mockResolvedValue([makeStockMovementEntity()]),
-  findByLocationId: jest.fn().mockResolvedValue([makeStockMovementEntity()]),
-  create: jest.fn().mockResolvedValue(makeStockMovementEntity({ id: 'stock-movement-created' })),
+  findAllPaginated: jest.fn().mockReturnValue(
+    Effect.succeed({
+      data: [makeStockMovementEntity()],
+      total: 1,
+      page: 1,
+      limit: 20,
+      total_pages: 1,
+    }),
+  ),
+  findById: jest.fn().mockReturnValue(Effect.succeed(makeStockMovementEntity())),
+  findByProductId: jest.fn().mockReturnValue(Effect.succeed([makeStockMovementEntity()])),
+  findByLocationId: jest.fn().mockReturnValue(Effect.succeed([makeStockMovementEntity()])),
+  create: jest.fn().mockReturnValue(Effect.succeed(makeStockMovementEntity({ id: 'stock-movement-created' }))),
   ...overrides,
 });
 
 const makeMockProductsService = (
   overrides: Partial<Record<keyof import('../products/service').ProductsService, jest.Mock>> = {},
 ) => ({
-  existsById: jest.fn().mockResolvedValue(true),
+  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
   ...overrides,
 } as any);
 
 const makeMockLocationsService = (
   overrides: Partial<Record<keyof import('../locations/service').LocationsService, jest.Mock>> = {},
 ) => ({
-  existsById: jest.fn().mockResolvedValue(true),
+  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
   ...overrides,
 } as any);
 
@@ -72,12 +74,16 @@ const buildService = (
   locationsService = makeMockLocationsService(),
 ) =>
   Effect.runPromise(
-    makeStockMovementsService.pipe(
+    StockMovementsService.pipe(
       Effect.provide(
-        Layer.mergeAll(
-          Layer.succeed(StockMovementsRepository, repository as any),
-          Layer.succeed(ProductsService, productsService),
-          Layer.succeed(LocationsService, locationsService),
+        StockMovementsService.DefaultWithoutDependencies.pipe(
+          Layer.provide(
+            Layer.mergeAll(
+              Layer.succeed(StockMovementsRepository, repository as any),
+              Layer.succeed(ProductsService, productsService),
+              Layer.succeed(LocationsService, locationsService),
+            ),
+          ),
         ),
       ),
     ),
@@ -113,7 +119,7 @@ describe('Effect StockMovementsService', () => {
 
     it('fails with StockMovementNotFound', async () => {
       const repository = makeMockRepository({
-        findById: jest.fn().mockResolvedValue(null),
+        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(repository);
 
@@ -135,7 +141,7 @@ describe('Effect StockMovementsService', () => {
 
     it('fails when product does not exist', async () => {
       const productsService = makeMockProductsService({
-        existsById: jest.fn().mockResolvedValue(false),
+        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
       });
       const service = await buildService(undefined, productsService);
 
@@ -157,7 +163,7 @@ describe('Effect StockMovementsService', () => {
 
     it('fails when location does not exist', async () => {
       const locationsService = makeMockLocationsService({
-        existsById: jest.fn().mockResolvedValue(false),
+        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
       });
       const service = await buildService(undefined, undefined, locationsService);
 
@@ -183,7 +189,9 @@ describe('Effect StockMovementsService', () => {
       const repository = makeMockRepository({
         findById: jest
           .fn()
-          .mockResolvedValueOnce(makeStockMovementEntity({ id: 'stock-movement-created' })),
+          .mockReturnValueOnce(
+            Effect.succeed(makeStockMovementEntity({ id: 'stock-movement-created' })),
+          ),
       });
       const service = await buildService(repository);
 
@@ -206,7 +214,7 @@ describe('Effect StockMovementsService', () => {
 
     it('fails when product does not exist', async () => {
       const productsService = makeMockProductsService({
-        existsById: jest.fn().mockResolvedValue(false),
+        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
       });
       const service = await buildService(undefined, productsService);
 
@@ -216,7 +224,7 @@ describe('Effect StockMovementsService', () => {
 
     it('fails when source location does not exist', async () => {
       const locationsService = makeMockLocationsService({
-        existsById: jest.fn().mockResolvedValueOnce(false),
+        existsById: jest.fn().mockReturnValueOnce(Effect.succeed(false)),
       });
       const service = await buildService(undefined, undefined, locationsService);
 
@@ -226,7 +234,10 @@ describe('Effect StockMovementsService', () => {
 
     it('fails when destination location does not exist', async () => {
       const locationsService = makeMockLocationsService({
-        existsById: jest.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false),
+        existsById: jest
+          .fn()
+          .mockReturnValueOnce(Effect.succeed(true))
+          .mockReturnValueOnce(Effect.succeed(false)),
       });
       const service = await buildService(undefined, undefined, locationsService);
 

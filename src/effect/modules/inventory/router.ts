@@ -2,6 +2,9 @@ import { HttpRouter, HttpServerRequest } from '@effect/platform';
 import { Effect, Schema } from 'effect';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import { Permission, Resource } from '@librestock/types/auth';
+import { requirePermission } from '../../platform/authorization';
+import { AuditLogWriter } from '../../platform/audit';
+import { respondJson } from '../../platform/errors';
 import {
   AdjustInventorySchema,
   CreateInventorySchema,
@@ -9,9 +12,6 @@ import {
   InventoryQuerySchema,
   UpdateInventorySchema,
 } from './inventory.schema';
-import { requirePermission } from '../../platform/authorization';
-import { AuditLogWriter } from '../../platform/audit';
-import { respondJson } from '../../platform/errors';
 import { InventoryService } from './service';
 
 type SearchParamsInput = Readonly<Record<string, string | readonly string[] | undefined>>;

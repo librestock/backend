@@ -65,7 +65,7 @@ describe('Effect CategoriesService', () => {
       expect(result).toHaveLength(1);
       expect(result[0]!.name).toBe('Root');
       expect(result[0]!.children).toHaveLength(1);
-      expect(result[0]!.children![0]!.name).toBe('Child');
+      expect(result[0]!.children[0]!.name).toBe('Child');
     });
 
     it('returns empty array for no categories', async () => {

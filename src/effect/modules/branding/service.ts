@@ -3,6 +3,7 @@ import type {
   BrandingResponseDto,
   UpdateBrandingDto,
 } from '@librestock/types/branding';
+import { TypeOrmDataSource } from '../../platform/typeorm';
 import { BrandingSettings } from './entities/branding.entity';
 import {
   BRANDING_SETTINGS_ID,
@@ -13,7 +14,6 @@ import { toBrandingResponse } from './branding.utils';
 import {
   BrandingInfrastructureError,
 } from './branding.errors';
-import { TypeOrmDataSource } from '../../platform/typeorm';
 
 const brandingTryAsync = <A>(action: string, run: () => Promise<A>) =>
   Effect.tryPromise({

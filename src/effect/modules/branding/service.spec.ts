@@ -1,6 +1,6 @@
 import { Effect, Layer } from 'effect';
-import { BrandingService } from './service';
 import { TypeOrmDataSource } from '../../platform/typeorm';
+import { BrandingService } from './service';
 import {
   BRANDING_SETTINGS_ID,
   DEFAULT_BRANDING,

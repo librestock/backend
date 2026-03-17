@@ -1,5 +1,10 @@
+import { Effect, Layer } from 'effect';
+import { HttpApp, HttpRouter } from '@effect/platform';
+import { healthRouter } from './router';
+import { HealthService } from './service';
+
 jest.mock('./service', () => {
-  const { Context } = require('effect');
+  const { Context } = jest.requireActual<typeof import('effect')>('effect');
 
   return {
     HealthService: Context.GenericTag('@librestock/test/HealthService'),
@@ -10,11 +15,6 @@ jest.mock('uuid', () => ({
   v4: () => '00000000-0000-4000-8000-000000000000',
   validate: () => true,
 }));
-
-import { Effect, Layer } from 'effect';
-import { HttpApp, HttpRouter } from '@effect/platform';
-import { healthRouter } from './router';
-import { HealthService } from './service';
 
 describe('healthRouter', () => {
   const makeHandler = (service: any) => {

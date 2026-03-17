@@ -4,13 +4,13 @@ import {
   type PaginatedAuditLogsResponseDto,
   type AuditEntityType,
 } from '@librestock/types/audit-logs';
-import type { AuditLogQueryOptions } from './repository';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
+import type { AuditLogQueryOptions } from './repository';
 import {
   AuditLogNotFound,
-  AuditLogsInfrastructureError,
+  type AuditLogsInfrastructureError,
 } from './audit-logs.errors';
-import { AuditLog } from './entities/audit-log.entity';
+import { type AuditLog } from './entities/audit-log.entity';
 import { AuditLogsRepository } from './repository';
 
 const toAuditLogResponseDto = (auditLog: AuditLog): AuditLogResponseDto => ({

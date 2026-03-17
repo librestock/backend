@@ -2,14 +2,14 @@ import { HttpRouter, HttpServerRequest } from '@effect/platform';
 import { Effect, Schema } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { requirePermission } from '../../platform/authorization';
+import { respondJson } from '../../platform/errors';
+import { AuditLogWriter } from '../../platform/audit';
 import {
   CategoryIdSchema,
   CreateCategorySchema,
   UpdateCategorySchema,
 } from './categories.schema';
-import { requirePermission } from '../../platform/authorization';
-import { respondJson } from '../../platform/errors';
-import { AuditLogWriter } from '../../platform/audit';
 import { CategoriesService } from './service';
 
 const CategoryPathParams = Schema.Struct({ id: CategoryIdSchema });

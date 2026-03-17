@@ -2,15 +2,15 @@ import { HttpRouter, HttpServerRequest } from '@effect/platform';
 import { Effect, Schema } from 'effect';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import { Permission, Resource } from '@librestock/types/auth';
+import type { UpdateRoleDto } from '@librestock/types/roles';
+import { requirePermission } from '../../platform/authorization';
+import { respondEmpty, respondJson } from '../../platform/errors';
+import { AuditLogWriter } from '../../platform/audit';
 import {
   CreateRoleSchema,
   RoleIdSchema,
   UpdateRoleSchema,
 } from './roles.schema';
-import type { UpdateRoleDto } from '@librestock/types/roles';
-import { requirePermission } from '../../platform/authorization';
-import { respondEmpty, respondJson } from '../../platform/errors';
-import { AuditLogWriter } from '../../platform/audit';
 import { RolesService } from './service';
 
 const RolePathParamsSchema = Schema.Struct({

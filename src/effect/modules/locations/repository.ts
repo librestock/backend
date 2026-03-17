@@ -1,4 +1,6 @@
 import { Effect } from 'effect';
+import type { LocationQueryDto, LocationSortField } from '@librestock/types/locations';
+import type { SortOrder } from '@librestock/types/common';
 import {
   applyQuerySpecs,
   resolvePaginationWindow,
@@ -8,8 +10,6 @@ import {
 import { TypeOrmDataSource } from '../../platform/typeorm';
 import { Location } from './entities/location.entity';
 import { LocationsInfrastructureError } from './locations.errors';
-import type { LocationQueryDto, LocationSortField } from '@librestock/types/locations';
-import type { SortOrder } from '@librestock/types/common';
 
 const tryAsync = <A>(action: string, run: () => Promise<A>) =>
   Effect.tryPromise({

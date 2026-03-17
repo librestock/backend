@@ -1,5 +1,10 @@
 import { Effect } from 'effect';
 import {
+  type AuditAction,
+  type AuditEntityType,
+  type AuditLogQueryDto,
+} from '@librestock/types/audit-logs';
+import {
   applyQuerySpecs,
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
@@ -9,11 +14,6 @@ import {
 import { TypeOrmDataSource } from '../../platform/typeorm';
 import { AuditLog } from './entities/audit-log.entity';
 import { AuditLogsInfrastructureError } from './audit-logs.errors';
-import {
-  AuditAction,
-  AuditEntityType,
-  type AuditLogQueryDto,
-} from '@librestock/types/audit-logs';
 
 export interface AuditLogQueryOptions {
   readonly entity_type?: AuditEntityType;

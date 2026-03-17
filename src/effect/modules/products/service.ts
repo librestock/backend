@@ -1,5 +1,15 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
+import { toPaginatedResponse } from '../../platform/pagination.utils';
+import {
+  addBulkFailure,
+  addBulkSuccess,
+  addNotFoundFailures,
+  createEmptyBulkResult,
+  findDuplicates,
+  partitionByExistence,
+} from '../../platform/bulk-operation.utils';
+import { CategoriesService } from '../categories/service';
 import type {
   ProductQuerySchema,
   CreateProductSchema,
@@ -10,15 +20,6 @@ import type {
   BulkRestoreSchema,
 } from './products.schema';
 import type { Product } from './entities/product.entity';
-import { toPaginatedResponse } from '../../platform/pagination.utils';
-import {
-  addBulkFailure,
-  addBulkSuccess,
-  addNotFoundFailures,
-  createEmptyBulkResult,
-  findDuplicates,
-  partitionByExistence,
-} from '../../platform/bulk-operation.utils';
 import {
   toCreateProductEntity,
   toProductResponseDto,
@@ -33,7 +34,6 @@ import {
   SkuAlreadyExists,
 } from './products.errors';
 import { ProductsRepository } from './repository';
-import { CategoriesService } from '../categories/service';
 
 type ProductQueryDto = Schema.Schema.Type<typeof ProductQuerySchema>;
 type CreateProductDto = Schema.Schema.Type<typeof CreateProductSchema>;

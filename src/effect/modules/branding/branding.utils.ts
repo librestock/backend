@@ -1,5 +1,5 @@
-import { POWERED_BY } from './branding.constants';
 import type { BrandingResponseDto } from '@librestock/types/branding';
+import { POWERED_BY } from './branding.constants';
 import { type BrandingSettings } from './entities/branding.entity';
 
 export function toBrandingResponse(

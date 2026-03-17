@@ -1,7 +1,6 @@
 import { Schema } from 'effect';
-import { PageSchema, LimitSchema } from '@librestock/types/common';
+import { PageSchema, LimitSchema, SortOrder  } from '@librestock/types/common';
 import { LocationSortField, LocationType } from '@librestock/types/locations';
-import { SortOrder } from '@librestock/types/common';
 
 const LocationTypeValues = [
   LocationType.WAREHOUSE,

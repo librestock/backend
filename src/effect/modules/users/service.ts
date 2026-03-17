@@ -1,12 +1,33 @@
 import { Effect } from 'effect';
 import type { UserQueryDto, UserResponseDto, BanUserDto } from '@librestock/types/users';
-import { UserNotFound, UsersInfrastructureError } from './users.errors';
 import { BetterAuth } from '../../platform/better-auth';
 import { RolesService } from '../roles/service';
+import { UserNotFound, UsersInfrastructureError } from './users.errors';
 import { UsersRepository } from './repository';
 
+interface BetterAuthUser {
+  readonly id: string;
+  readonly name?: string | null;
+  readonly email?: string | null;
+  readonly image?: string | null;
+  readonly banned?: boolean | null;
+  readonly banReason?: string | null;
+  readonly banExpires?: string | Date | null;
+  readonly createdAt: string | Date;
+}
+
+interface BetterAuthBanUserBody {
+  readonly userId: string;
+  banReason?: string;
+  banExpiresIn?: number;
+}
+
+interface BetterAuthUserActionBody {
+  readonly userId: string;
+}
+
 const toUserResponse = (
-  user: Record<string, any>,
+  user: BetterAuthUser,
   roles: string[],
 ): UserResponseDto => ({
   id: user.id,
@@ -43,7 +64,7 @@ export class UsersService extends Effect.Service<UsersService>()(
         api: typeof import('../../../auth').auth.api,
         id: string,
         headers: Headers,
-      ): Effect.Effect<Record<string, any>, UserNotFound | UsersInfrastructureError> =>
+      ): Effect.Effect<BetterAuthUser, UserNotFound | UsersInfrastructureError> =>
         Effect.flatMap(
           userTryAsync('load user from auth provider', () =>
             api.listUsers({
@@ -57,7 +78,7 @@ export class UsersService extends Effect.Service<UsersService>()(
             }),
           ),
           (result) => {
-            const user = (result.users ?? [])[0] as Record<string, any> | undefined;
+            const user = (result.users ?? [])[0] as BetterAuthUser | undefined;
             return user
               ? Effect.succeed(user)
               : Effect.fail(
@@ -107,7 +128,7 @@ export class UsersService extends Effect.Service<UsersService>()(
             }),
           );
 
-          const users = (result.users ?? []) as Record<string, any>[];
+          const users = (result.users ?? []) as BetterAuthUser[];
           const total = result.total ?? users.length;
           const assignments = yield* usersRepository.findRoleAssignments(users.map((user) => user.id));
 
@@ -158,7 +179,7 @@ export class UsersService extends Effect.Service<UsersService>()(
         Effect.gen(function* () {
           yield* getBetterAuthUserOrFail(betterAuth.api, userId, headers);
 
-          const body: Record<string, unknown> = { userId };
+          const body: BetterAuthBanUserBody = { userId };
           if (dto.reason) {
             body.banReason = dto.reason;
           }
@@ -172,7 +193,7 @@ export class UsersService extends Effect.Service<UsersService>()(
           yield* userTryAsync('ban user in auth provider', () =>
             betterAuth.api.banUser({
               headers,
-              body: body as any,
+              body,
             }),
           );
 
@@ -185,7 +206,7 @@ export class UsersService extends Effect.Service<UsersService>()(
           yield* userTryAsync('unban user in auth provider', () =>
             betterAuth.api.unbanUser({
               headers,
-              body: { userId } as any,
+              body: { userId } satisfies BetterAuthUserActionBody,
             }),
           );
 
@@ -199,7 +220,7 @@ export class UsersService extends Effect.Service<UsersService>()(
           yield* userTryAsync('remove user from auth provider', () =>
             betterAuth.api.removeUser({
               headers,
-              body: { userId } as any,
+              body: { userId } satisfies BetterAuthUserActionBody,
             }),
           );
         });
@@ -210,7 +231,7 @@ export class UsersService extends Effect.Service<UsersService>()(
           yield* userTryAsync('revoke user sessions', () =>
             betterAuth.api.revokeUserSessions({
               headers,
-              body: { userId } as any,
+              body: { userId } satisfies BetterAuthUserActionBody,
             }),
           );
         });

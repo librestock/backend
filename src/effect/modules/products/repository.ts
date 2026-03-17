@@ -1,11 +1,11 @@
 import { Effect } from 'effect';
+import type { Schema } from 'effect';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
 } from '../../platform/query-spec.utils';
 import { TypeOrmDataSource } from '../../platform/typeorm';
 import { Product } from './entities/product.entity';
-import type { Schema } from 'effect';
 import type { ProductQuerySchema } from './products.schema';
 import { ProductsInfrastructureError } from './products.errors';
 

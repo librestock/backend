@@ -1,17 +1,17 @@
 import { Effect } from 'effect';
+import type { Schema } from 'effect';
+import { InventorySortField } from '@librestock/types/inventory';
 import {
   applyQuerySpecs,
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
   type QuerySpec,
 } from '../../platform/query-spec.utils';
-import type { Schema } from 'effect';
+import { TypeOrmDataSource } from '../../platform/typeorm';
 import type {
   InventoryQuerySchema,
 } from './inventory.schema';
-import { InventorySortField } from '@librestock/types/inventory';
 import { Inventory } from './entities/inventory.entity';
-import { TypeOrmDataSource } from '../../platform/typeorm';
 import { InventoryInfrastructureError } from './inventory.errors';
 
 type InventoryQueryDto = Schema.Schema.Type<typeof InventoryQuerySchema>;

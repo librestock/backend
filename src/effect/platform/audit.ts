@@ -1,5 +1,5 @@
 import { Context, Effect, Layer } from 'effect';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { type AuditAction, type AuditEntityType } from '@librestock/types/audit-logs';
 import { TypeOrmDataSource } from './typeorm';
 import { getOptionalSession } from './session';
 import { getRequestContext } from './request-context';
@@ -11,7 +11,7 @@ export interface AuditWriteParams {
 }
 
 export interface AuditLogWriter {
-  readonly log: (params: AuditWriteParams) => Effect.Effect<void, never, any>;
+  readonly log: (params: AuditWriteParams) => Effect.Effect<void, never, unknown>;
 }
 
 export const AuditLogWriter = Context.GenericTag<AuditLogWriter>(

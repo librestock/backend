@@ -1,16 +1,16 @@
 import { Effect } from 'effect';
+import type { Schema } from 'effect';
 import {
   applyQuerySpecs,
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
   type QuerySpec,
 } from '../../platform/query-spec.utils';
+import { TypeOrmDataSource } from '../../platform/typeorm';
 import { StockMovement } from './entities/stock-movement.entity';
-import type { Schema } from 'effect';
 import type {
   StockMovementQuerySchema,
 } from './stock-movements.schema';
-import { TypeOrmDataSource } from '../../platform/typeorm';
 import { StockMovementsInfrastructureError } from './stock-movements.errors';
 
 type StockMovementQueryDto = Schema.Schema.Type<typeof StockMovementQuerySchema>;

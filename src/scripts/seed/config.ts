@@ -1,5 +1,5 @@
 import { LocationType } from '@librestock/types/locations';
-import { DataSource } from 'typeorm';
+import { DataSource, type DataSourceOptions } from 'typeorm';
 import { Area } from '../../effect/modules/areas/entities/area.entity';
 import { AuditLog } from '../../effect/modules/audit-logs/entities/audit-log.entity';
 import { Category } from '../../effect/modules/categories/entities/category.entity';
@@ -88,24 +88,29 @@ export const SUB_AREA_TEMPLATES = [
 ];
 
 export async function createDataSource(): Promise<DataSource> {
-  const dataSourceConfig: any = {
-    type: 'postgres',
-    entities: [
-      Category, Supplier, SupplierProduct, Product, Photo, Location, Area,
-      Inventory, Client, Order, OrderItem, StockMovement, AuditLog,
-    ],
-    synchronize: false,
-  };
-
-  if (process.env.DATABASE_URL) {
-    dataSourceConfig.url = process.env.DATABASE_URL;
-  } else {
-    dataSourceConfig.host = process.env.PGHOST ?? 'localhost';
-    dataSourceConfig.port = Number.parseInt(process.env.PGPORT ?? '5432');
-    dataSourceConfig.username = process.env.PGUSER;
-    dataSourceConfig.password = process.env.PGPASSWORD;
-    dataSourceConfig.database = process.env.PGDATABASE ?? 'librestock_inventory';
-  }
+  const dataSourceConfig: DataSourceOptions = process.env.DATABASE_URL
+    ? {
+        type: 'postgres',
+        entities: [
+          Category, Supplier, SupplierProduct, Product, Photo, Location, Area,
+          Inventory, Client, Order, OrderItem, StockMovement, AuditLog,
+        ],
+        synchronize: false,
+        url: process.env.DATABASE_URL,
+      }
+    : {
+        type: 'postgres',
+        entities: [
+          Category, Supplier, SupplierProduct, Product, Photo, Location, Area,
+          Inventory, Client, Order, OrderItem, StockMovement, AuditLog,
+        ],
+        synchronize: false,
+        host: process.env.PGHOST ?? 'localhost',
+        port: Number.parseInt(process.env.PGPORT ?? '5432'),
+        username: process.env.PGUSER,
+        password: process.env.PGPASSWORD,
+        database: process.env.PGDATABASE ?? 'librestock_inventory',
+      };
 
   const dataSource = new DataSource(dataSourceConfig);
   await dataSource.initialize();

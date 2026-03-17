@@ -1,5 +1,5 @@
-import type { UserSession } from '../../platform/auth/user-session';
 import type { CurrentUserResponseDto, ProfileResponseDto, SessionClaimsResponseDto } from '@librestock/types/auth';
+import type { UserSession } from '../../platform/auth/user-session';
 import {
   getSessionIdFromSession,
   getSessionTimingFromSession,

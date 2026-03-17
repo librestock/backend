@@ -1,16 +1,12 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
-import type { Inventory } from './entities/inventory.entity';
-import type {
-  AdjustInventorySchema,
-  CreateInventorySchema,
-  InventoryQuerySchema,
-  UpdateInventorySchema,
-} from './inventory.schema';
+import '@librestock/types/inventory';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
-import {
-  toInventoryResponseDto,
-} from './inventory.utils';
+import { AreaNotFound, AreasInfrastructureError } from '../areas/areas.errors';
+import { AreasService } from '../areas/service';
+import { LocationsService } from '../locations/service';
+import { ProductsService } from '../products/service';
+import type { Inventory } from './entities/inventory.entity';
 import {
   InvalidInventoryArea,
   InvalidInventoryLocation,
@@ -23,12 +19,16 @@ import {
   InventoryProductNotFound,
   InventoryQuantityAdjustmentFailed,
 } from './inventory.errors';
-import '@librestock/types/inventory';
-import { AreaNotFound, AreasInfrastructureError } from '../areas/areas.errors';
-import { ProductsService } from '../products/service';
-import { LocationsService } from '../locations/service';
-import { AreasService } from '../areas/service';
+import type {
+  AdjustInventorySchema,
+  CreateInventorySchema,
+  InventoryQuerySchema,
+  UpdateInventorySchema,
+} from './inventory.schema';
 import { InventoryRepository } from './repository';
+import {
+  toInventoryResponseDto,
+} from './inventory.utils';
 
 type InventoryQueryDto = Schema.Schema.Type<typeof InventoryQuerySchema>;
 type CreateInventoryDto = Schema.Schema.Type<typeof CreateInventorySchema>;

@@ -1,11 +1,13 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
+import { toPaginatedResponse } from '../../platform/pagination.utils';
+import { ProductsService } from '../products/service';
+import { LocationsService } from '../locations/service';
 import type { StockMovement } from './entities/stock-movement.entity';
 import type {
   CreateStockMovementSchema,
   StockMovementQuerySchema,
 } from './stock-movements.schema';
-import { toPaginatedResponse } from '../../platform/pagination.utils';
 import {
   toStockMovementResponseDto,
 } from './stock-movements.utils';
@@ -16,10 +18,8 @@ import {
   StockMovementLocationNotFound,
   StockMovementNotFound,
   StockMovementProductNotFound,
-  StockMovementsInfrastructureError,
+  type StockMovementsInfrastructureError,
 } from './stock-movements.errors';
-import { ProductsService } from '../products/service';
-import { LocationsService } from '../locations/service';
 import { StockMovementsRepository } from './repository';
 
 type StockMovementQueryDto = Schema.Schema.Type<typeof StockMovementQuerySchema>;
@@ -106,7 +106,7 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
           }
 
           if (dto.from_location_id) {
-            const fromLocationExists = yield* locationsService.existsById(dto.from_location_id!);
+            const fromLocationExists = yield* locationsService.existsById(dto.from_location_id);
             if (!fromLocationExists) {
               return yield* Effect.fail(
                 new InvalidSourceLocation({
@@ -118,7 +118,7 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
           }
 
           if (dto.to_location_id) {
-            const toLocationExists = yield* locationsService.existsById(dto.to_location_id!);
+            const toLocationExists = yield* locationsService.existsById(dto.to_location_id);
             if (!toLocationExists) {
               return yield* Effect.fail(
                 new InvalidDestinationLocation({

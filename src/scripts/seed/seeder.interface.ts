@@ -2,7 +2,7 @@ import { type DataSource } from 'typeorm';
 
 export interface SeedContext {
   dataSource: DataSource;
-  store: Map<string, any[]>;
+  store: Map<string, unknown[]>;
 }
 
 export interface Seeder {

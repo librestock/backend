@@ -1,4 +1,5 @@
 import { Effect } from 'effect';
+import type { FindOneOptions } from 'typeorm';
 import { TypeOrmDataSource } from '../../platform/typeorm';
 import { Category } from './entities/category.entity';
 import { CategoriesInfrastructureError } from './categories.errors';
@@ -63,7 +64,7 @@ export class CategoriesRepository extends Effect.Service<CategoriesRepository>()
           await repo.delete(id);
         });
 
-      const findOne = (options: any) =>
+      const findOne = (options: FindOneOptions<Category>) =>
         tryAsync('load category', () => repo.findOne(options));
 
       const findAllDescendantIds = (parentId: string) =>

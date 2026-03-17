@@ -1,16 +1,15 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
-import type { SupplierResponseDto } from '@librestock/types/suppliers';
+import { toPaginatedResponse } from '../../platform/pagination.utils';
 import type {
   SupplierQuerySchema,
   CreateSupplierSchema,
   UpdateSupplierSchema,
 } from './suppliers.schema';
-import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { toSupplierResponseDto } from './suppliers.utils';
 import {
   SupplierNotFound,
-  SuppliersInfrastructureError,
+  type SuppliersInfrastructureError,
 } from './suppliers.errors';
 import type { Supplier } from './entities/supplier.entity';
 import { SuppliersRepository } from './repository';

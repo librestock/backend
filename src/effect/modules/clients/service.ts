@@ -1,17 +1,20 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
 import type { ClientResponseDto } from '@librestock/types/clients';
+import {
+  type PaginationMeta,
+  toPaginatedResponse,
+} from '../../platform/pagination.utils';
 import type {
   ClientQuerySchema,
   CreateClientSchema,
   UpdateClientSchema,
 } from './clients.schema';
-import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { toClientResponseDto } from './clients.utils';
 import {
   ClientEmailAlreadyExists,
   ClientNotFound,
-  ClientsInfrastructureError,
+  type ClientsInfrastructureError,
 } from './clients.errors';
 import type { Client } from './entities/client.entity';
 import { ClientsRepository } from './repository';
@@ -38,7 +41,7 @@ export class ClientsService extends Effect.Service<ClientsService>()(
       const findAllPaginated = (
         query: ClientQueryDto,
       ): Effect.Effect<
-        { data: ClientResponseDto[]; meta: any },
+        { data: ClientResponseDto[]; meta: PaginationMeta },
         ClientsInfrastructureError
       > =>
         Effect.map(repository.findAllPaginated(query), (result) =>
@@ -99,7 +102,7 @@ export class ClientsService extends Effect.Service<ClientsService>()(
           }
 
           if (dto.email && dto.email !== client.email) {
-            const existing = yield* repository.findByEmail(dto.email!);
+            const existing = yield* repository.findByEmail(dto.email);
             if (existing) {
               return yield* Effect.fail(
                 new ClientEmailAlreadyExists({

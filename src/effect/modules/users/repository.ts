@@ -1,8 +1,8 @@
 import { Effect } from 'effect';
 import { In } from 'typeorm';
 import { TypeOrmDataSource } from '../../platform/typeorm';
-import { UserRoleEntity } from './entities/user-role.entity';
 import { RoleEntity } from '../roles/entities/role.entity';
+import { UserRoleEntity } from './entities/user-role.entity';
 import { UsersInfrastructureError } from './users.errors';
 
 const tryAsync = <A>(action: string, run: () => Promise<A>) =>

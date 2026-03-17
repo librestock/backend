@@ -1,4 +1,5 @@
 import { Effect } from 'effect';
+import type { Schema } from 'effect';
 import {
   applyQuerySpecs,
   resolvePaginationWindow,
@@ -8,7 +9,6 @@ import {
 import { TypeOrmDataSource } from '../../platform/typeorm';
 import { Supplier } from './entities/supplier.entity';
 import { SuppliersInfrastructureError } from './suppliers.errors';
-import type { Schema } from 'effect';
 import type { SupplierQuerySchema } from './suppliers.schema';
 
 type SupplierQueryDto = Schema.Schema.Type<typeof SupplierQuerySchema>;

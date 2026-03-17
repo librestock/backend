@@ -1,18 +1,18 @@
+import { Effect, Layer } from 'effect';
+import { Permission, Resource } from '@librestock/types/auth';
+import { RolesService } from '../modules/roles/service';
+import { RolesInfrastructureError } from '../modules/roles/roles.errors';
+import { requirePermission, PermissionDenied } from './authorization';
+
 const mockRequireSession = jest.fn();
 
 jest.mock('./session', () => {
-  const { Effect } = require('effect');
+  const { Effect } = jest.requireActual<typeof import('effect')>('effect');
 
   return {
     requireSession: Effect.suspend(() => mockRequireSession()),
   };
 });
-
-import { Effect, Layer } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
-import { requirePermission, PermissionDenied } from './authorization';
-import { RolesService } from '../modules/roles/service';
-import { RolesInfrastructureError } from '../modules/roles/roles.errors';
 
 describe('requirePermission', () => {
   const run = <A, E>(effect: Effect.Effect<A, E, any>) =>

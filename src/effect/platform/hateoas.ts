@@ -1,9 +1,11 @@
 import { Headers, HttpServerRequest } from '@effect/platform';
 import { Effect, Option } from 'effect';
 
+type HateoasTarget = Record<string, unknown>;
+
 export interface LinkDefinition {
   rel: string;
-  href: string | ((data: any) => string);
+  href: string | ((data: HateoasTarget) => string);
   method?: string;
 }
 
@@ -24,8 +26,6 @@ export const getBaseUrl = Effect.map(
     return `${getProtocol(request)}://${host}/api/v1`;
   },
 );
-
-type HateoasTarget = Record<string, unknown>;
 
 const resolveHref = (
   target: HateoasTarget,

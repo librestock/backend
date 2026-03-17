@@ -1,9 +1,9 @@
 import { Effect, Layer } from 'effect';
 import { OrderStatus, type CreateOrder } from '@librestock/types/orders';
-import { makeOrdersService } from './service';
-import { OrderItemsRepository, OrdersRepository } from './repository';
 import { ClientsService } from '../clients/service';
 import { ProductsService } from '../products/service';
+import { OrdersService } from './service';
+import { OrderItemsRepository, OrdersRepository } from './repository';
 
 const makeOrderEntity = (overrides: Record<string, any> = {}) => ({
   id: 'order-1',
@@ -54,41 +54,41 @@ const makeOrderItemEntity = (overrides: Record<string, any> = {}) => ({
 const makeMockOrdersRepository = (
   overrides: Partial<Record<keyof import('./repository').OrdersRepository, jest.Mock>> = {},
 ) => ({
-  findAllPaginated: jest.fn().mockResolvedValue({
+  findAllPaginated: jest.fn().mockReturnValue(Effect.succeed({
     data: [makeOrderEntity({ items: [makeOrderItemEntity()] })],
     total: 1,
     page: 1,
     limit: 20,
     total_pages: 1,
-  }),
-  findById: jest.fn().mockResolvedValue(
-    makeOrderEntity({ items: [makeOrderItemEntity()] }),
+  })),
+  findById: jest.fn().mockReturnValue(
+    Effect.succeed(makeOrderEntity({ items: [makeOrderItemEntity()] })),
   ),
-  create: jest.fn().mockResolvedValue(makeOrderEntity()),
-  update: jest.fn().mockResolvedValue(1),
-  delete: jest.fn().mockResolvedValue(undefined),
-  getNextOrderNumberSequence: jest.fn().mockResolvedValue(1),
-  existsById: jest.fn().mockResolvedValue(true),
+  create: jest.fn().mockReturnValue(Effect.succeed(makeOrderEntity())),
+  update: jest.fn().mockReturnValue(Effect.succeed(1)),
+  delete: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+  getNextOrderNumberSequence: jest.fn().mockReturnValue(Effect.succeed(1)),
+  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
   ...overrides,
 });
 
 const makeMockOrderItemsRepository = (
   overrides: Partial<Record<keyof import('./repository').OrderItemsRepository, jest.Mock>> = {},
 ) => ({
-  findByOrderId: jest.fn().mockResolvedValue([makeOrderItemEntity()]),
-  createMany: jest.fn().mockResolvedValue([makeOrderItemEntity()]),
-  deleteByOrderId: jest.fn().mockResolvedValue(undefined),
+  findByOrderId: jest.fn().mockReturnValue(Effect.succeed([makeOrderItemEntity()])),
+  createMany: jest.fn().mockReturnValue(Effect.succeed([makeOrderItemEntity()])),
+  deleteByOrderId: jest.fn().mockReturnValue(Effect.succeed(undefined)),
   ...overrides,
 });
 
 const makeMockClientsService = () =>
   ({
-    existsById: jest.fn().mockResolvedValue(true),
+    existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
   }) as any;
 
 const makeMockProductsService = () =>
   ({
-    existsById: jest.fn().mockResolvedValue(true),
+    existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
   }) as any;
 
 const buildService = (
@@ -98,13 +98,17 @@ const buildService = (
   productsService = makeMockProductsService(),
 ) =>
   Effect.runPromise(
-    makeOrdersService.pipe(
+    OrdersService.pipe(
       Effect.provide(
-        Layer.mergeAll(
-          Layer.succeed(OrdersRepository, ordersRepository as any),
-          Layer.succeed(OrderItemsRepository, orderItemsRepository as any),
-          Layer.succeed(ClientsService, clientsService),
-          Layer.succeed(ProductsService, productsService),
+        OrdersService.DefaultWithoutDependencies.pipe(
+          Layer.provide(
+            Layer.mergeAll(
+              Layer.succeed(OrdersRepository, ordersRepository as any),
+              Layer.succeed(OrderItemsRepository, orderItemsRepository as any),
+              Layer.succeed(ClientsService, clientsService),
+              Layer.succeed(ProductsService, productsService),
+            ),
+          ),
         ),
       ),
     ),
@@ -137,7 +141,7 @@ describe('Effect OrdersService', () => {
 
     it('fails with OrderNotFound', async () => {
       const ordersRepository = makeMockOrdersRepository({
-        findById: jest.fn().mockResolvedValue(null),
+        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(ordersRepository);
       const error = await fail(service.findOne('missing'));
@@ -155,7 +159,7 @@ describe('Effect OrdersService', () => {
     it('creates an order, validates dependencies, and reloads', async () => {
       jest.useFakeTimers().setSystemTime(new Date('2026-03-10T10:00:00.000Z'));
       const ordersRepository = makeMockOrdersRepository({
-        create: jest.fn().mockResolvedValue(makeOrderEntity({ id: 'new-order' })),
+        create: jest.fn().mockReturnValue(Effect.succeed(makeOrderEntity({ id: 'new-order' }))),
       });
       const orderItemsRepository = makeMockOrderItemsRepository();
       const clientsService = makeMockClientsService();
@@ -192,7 +196,7 @@ describe('Effect OrdersService', () => {
 
     it('fails when client does not exist', async () => {
       const clientsService = {
-        existsById: jest.fn().mockResolvedValue(false),
+        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
       } as any;
       const service = await buildService(
         undefined,
@@ -205,7 +209,7 @@ describe('Effect OrdersService', () => {
 
     it('fails when a product does not exist', async () => {
       const productsService = {
-        existsById: jest.fn().mockResolvedValue(false),
+        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
       } as any;
       const service = await buildService(
         undefined,
@@ -223,10 +227,10 @@ describe('Effect OrdersService', () => {
       const ordersRepository = makeMockOrdersRepository({
         findById: jest
           .fn()
-          .mockResolvedValueOnce(makeOrderEntity())
-          .mockResolvedValueOnce(
+          .mockReturnValueOnce(Effect.succeed(makeOrderEntity()))
+          .mockReturnValueOnce(Effect.succeed(
             makeOrderEntity({ delivery_address: 'New Address' }),
-          ),
+          )),
       });
       const service = await buildService(ordersRepository);
       const result = await run(
@@ -251,15 +255,15 @@ describe('Effect OrdersService', () => {
       const ordersRepository = makeMockOrdersRepository({
         findById: jest
           .fn()
-          .mockResolvedValueOnce(
+          .mockReturnValueOnce(Effect.succeed(
             makeOrderEntity({ status: OrderStatus.DRAFT }),
-          )
-          .mockResolvedValueOnce(
+          ))
+          .mockReturnValueOnce(Effect.succeed(
             makeOrderEntity({
               status: OrderStatus.CONFIRMED,
               confirmed_at: new Date('2026-03-10T10:00:00.000Z'),
             }),
-          ),
+          )),
       });
       const service = await buildService(ordersRepository);
       const result = await run(
@@ -277,9 +281,9 @@ describe('Effect OrdersService', () => {
 
     it('fails for invalid transitions', async () => {
       const ordersRepository = makeMockOrdersRepository({
-        findById: jest.fn().mockResolvedValue(
+        findById: jest.fn().mockReturnValue(Effect.succeed(
           makeOrderEntity({ status: OrderStatus.DELIVERED }),
-        ),
+        )),
       });
       const service = await buildService(ordersRepository);
       const error = await fail(
@@ -292,9 +296,9 @@ describe('Effect OrdersService', () => {
   describe('delete', () => {
     it('deletes draft orders', async () => {
       const ordersRepository = makeMockOrdersRepository({
-        findById: jest.fn().mockResolvedValue(
+        findById: jest.fn().mockReturnValue(Effect.succeed(
           makeOrderEntity({ status: OrderStatus.DRAFT }),
-        ),
+        )),
       });
       const orderItemsRepository = makeMockOrderItemsRepository();
       const service = await buildService(ordersRepository, orderItemsRepository);
@@ -305,9 +309,9 @@ describe('Effect OrdersService', () => {
 
     it('fails when deleting a non-draft order', async () => {
       const ordersRepository = makeMockOrdersRepository({
-        findById: jest.fn().mockResolvedValue(
+        findById: jest.fn().mockReturnValue(Effect.succeed(
           makeOrderEntity({ status: OrderStatus.CONFIRMED }),
-        ),
+        )),
       });
       const service = await buildService(ordersRepository);
       const error = await fail(service.delete('order-1'));
@@ -318,7 +322,7 @@ describe('Effect OrdersService', () => {
   describe('existsById', () => {
     it('delegates to repository', async () => {
       const ordersRepository = makeMockOrdersRepository({
-        existsById: jest.fn().mockResolvedValue(false),
+        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
       });
       const service = await buildService(ordersRepository);
       const result = await run(service.existsById('order-1'));

@@ -1,7 +1,8 @@
 import { Effect } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
-import type { CreateRoleDto, UpdateRoleDto, RoleResponseDto } from '@librestock/types/roles';
-import { RoleEntity } from './entities/role.entity';
+import type { CreateRoleDto, UpdateRoleDto } from '@librestock/types/roles';
+import { TypeOrmDataSource } from '../../platform/typeorm';
+import { type RoleEntity } from './entities/role.entity';
 import { toRoleResponseDto } from './roles.utils';
 import {
   RoleNameAlreadyExists,
@@ -9,7 +10,6 @@ import {
   RolesInfrastructureError,
   SystemRoleDeletionForbidden,
 } from './roles.errors';
-import { TypeOrmDataSource } from '../../platform/typeorm';
 import { RolesRepository } from './repository';
 
 export interface UserPermissions {
@@ -239,7 +239,7 @@ export class RolesService extends Effect.Service<RolesService>()(
             }
 
             if (dto.permissions !== undefined) {
-              const permissions = dto.permissions;
+              const {permissions} = dto;
               yield* repository.replacePermissions(id, permissions);
               yield* clearAllCache();
             }

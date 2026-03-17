@@ -17,21 +17,17 @@ jobs:
         with:
           path: backend
 
-      - uses: pnpm/action-setup@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          version: 10
+          bun-version: latest
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - run: pnpm install --frozen-lockfile
+      - run: bun install --frozen-lockfile
 
       - name: Lint
-        run: pnpm lint
+        run: bun run lint
 
       - name: Type check
-        run: pnpm type-check
+        run: bun run type-check
 
   test:
     runs-on: blacksmith-2vcpu-ubuntu-2404
@@ -43,18 +39,14 @@ jobs:
         with:
           path: backend
 
-      - uses: pnpm/action-setup@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          version: 10
+          bun-version: latest
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - run: pnpm install --frozen-lockfile
+      - run: bun install --frozen-lockfile
 
       - name: Run tests
-        run: pnpm test
+        run: bun run test -- --runInBand
 
   build:
     runs-on: blacksmith-2vcpu-ubuntu-2404
@@ -66,15 +58,11 @@ jobs:
         with:
           path: backend
 
-      - uses: pnpm/action-setup@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          version: 10
+          bun-version: latest
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - run: pnpm install --frozen-lockfile
+      - run: bun install --frozen-lockfile
 
       - name: Build
-        run: pnpm build
+        run: bun run build

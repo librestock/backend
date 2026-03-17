@@ -1,17 +1,18 @@
+import { Effect, Layer } from 'effect';
+import { BetterAuth } from '../../platform/better-auth';
+import { RolesService } from '../roles/service';
+import { UsersService } from './service';
+import { UsersRepository } from './repository';
+
 jest.mock('../../platform/better-auth', () => {
-  const { Context, Layer } = require('effect');
+  const { Context, Layer } =
+    jest.requireActual<typeof import('effect')>('effect');
 
   return {
     BetterAuth: Context.GenericTag('@librestock/test/BetterAuth'),
     betterAuthLayer: Layer.empty,
   };
 });
-
-import { Effect, Layer } from 'effect';
-import { BetterAuth } from '../../platform/better-auth';
-import { UsersService } from './service';
-import { UsersRepository } from './repository';
-import { RolesService } from '../roles/service';
 
 describe('Effect UsersService', () => {
   const headers = new Headers({
@@ -59,7 +60,7 @@ describe('Effect UsersService', () => {
   it('lists users and merges role names', async () => {
     const betterAuth = {
       api: {
-        listUsers: jest.fn().mockReturnValue(Effect.succeed({
+        listUsers: jest.fn().mockReturnValue(Promise.resolve({
           users: [betterAuthUser],
           total: 1,
         })),
@@ -96,7 +97,7 @@ describe('Effect UsersService', () => {
   it('gets a single user with roles', async () => {
     const betterAuth = {
       api: {
-        listUsers: jest.fn().mockReturnValue(Effect.succeed({
+        listUsers: jest.fn().mockReturnValue(Promise.resolve({
           users: [betterAuthUser],
         })),
       },
@@ -133,8 +134,8 @@ describe('Effect UsersService', () => {
       api: {
         listUsers: jest
           .fn()
-          .mockReturnValueOnce(Effect.succeed({ users: [betterAuthUser] }))
-          .mockReturnValueOnce(Effect.succeed({ users: [betterAuthUser] })),
+          .mockReturnValueOnce(Promise.resolve({ users: [betterAuthUser] }))
+          .mockReturnValueOnce(Promise.resolve({ users: [betterAuthUser] })),
       },
     };
     const usersRepository = {
@@ -175,9 +176,9 @@ describe('Effect UsersService', () => {
       api: {
         listUsers: jest
           .fn()
-          .mockReturnValue(Effect.succeed({ users: [betterAuthUser] })),
-        banUser: jest.fn().mockReturnValue(Effect.succeed(undefined)),
-        unbanUser: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+          .mockReturnValue(Promise.resolve({ users: [betterAuthUser] })),
+        banUser: jest.fn().mockReturnValue(Promise.resolve(undefined)),
+        unbanUser: jest.fn().mockReturnValue(Promise.resolve(undefined)),
       },
     };
     const usersRepository = {
@@ -219,8 +220,8 @@ describe('Effect UsersService', () => {
   it('revokes user sessions', async () => {
     const betterAuth = {
       api: {
-        listUsers: jest.fn().mockReturnValue(Effect.succeed({ users: [betterAuthUser] })),
-        revokeUserSessions: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+        listUsers: jest.fn().mockReturnValue(Promise.resolve({ users: [betterAuthUser] })),
+        revokeUserSessions: jest.fn().mockReturnValue(Promise.resolve(undefined)),
       },
     };
     const usersRepository = {

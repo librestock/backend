@@ -5,18 +5,18 @@ import type {
   UpdateAreaDto,
   AreaQueryDto,
 } from '@librestock/types/areas';
+import { LocationsService } from '../locations/service';
 import { toAreaResponseDto } from './areas.utils';
 import {
   AreaCircularReference,
   AreaLocationNotFound,
   AreaNotFound,
   AreaParentLocationMismatch,
-  AreasInfrastructureError,
+  type AreasInfrastructureError,
   AreaSelfParent,
   ParentAreaNotFound,
 } from './areas.errors';
 import { AreasRepository } from './repository';
-import { LocationsService } from '../locations/service';
 import type { Area } from './entities/area.entity';
 
 export class AreasService extends Effect.Service<AreasService>()(

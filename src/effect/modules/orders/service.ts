@@ -1,26 +1,26 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
 import {
-  CreateOrderSchema,
+  type CreateOrderSchema,
   OrderStatus,
-  OrderQuerySchema,
-  UpdateOrderSchema,
-  UpdateOrderStatusSchema,
+  type OrderQuerySchema,
+  type UpdateOrderSchema,
+  type UpdateOrderStatusSchema,
 } from '@librestock/types/orders';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
+import { ProductNotFound } from '../products/products.errors';
+import { ClientsService } from '../clients/service';
+import { ProductsService } from '../products/service';
 import {
   CannotDeleteNonDraftOrder,
   ClientNotFound,
   InvalidOrderStatusTransition,
   OrderNotFound,
-  OrdersInfrastructureError,
+  type OrdersInfrastructureError,
 } from './orders.errors';
 import { OrderUtils } from './orders.utils';
 import { getOrderState } from './state/order-state';
 import type { Order } from './entities/order.entity';
-import { ProductNotFound } from '../products/products.errors';
-import { ClientsService } from '../clients/service';
-import { ProductsService } from '../products/service';
 import { OrderItemsRepository, OrdersRepository } from './repository';
 
 type OrderQueryDto = Schema.Schema.Type<typeof OrderQuerySchema>;
@@ -89,11 +89,16 @@ export class OrdersService extends Effect.Service<OrdersService>()(
       const findAllPaginated = (query: OrderQueryDto) =>
         Effect.map(
           ordersRepository.findAllPaginated(query),
-          (result) => toPaginatedResponse(result, OrderUtils.toOrderResponseDto),
+          (result) =>
+            toPaginatedResponse(result, (order) =>
+              OrderUtils.toOrderResponseDto(order),
+            ),
         );
 
       const findOne = (id: string) =>
-        Effect.map(getOrderOrFail(id), OrderUtils.toOrderResponseDto);
+        Effect.map(getOrderOrFail(id), (order) =>
+          OrderUtils.toOrderResponseDto(order),
+        );
 
       const create = (dto: CreateOrderDto, userId: string) =>
         Effect.gen(function* () {
@@ -192,7 +197,7 @@ export class OrdersService extends Effect.Service<OrdersService>()(
           yield* validateStatusTransition(order, dto.status);
 
           const updateData: Partial<Order> = { status: dto.status };
-          const timestampField = getOrderState(dto.status).timestampField;
+          const {timestampField} = getOrderState(dto.status);
           if (timestampField) {
             updateData[timestampField] = new Date() as never;
           }

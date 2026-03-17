@@ -24,7 +24,7 @@ export const getRequestId = Effect.map(HttpServerRequest.HttpServerRequest, (req
 });
 
 export const getRequestPath = Effect.map(HttpServerRequest.HttpServerRequest, (request) => {
-  const url = request.url;
+  const {url} = request;
   const queryStart = url.indexOf('?');
   return queryStart >= 0 ? url.slice(0, queryStart) : url;
 });

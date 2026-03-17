@@ -1,13 +1,13 @@
 import { Effect } from 'effect';
 import { IsNull } from 'typeorm';
-import { TypeOrmDataSource } from '../../platform/typeorm';
-import { Area } from './entities/area.entity';
-import { AreasInfrastructureError } from './areas.errors';
 import type {
   CreateAreaDto,
   UpdateAreaDto,
   AreaQueryDto,
 } from '@librestock/types/areas';
+import { TypeOrmDataSource } from '../../platform/typeorm';
+import { Area } from './entities/area.entity';
+import { AreasInfrastructureError } from './areas.errors';
 
 const tryAsync = <A>(action: string, run: () => Promise<A>) =>
   Effect.tryPromise({

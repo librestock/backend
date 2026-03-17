@@ -1,6 +1,6 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
-import { OrderQuerySchema } from '@librestock/types/orders';
+import { type OrderQuerySchema } from '@librestock/types/orders';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,

@@ -1,8 +1,8 @@
 import { Effect, Layer } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
+import { TypeOrmDataSource } from '../../platform/typeorm';
 import { RolesService } from './service';
 import { RolesRepository } from './repository';
-import { TypeOrmDataSource } from '../../platform/typeorm';
 import { SystemRoleDeletionForbidden } from './roles.errors';
 
 describe('Effect RolesService', () => {

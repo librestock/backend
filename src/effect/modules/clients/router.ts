@@ -2,15 +2,15 @@ import { HttpRouter, HttpServerRequest } from '@effect/platform';
 import { Effect, Schema } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { requirePermission } from '../../platform/authorization';
+import { respondJson } from '../../platform/errors';
+import { AuditLogWriter } from '../../platform/audit';
 import {
   ClientIdSchema,
   ClientQuerySchema,
   CreateClientSchema,
   UpdateClientSchema,
 } from './clients.schema';
-import { requirePermission } from '../../platform/authorization';
-import { respondJson } from '../../platform/errors';
-import { AuditLogWriter } from '../../platform/audit';
 import { ClientsService } from './service';
 
 type SearchParamsInput = Readonly<Record<string, string | readonly string[] | undefined>>;

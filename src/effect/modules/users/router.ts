@@ -2,16 +2,16 @@ import { HttpRouter, HttpServerRequest } from '@effect/platform';
 import { Effect, Schema } from 'effect';
 import type { UserQueryDto } from '@librestock/types/users';
 import { Permission, Resource } from '@librestock/types/auth';
+import { toPaginatedResponse } from '../../platform/pagination.utils';
+import { requirePermission } from '../../platform/authorization';
+import { respondEmpty, respondJson } from '../../platform/errors';
+import { getRequestHeaders } from '../../platform/session';
 import {
   BanUserSchema,
   UpdateUserRolesSchema,
   UserIdSchema,
   UserQuerySchema,
 } from './users.schema';
-import { toPaginatedResponse } from '../../platform/pagination.utils';
-import { requirePermission } from '../../platform/authorization';
-import { respondEmpty, respondJson } from '../../platform/errors';
-import { getRequestHeaders } from '../../platform/session';
 import { UsersService } from './service';
 
 const UserPathParamsSchema = Schema.Struct({

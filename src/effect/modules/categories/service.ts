@@ -1,8 +1,8 @@
 import { Effect } from 'effect';
-import type { Category } from './entities/category.entity';
 import type { CategoryWithChildrenResponseDto, CreateCategoryDto, UpdateCategoryDto } from '@librestock/types/categories';
+import type { Category } from './entities/category.entity';
 import {
-  CategoriesInfrastructureError,
+  type CategoriesInfrastructureError,
   CategoryCircularReference,
   CategoryNameAlreadyExists,
   CategoryNotFound,
