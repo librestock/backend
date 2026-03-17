@@ -73,7 +73,7 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
               return true;
             }
 
-            const parent = yield* repository.findOne({
+            const parent: Category | null = yield* repository.findOne({
               where: { id: currentId },
               select: ['parent_id'],
             });

@@ -23,8 +23,8 @@ describe('authRouter', () => {
     const app = Effect.runSync(HttpRouter.toHttpApp(authRouter));
 
     return HttpApp.toWebHandlerLayer(
-      app,
-      Layer.succeed(AuthService, service),
+      app as any,
+      Layer.succeed(AuthService, service) as any,
     ).handler;
   };
 

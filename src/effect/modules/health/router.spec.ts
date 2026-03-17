@@ -21,8 +21,8 @@ describe('healthRouter', () => {
     const app = Effect.runSync(HttpRouter.toHttpApp(healthRouter));
 
     return HttpApp.toWebHandlerLayer(
-      app,
-      Layer.succeed(HealthService, service),
+      app as any,
+      Layer.succeed(HealthService, service) as any,
     ).handler;
   };
 
