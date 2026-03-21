@@ -13,10 +13,6 @@ import {
 } from './areas.schema';
 import { AreasService } from './service';
 
-type SearchParamsInput = Readonly<
-  Record<string, string | readonly string[] | undefined>
->;
-
 const AreaPathParams = Schema.Struct({ id: AreaIdSchema });
 
 export const areasRouter = HttpRouter.empty.pipe(
@@ -40,12 +36,7 @@ export const areasRouter = HttpRouter.empty.pipe(
     '/',
     Effect.gen(function* () {
       yield* requirePermission(Resource.LOCATIONS, Permission.READ);
-      const query = yield* HttpServerRequest.schemaSearchParams(
-        AreaQuerySchema as unknown as Schema.Schema<
-          Schema.Schema.Type<typeof AreaQuerySchema>,
-          SearchParamsInput
-        >,
-      );
+      const query = yield* HttpServerRequest.schemaSearchParams(AreaQuerySchema);
       const areasService = yield* AreasService;
       return yield* respondJson(areasService.findAll(query));
     }),

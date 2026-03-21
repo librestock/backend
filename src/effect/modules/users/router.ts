@@ -23,17 +23,7 @@ export const usersRouter = HttpRouter.empty.pipe(
     '/',
     Effect.gen(function* () {
       yield* requirePermission(Resource.USERS, Permission.READ);
-      const query = (yield* HttpServerRequest.schemaSearchParams(
-        UserQuerySchema as unknown as Schema.Schema<
-          {
-            readonly page: number;
-            readonly limit: number;
-            readonly search?: string | null | undefined;
-            readonly role?: string | null | undefined;
-          },
-          Readonly<Record<string, string | readonly string[] | undefined>>
-        >,
-      )) as Schema.Schema.Type<typeof UserQuerySchema>;
+      const query = yield* HttpServerRequest.schemaSearchParams(UserQuerySchema);
       const normalizedQuery = {
         page: query.page,
         limit: query.limit,

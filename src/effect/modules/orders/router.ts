@@ -15,10 +15,6 @@ import { AuditLogWriter } from '../../platform/audit';
 import { getOptionalSession } from '../../platform/session';
 import { OrdersService } from './service';
 
-type SearchParamsInput = Readonly<
-  Record<string, string | readonly string[] | undefined>
->;
-
 const OrderPathParams = Schema.Struct({ id: OrderIdSchema });
 
 export const ordersRouter = HttpRouter.empty.pipe(
@@ -26,12 +22,7 @@ export const ordersRouter = HttpRouter.empty.pipe(
     '/',
     Effect.gen(function* () {
       yield* requirePermission(Resource.STOCK, Permission.READ);
-      const query = yield* HttpServerRequest.schemaSearchParams(
-        OrderQuerySchema as unknown as Schema.Schema<
-          Schema.Schema.Type<typeof OrderQuerySchema>,
-          SearchParamsInput
-        >,
-      );
+      const query = yield* HttpServerRequest.schemaSearchParams(OrderQuerySchema);
       const ordersService = yield* OrdersService;
       return yield* respondJson(ordersService.findAllPaginated(query));
     }),

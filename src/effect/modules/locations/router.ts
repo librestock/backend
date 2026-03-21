@@ -13,8 +13,6 @@ import {
 } from './locations.schema';
 import { LocationsService } from './service';
 
-type SearchParamsInput = Readonly<Record<string, string | readonly string[] | undefined>>;
-
 const LocationPathParams = Schema.Struct({ id: LocationIdSchema });
 
 export const locationsRouter = HttpRouter.empty.pipe(
@@ -30,12 +28,7 @@ export const locationsRouter = HttpRouter.empty.pipe(
     '/',
     Effect.gen(function* () {
       yield* requirePermission(Resource.LOCATIONS, Permission.READ);
-      const query = yield* HttpServerRequest.schemaSearchParams(
-        LocationQuerySchema as unknown as Schema.Schema<
-          Schema.Schema.Type<typeof LocationQuerySchema>,
-          SearchParamsInput
-        >,
-      );
+      const query = yield* HttpServerRequest.schemaSearchParams(LocationQuerySchema);
       const locationsService = yield* LocationsService;
       return yield* respondJson(locationsService.findAllPaginated(query));
     }),

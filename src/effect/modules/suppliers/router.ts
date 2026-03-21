@@ -13,8 +13,6 @@ import {
 } from './suppliers.schema';
 import { SuppliersService } from './service';
 
-type SearchParamsInput = Readonly<Record<string, string | readonly string[] | undefined>>;
-
 const SupplierPathParams = Schema.Struct({ id: SupplierIdSchema });
 
 export const suppliersRouter = HttpRouter.empty.pipe(
@@ -22,12 +20,7 @@ export const suppliersRouter = HttpRouter.empty.pipe(
     '/',
     Effect.gen(function* () {
       yield* requirePermission(Resource.STOCK, Permission.READ);
-      const query = yield* HttpServerRequest.schemaSearchParams(
-        SupplierQuerySchema as unknown as Schema.Schema<
-          Schema.Schema.Type<typeof SupplierQuerySchema>,
-          SearchParamsInput
-        >,
-      );
+      const query = yield* HttpServerRequest.schemaSearchParams(SupplierQuerySchema);
       const suppliersService = yield* SuppliersService;
       return yield* respondJson(suppliersService.findAllPaginated(query));
     }),

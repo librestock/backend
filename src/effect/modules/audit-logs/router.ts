@@ -23,8 +23,6 @@ const AuditUserPathParamsSchema = Schema.Struct({
   userId: AuditLogIdSchema,
 });
 
-type SearchParamsInput = Readonly<Record<string, string | readonly string[] | undefined>>;
-
 export const auditLogsRouter = HttpRouter.empty.pipe(
   HttpRouter.get(
     '/entity/:entityType/:entityId',
@@ -54,12 +52,7 @@ export const auditLogsRouter = HttpRouter.empty.pipe(
     '/',
     Effect.gen(function* () {
       yield* requirePermission(Resource.AUDIT_LOGS, Permission.READ);
-      const query = yield* HttpServerRequest.schemaSearchParams(
-        AuditLogQuerySchema as unknown as Schema.Schema<
-          Schema.Schema.Type<typeof AuditLogQuerySchema>,
-          SearchParamsInput
-        >,
-      );
+      const query = yield* HttpServerRequest.schemaSearchParams(AuditLogQuerySchema);
       const auditLogsService = yield* AuditLogsService;
       return yield* respondJson(auditLogsService.query(query));
     }),
