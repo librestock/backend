@@ -1,13 +1,11 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
+import type { StockMovementQueryDto } from '@librestock/types/stock-movements';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { ProductsService } from '../products/service';
 import { LocationsService } from '../locations/service';
 import type { StockMovement } from './entities/stock-movement.entity';
-import type {
-  CreateStockMovementSchema,
-  StockMovementQuerySchema,
-} from './stock-movements.schema';
+import type { CreateStockMovementSchema } from './stock-movements.schema';
 import {
   toStockMovementResponseDto,
 } from './stock-movements.utils';
@@ -22,7 +20,6 @@ import {
 } from './stock-movements.errors';
 import { StockMovementsRepository } from './repository';
 
-type StockMovementQueryDto = Schema.Schema.Type<typeof StockMovementQuerySchema>;
 type CreateStockMovementDto = Schema.Schema.Type<typeof CreateStockMovementSchema>;
 
 export class StockMovementsService extends Effect.Service<StockMovementsService>()(

@@ -1,12 +1,11 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
-import type { ClientResponseDto } from '@librestock/types/clients';
+import type { ClientResponseDto, ClientQueryDto } from '@librestock/types/clients';
 import {
   type PaginationMeta,
   toPaginatedResponse,
 } from '../../platform/pagination.utils';
 import type {
-  ClientQuerySchema,
   CreateClientSchema,
   UpdateClientSchema,
 } from './clients.schema';
@@ -19,7 +18,6 @@ import {
 import type { Client } from './entities/client.entity';
 import { ClientsRepository } from './repository';
 
-type ClientQueryDto = Schema.Schema.Type<typeof ClientQuerySchema>;
 type CreateClientDto = Schema.Schema.Type<typeof CreateClientSchema>;
 type UpdateClientDto = Schema.Schema.Type<typeof UpdateClientSchema>;
 

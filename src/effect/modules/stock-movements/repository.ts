@@ -1,5 +1,5 @@
 import { Effect } from 'effect';
-import type { Schema } from 'effect';
+import type { StockMovementQueryDto } from '@librestock/types/stock-movements';
 import {
   applyQuerySpecs,
   resolvePaginationWindow,
@@ -8,12 +8,7 @@ import {
 } from '../../platform/query-spec.utils';
 import { TypeOrmDataSource } from '../../platform/typeorm';
 import { StockMovement } from './entities/stock-movement.entity';
-import type {
-  StockMovementQuerySchema,
-} from './stock-movements.schema';
 import { StockMovementsInfrastructureError } from './stock-movements.errors';
-
-type StockMovementQueryDto = Schema.Schema.Type<typeof StockMovementQuerySchema>;
 
 const tryAsync = <A>(action: string, run: () => Promise<A>) =>
   Effect.tryPromise({

@@ -1,5 +1,5 @@
 import { Effect } from 'effect';
-import type { Schema } from 'effect';
+import type { InventoryQueryDto } from '@librestock/types/inventory';
 import { InventorySortField } from '@librestock/types/inventory';
 import {
   applyQuerySpecs,
@@ -8,13 +8,8 @@ import {
   type QuerySpec,
 } from '../../platform/query-spec.utils';
 import { TypeOrmDataSource } from '../../platform/typeorm';
-import type {
-  InventoryQuerySchema,
-} from './inventory.schema';
 import { Inventory } from './entities/inventory.entity';
 import { InventoryInfrastructureError } from './inventory.errors';
-
-type InventoryQueryDto = Schema.Schema.Type<typeof InventoryQuerySchema>;
 
 const tryAsync = <A>(action: string, run: () => Promise<A>) =>
   Effect.tryPromise({

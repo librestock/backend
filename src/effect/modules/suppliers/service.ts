@@ -1,8 +1,8 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
+import type { SupplierQueryDto } from '@librestock/types/suppliers';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import type {
-  SupplierQuerySchema,
   CreateSupplierSchema,
   UpdateSupplierSchema,
 } from './suppliers.schema';
@@ -14,7 +14,6 @@ import {
 import type { Supplier } from './entities/supplier.entity';
 import { SuppliersRepository } from './repository';
 
-type SupplierQueryDto = Schema.Schema.Type<typeof SupplierQuerySchema>;
 type CreateSupplierDto = Schema.Schema.Type<typeof CreateSupplierSchema>;
 type UpdateSupplierDto = Schema.Schema.Type<typeof UpdateSupplierSchema>;
 

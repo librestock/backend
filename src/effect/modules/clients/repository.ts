@@ -1,5 +1,5 @@
 import { Effect } from 'effect';
-import type { Schema } from 'effect';
+import type { ClientQueryDto } from '@librestock/types/clients';
 import {
   applyQuerySpecs,
   resolvePaginationWindow,
@@ -10,9 +10,6 @@ import {
 import { TypeOrmDataSource } from '../../platform/typeorm';
 import { Client } from './entities/client.entity';
 import { ClientsInfrastructureError } from './clients.errors';
-import type { ClientQuerySchema } from './clients.schema';
-
-type ClientQueryDto = Schema.Schema.Type<typeof ClientQuerySchema>;
 
 const tryAsync = <A>(action: string, run: () => Promise<A>) =>
   Effect.tryPromise({

@@ -1,5 +1,5 @@
 import { Effect } from 'effect';
-import type { Schema } from 'effect';
+import type { SupplierQueryDto } from '@librestock/types/suppliers';
 import {
   applyQuerySpecs,
   resolvePaginationWindow,
@@ -9,9 +9,6 @@ import {
 import { TypeOrmDataSource } from '../../platform/typeorm';
 import { Supplier } from './entities/supplier.entity';
 import { SuppliersInfrastructureError } from './suppliers.errors';
-import type { SupplierQuerySchema } from './suppliers.schema';
-
-type SupplierQueryDto = Schema.Schema.Type<typeof SupplierQuerySchema>;
 
 const supplierFilterSpec: QuerySpec<Supplier, SupplierQueryDto> = (qb, query) => {
   if (query.q) {
