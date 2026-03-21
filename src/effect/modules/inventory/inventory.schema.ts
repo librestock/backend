@@ -1,8 +1,8 @@
 import { Schema } from 'effect';
-import { LimitSchema, NullableTrimmedString, PageSchema, SortOrder  } from '@librestock/types/common';
+import { LimitSchema, PageSchema, SortOrder  } from '@librestock/types/common';
 import { InventorySortField } from '@librestock/types/inventory';
 
-const QueryBooleanSchema = Schema.Union(Schema.Boolean, Schema.BooleanFromString);
+const QueryBooleanSchema = Schema.BooleanFromString;
 const InventorySortFieldValues = [
   InventorySortField.QUANTITY,
   InventorySortField.EXPIRY_DATE,
@@ -25,7 +25,7 @@ export const InventoryQuerySchema = Schema.Struct({
   product_id: Schema.optional(Schema.UUID),
   location_id: Schema.optional(Schema.UUID),
   area_id: Schema.optional(Schema.UUID),
-  search: Schema.optional(NullableTrimmedString),
+  search: Schema.optional(Schema.Trim),
   low_stock: Schema.optional(QueryBooleanSchema),
   expiring_soon: Schema.optional(QueryBooleanSchema),
   min_quantity: Schema.optional(Schema.NumberFromString.pipe(Schema.nonNegative())),

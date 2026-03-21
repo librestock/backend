@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
 
-const QueryBooleanSchema = Schema.Union(Schema.Boolean, Schema.BooleanFromString);
+const QueryBooleanSchema = Schema.BooleanFromString;
 
 export const AreaIdSchema = Schema.UUID.annotations({ identifier: 'AreaId' });
 

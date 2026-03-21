@@ -17,7 +17,7 @@ const LocationSortFieldValues = [
 ] as const;
 
 const SortOrderValues = [SortOrder.ASC, SortOrder.DESC] as const;
-const QueryBooleanSchema = Schema.Union(Schema.Boolean, Schema.BooleanFromString);
+const QueryBooleanSchema = Schema.BooleanFromString;
 
 export const LocationIdSchema = Schema.UUID.annotations({
   identifier: 'LocationId',

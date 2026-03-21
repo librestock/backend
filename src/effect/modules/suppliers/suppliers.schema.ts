@@ -1,7 +1,7 @@
 import { Schema } from 'effect';
-import { PageSchema, LimitSchema, NullableTrimmedString } from '@librestock/types/common';
+import { PageSchema, LimitSchema } from '@librestock/types/common';
 
-const QueryBooleanSchema = Schema.Union(Schema.Boolean, Schema.BooleanFromString);
+const QueryBooleanSchema = Schema.BooleanFromString;
 const EmailSchema = Schema.Trim.pipe(
   Schema.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/),
 );
@@ -17,7 +17,7 @@ export const SupplierIdSchema = Schema.UUID.annotations({
 export const SupplierQuerySchema = Schema.Struct({
   page: Schema.optionalWith(PageSchema, { default: () => 1 }),
   limit: Schema.optionalWith(LimitSchema, { default: () => 20 }),
-  q: Schema.optional(NullableTrimmedString),
+  q: Schema.optional(Schema.Trim),
   is_active: Schema.optional(QueryBooleanSchema),
 }).annotations({ identifier: 'SupplierQuery' });
 

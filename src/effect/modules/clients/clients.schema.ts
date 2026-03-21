@@ -1,5 +1,5 @@
 import { Schema } from 'effect';
-import { PageSchema, LimitSchema, NullableTrimmedString } from '@librestock/types/common';
+import { PageSchema, LimitSchema } from '@librestock/types/common';
 import { ClientStatus } from '@librestock/types/clients';
 
 const ClientStatusValues = [
@@ -18,7 +18,7 @@ export const ClientIdSchema = Schema.UUID.annotations({ identifier: 'ClientId' }
 export const ClientQuerySchema = Schema.Struct({
   page: Schema.optionalWith(PageSchema, { default: () => 1 }),
   limit: Schema.optionalWith(LimitSchema, { default: () => 20 }),
-  q: Schema.optional(NullableTrimmedString),
+  q: Schema.optional(Schema.Trim),
   account_status: Schema.optional(ClientStatusSchema),
 }).annotations({ identifier: 'ClientQuery' });
 

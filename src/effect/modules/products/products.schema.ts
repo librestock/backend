@@ -2,7 +2,7 @@ import { Schema } from 'effect';
 import { LimitSchema, PageSchema, SortOrder } from '@librestock/types/common';
 import { ProductSortField } from '@librestock/types/products';
 
-const QueryBooleanSchema = Schema.Union(Schema.Boolean, Schema.BooleanFromString);
+const QueryBooleanSchema = Schema.BooleanFromString;
 const ProductSortFieldValues = [
   ProductSortField.NAME,
   ProductSortField.SKU,
