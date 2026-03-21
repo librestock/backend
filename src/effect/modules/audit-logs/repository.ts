@@ -9,7 +9,6 @@ import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
   type QuerySpec,
-  type RepositoryPaginatedResult,
 } from '../../platform/query-spec.utils';
 import { TypeOrmDataSource } from '../../platform/typeorm';
 import { AuditLog } from './entities/audit-log.entity';
@@ -25,8 +24,6 @@ export interface AuditLogQueryOptions {
   readonly page?: number;
   readonly limit?: number;
 }
-
-export type PaginatedAuditLogs = RepositoryPaginatedResult<AuditLog>;
 
 const tryAsync = <A>(action: string, run: () => Promise<A>) =>
   Effect.tryPromise({
