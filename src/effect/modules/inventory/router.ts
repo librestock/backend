@@ -2,19 +2,19 @@ import { HttpRouter, HttpServerRequest } from '@effect/platform';
 import { Effect, Schema } from 'effect';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import { Permission, Resource } from '@librestock/types/auth';
+import {
+  InventoryIdSchema,
+  InventoryQuerySchema,
+} from '@librestock/types/inventory';
 import { requirePermission } from '../../platform/authorization';
 import { AuditLogWriter } from '../../platform/audit';
 import { respondJson } from '../../platform/errors';
 import {
   AdjustInventorySchema,
   CreateInventorySchema,
-  InventoryIdSchema,
-  InventoryQuerySchema,
   UpdateInventorySchema,
 } from './inventory.schema';
 import { InventoryService } from './service';
-
-type SearchParamsInput = Readonly<Record<string, string | readonly string[] | undefined>>;
 
 const InventoryPathParams = Schema.Struct({ id: InventoryIdSchema });
 const ProductPathParams = Schema.Struct({ productId: Schema.UUID });
@@ -25,12 +25,7 @@ export const inventoryRouter = HttpRouter.empty.pipe(
     '/',
     Effect.gen(function* () {
       yield* requirePermission(Resource.STOCK, Permission.READ);
-      const query = yield* HttpServerRequest.schemaSearchParams(
-        InventoryQuerySchema as unknown as Schema.Schema<
-          Schema.Schema.Type<typeof InventoryQuerySchema>,
-          SearchParamsInput
-        >,
-      );
+      const query = yield* HttpServerRequest.schemaSearchParams(InventoryQuerySchema);
       const inventoryService = yield* InventoryService;
       return yield* respondJson(inventoryService.findAllPaginated(query));
     }),

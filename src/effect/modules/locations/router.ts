@@ -2,12 +2,14 @@ import { HttpRouter, HttpServerRequest } from '@effect/platform';
 import { Effect, Schema } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import {
+  LocationIdSchema,
+  LocationQuerySchema,
+} from '@librestock/types/locations';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
 import {
-  LocationIdSchema,
-  LocationQuerySchema,
   CreateLocationSchema,
   UpdateLocationSchema,
 } from './locations.schema';

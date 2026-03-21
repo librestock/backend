@@ -2,15 +2,15 @@ import { HttpRouter, HttpServerRequest } from '@effect/platform';
 import { Effect, Schema } from 'effect';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import { Permission, Resource } from '@librestock/types/auth';
+import {
+  StockMovementIdSchema,
+  StockMovementQuerySchema,
+} from '@librestock/types/stock-movements';
 import { requirePermission } from '../../platform/authorization';
 import { AuditLogWriter } from '../../platform/audit';
 import { respondJson } from '../../platform/errors';
 import { requireSession } from '../../platform/session';
-import {
-  CreateStockMovementSchema,
-  StockMovementIdSchema,
-  StockMovementQuerySchema,
-} from './stock-movements.schema';
+import { CreateStockMovementSchema } from './stock-movements.schema';
 import { StockMovementsService } from './service';
 
 const StockMovementPathParams = Schema.Struct({ id: StockMovementIdSchema });
