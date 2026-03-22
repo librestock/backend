@@ -1,6 +1,7 @@
 import { Context, Effect, Layer } from 'effect';
 import { type AuditAction, type AuditEntityType } from '@librestock/types/audit-logs';
-import { TypeOrmDataSource } from './typeorm';
+import { DrizzleDatabase } from './drizzle';
+import { auditLogs } from './db/schema';
 import { getOptionalSession } from './session';
 import { getRequestContext } from './request-context';
 
@@ -19,7 +20,7 @@ export const AuditLogWriter = Context.GenericTag<AuditLogWriter>(
 );
 
 export const makeAuditLogWriter = Effect.gen(function* () {
-  const dataSource = yield* TypeOrmDataSource;
+  const db = yield* DrizzleDatabase;
 
   const writeAuditLog = (params: AuditWriteParams) =>
     Effect.gen(function* () {
@@ -28,26 +29,15 @@ export const makeAuditLogWriter = Effect.gen(function* () {
 
       yield* Effect.tryPromise({
         try: () =>
-          dataSource.query(
-            `INSERT INTO audit_logs (
-               user_id,
-               action,
-               entity_type,
-               entity_id,
-               changes,
-               ip_address,
-               user_agent
-             ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [
-              session?.user.id ?? null,
-              params.action,
-              params.entityType,
-              params.entityId,
-              null,
-              requestContext.ip,
-              null,
-            ],
-          ),
+          db.insert(auditLogs).values({
+            user_id: session?.user.id ?? null,
+            action: params.action,
+            entity_type: params.entityType,
+            entity_id: params.entityId,
+            changes: null,
+            ip_address: requestContext.ip,
+            user_agent: null,
+          }),
         catch: (cause) => cause,
       }).pipe(
         Effect.catchAll((cause) =>

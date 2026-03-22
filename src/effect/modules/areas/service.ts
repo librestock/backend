@@ -6,6 +6,7 @@ import type {
   AreaQueryDto,
 } from '@librestock/types/areas';
 import { LocationsService } from '../locations/service';
+import type { areas } from '../../platform/db/schema';
 import { toAreaResponseDto } from './areas.utils';
 import {
   AreaCircularReference,
@@ -17,7 +18,11 @@ import {
   ParentAreaNotFound,
 } from './areas.errors';
 import { AreasRepository } from './repository';
-import type { Area } from './entities/area.entity';
+
+type AreaRow = typeof areas.$inferSelect;
+type Area = AreaRow & {
+  children?: Area[];
+};
 
 export class AreasService extends Effect.Service<AreasService>()(
   '@librestock/effect/AreasService',
@@ -58,7 +63,9 @@ export class AreasService extends Effect.Service<AreasService>()(
 
       const create = (dto: CreateAreaDto) =>
         Effect.gen(function* () {
-          const locationExists = yield* locationsService.existsById(dto.location_id);
+          const locationExists = yield* locationsService.existsById(
+            dto.location_id,
+          );
           if (!locationExists) {
             return yield* Effect.fail(
               new AreaLocationNotFound({
@@ -203,16 +210,6 @@ export class AreasService extends Effect.Service<AreasService>()(
         id: string,
       ): Effect.Effect<void, AreaNotFound | AreasInfrastructureError> =>
         Effect.gen(function* () {
-          const exists = yield* repository.existsById(id);
-          if (!exists) {
-            return yield* Effect.fail(
-              new AreaNotFound({
-                id,
-                message: `Area with ID ${id} not found`,
-              }),
-            );
-          }
-
           const deleted = yield* repository.delete(id);
           if (!deleted) {
             return yield* Effect.fail(

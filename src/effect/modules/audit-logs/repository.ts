@@ -1,17 +1,15 @@
 import { Effect } from 'effect';
-import {
-  type AuditAction,
-  type AuditEntityType,
-  type AuditLogQueryDto,
+import { eq, and, desc, gte, lte, sql, type SQL } from 'drizzle-orm';
+import type {
+  AuditAction,
+  AuditEntityType,
 } from '@librestock/types/audit-logs';
 import {
-  applyQuerySpecs,
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
-  type QuerySpec,
-} from '../../platform/query-spec.utils';
-import { TypeOrmDataSource } from '../../platform/typeorm';
-import { AuditLog } from './entities/audit-log.entity';
+} from '../../platform/drizzle-query.utils';
+import { DrizzleDatabase } from '../../platform/drizzle';
+import { auditLogs } from '../../platform/db/schema';
 import { AuditLogsInfrastructureError } from './audit-logs.errors';
 
 export interface AuditLogQueryOptions {
@@ -36,64 +34,34 @@ const tryAsync = <A>(action: string, run: () => Promise<A>) =>
       }),
   });
 
-type AuditLogQueryBuilderInput = Omit<AuditLogQueryDto, 'from_date' | 'to_date'> & {
-  readonly from_date?: Date;
-  readonly to_date?: Date;
-};
-
-const auditLogFilterSpec: QuerySpec<AuditLog, AuditLogQueryBuilderInput> = (
-  queryBuilder,
-  query,
-) => {
-  if (query.entity_type) {
-    queryBuilder.andWhere('audit_log.entity_type = :entity_type', {
-      entity_type: query.entity_type,
-    });
+function buildAuditFilters(options: AuditLogQueryOptions): SQL[] {
+  const conditions: SQL[] = [];
+  if (options.entity_type) {
+    conditions.push(eq(auditLogs.entity_type, options.entity_type));
   }
-
-  if (query.entity_id) {
-    queryBuilder.andWhere('audit_log.entity_id = :entity_id', {
-      entity_id: query.entity_id,
-    });
+  if (options.entity_id) {
+    conditions.push(eq(auditLogs.entity_id, options.entity_id));
   }
-
-  if (query.user_id) {
-    queryBuilder.andWhere('audit_log.user_id = :user_id', {
-      user_id: query.user_id,
-    });
+  if (options.user_id) {
+    conditions.push(eq(auditLogs.user_id, options.user_id));
   }
-
-  if (query.action) {
-    queryBuilder.andWhere('audit_log.action = :action', {
-      action: query.action,
-    });
+  if (options.action) {
+    conditions.push(eq(auditLogs.action, options.action));
   }
-
-  if (query.from_date) {
-    queryBuilder.andWhere('audit_log.created_at >= :from_date', {
-      from_date: query.from_date,
-    });
+  if (options.from_date) {
+    conditions.push(gte(auditLogs.created_at, options.from_date));
   }
-
-  if (query.to_date) {
-    queryBuilder.andWhere('audit_log.created_at <= :to_date', {
-      to_date: query.to_date,
-    });
+  if (options.to_date) {
+    conditions.push(lte(auditLogs.created_at, options.to_date));
   }
-};
-
-const auditLogSortSpec: QuerySpec<AuditLog, AuditLogQueryBuilderInput> = (
-  queryBuilder,
-) => {
-  queryBuilder.orderBy('audit_log.created_at', 'DESC');
-};
+  return conditions;
+}
 
 export class AuditLogsRepository extends Effect.Service<AuditLogsRepository>()(
   '@librestock/effect/AuditLogsRepository',
   {
     effect: Effect.gen(function* () {
-      const dataSource = yield* TypeOrmDataSource;
-      const repo = dataSource.getRepository(AuditLog);
+      const db = yield* DrizzleDatabase;
 
       const findPaginated = (options: AuditLogQueryOptions) =>
         tryAsync('query audit logs', async () => {
@@ -101,42 +69,58 @@ export class AuditLogsRepository extends Effect.Service<AuditLogsRepository>()(
             options.page,
             options.limit,
           );
-          const queryBuilder = applyQuerySpecs(
-            repo.createQueryBuilder('audit_log'),
-            {
-              ...options,
-              page,
-              limit,
-            },
-            [auditLogFilterSpec, auditLogSortSpec],
-          );
+          const conditions = buildAuditFilters(options);
+          const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-          const total = await queryBuilder.getCount();
-          const data = await queryBuilder.skip(skip).take(limit).getMany();
+          const [countResult, data] = await Promise.all([
+            db
+              .select({ count: sql<number>`count(*)::int` })
+              .from(auditLogs)
+              .where(where),
+            db
+              .select()
+              .from(auditLogs)
+              .where(where)
+              .orderBy(desc(auditLogs.created_at))
+              .offset(skip)
+              .limit(limit),
+          ]);
 
+          const total = countResult[0]?.count ?? 0;
           return toRepositoryPaginatedResult(data, total, page, limit);
         });
 
       const findById = (id: string) =>
-        tryAsync('load audit log', () => repo.findOneBy({ id }));
+        tryAsync('load audit log', async () => {
+          const rows = await db
+            .select()
+            .from(auditLogs)
+            .where(eq(auditLogs.id, id))
+            .limit(1);
+          return rows[0] ?? null;
+        });
 
       const findByEntityId = (entityType: AuditEntityType, entityId: string) =>
         tryAsync('load entity audit history', () =>
-          repo.find({
-            where: {
-              entity_type: entityType,
-              entity_id: entityId,
-            },
-            order: { created_at: 'DESC' },
-          }),
+          db
+            .select()
+            .from(auditLogs)
+            .where(
+              and(
+                eq(auditLogs.entity_type, entityType),
+                eq(auditLogs.entity_id, entityId),
+              ),
+            )
+            .orderBy(desc(auditLogs.created_at)),
         );
 
       const findByUserId = (userId: string) =>
         tryAsync('load user audit history', () =>
-          repo.find({
-            where: { user_id: userId },
-            order: { created_at: 'DESC' },
-          }),
+          db
+            .select()
+            .from(auditLogs)
+            .where(eq(auditLogs.user_id, userId))
+            .orderBy(desc(auditLogs.created_at)),
         );
 
       return { findPaginated, findById, findByEntityId, findByUserId };

@@ -1,14 +1,13 @@
 import { Effect } from 'effect';
+import { eq, or, ilike, and, sql, type SQL } from 'drizzle-orm';
 import type { ClientQueryDto } from '@librestock/types/clients';
 import {
-  applyQuerySpecs,
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
-  type QuerySpec,
   type RepositoryPaginatedResult,
-} from '../../platform/query-spec.utils';
-import { TypeOrmDataSource } from '../../platform/typeorm';
-import { Client } from './entities/client.entity';
+} from '../../platform/drizzle-query.utils';
+import { DrizzleDatabase } from '../../platform/drizzle';
+import { clients } from '../../platform/db/schema';
 import { ClientsInfrastructureError } from './clients.errors';
 
 const tryAsync = <A>(action: string, run: () => Promise<A>) =>
@@ -22,84 +21,92 @@ const tryAsync = <A>(action: string, run: () => Promise<A>) =>
       }),
   });
 
-const clientFilterSpec: QuerySpec<Client, ClientQueryDto> = (qb, query) => {
+function buildClientFilters(query: ClientQueryDto): SQL[] {
+  const conditions: SQL[] = [];
   if (query.q) {
-    qb.andWhere('(client.company_name ILIKE :q OR client.email ILIKE :q)', {
-      q: `%${query.q}%`,
-    });
+    conditions.push(
+      or(
+        ilike(clients.company_name, `%${query.q}%`),
+        ilike(clients.email, `%${query.q}%`),
+      )!,
+    );
   }
   if (query.account_status) {
-    qb.andWhere('client.account_status = :account_status', {
-      account_status: query.account_status,
-    });
+    conditions.push(eq(clients.account_status, query.account_status));
   }
-};
-
-const clientSortSpec: QuerySpec<Client, ClientQueryDto> = (qb) => {
-  qb.orderBy('client.company_name', 'ASC');
-};
+  return conditions;
+}
 
 export class ClientsRepository extends Effect.Service<ClientsRepository>()(
   '@librestock/effect/ClientsRepository',
   {
     effect: Effect.gen(function* () {
-      const dataSource = yield* TypeOrmDataSource;
-      const repo = dataSource.getRepository(Client);
+      const db = yield* DrizzleDatabase;
 
       const findAllPaginated = (
         query: ClientQueryDto,
-      ): Effect.Effect<RepositoryPaginatedResult<Client>, ClientsInfrastructureError> =>
+      ): Effect.Effect<RepositoryPaginatedResult<typeof clients.$inferSelect>, ClientsInfrastructureError> =>
         tryAsync('list clients', async () => {
           const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
-          const qb = applyQuerySpecs(
-            repo.createQueryBuilder('client'),
-            query,
-            [clientFilterSpec, clientSortSpec],
-          );
-          const total = await qb.getCount();
-          const data = await qb.skip(skip).take(limit).getMany();
+          const conditions = buildClientFilters(query);
+          const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+          const [countResult, data] = await Promise.all([
+            db.select({ count: sql<number>`count(*)::int` }).from(clients).where(where),
+            db
+              .select()
+              .from(clients)
+              .where(where)
+              .orderBy(sql`"company_name" ASC`)
+              .offset(skip)
+              .limit(limit),
+          ]);
+
+          const total = countResult[0]?.count ?? 0;
           return toRepositoryPaginatedResult(data, total, page, limit);
         });
 
       const findById = (id: string) =>
-        tryAsync('load client', () =>
-          repo.createQueryBuilder('client').where('client.id = :id', { id }).getOne(),
-        );
+        tryAsync('load client', async () => {
+          const rows = await db.select().from(clients).where(eq(clients.id, id)).limit(1);
+          return rows[0] ?? null;
+        });
 
       const findByEmail = (email: string) =>
-        tryAsync('load client by email', () =>
-          repo.createQueryBuilder('client').where('client.email = :email', { email }).getOne(),
-        );
+        tryAsync('load client by email', async () => {
+          const rows = await db.select().from(clients).where(eq(clients.email, email)).limit(1);
+          return rows[0] ?? null;
+        });
 
       const existsById = (id: string) =>
         tryAsync('check client existence', async () => {
-          const count = await repo
-            .createQueryBuilder('client')
-            .where('client.id = :id', { id })
-            .getCount();
-          return count > 0;
+          const rows = await db
+            .select({ id: clients.id })
+            .from(clients)
+            .where(eq(clients.id, id))
+            .limit(1);
+          return rows.length > 0;
         });
 
-      const create = (data: Partial<Client>) =>
+      const create = (data: typeof clients.$inferInsert) =>
         tryAsync('create client', async () => {
-          const client = repo.create(data);
-          return repo.save(client);
+          const rows = await db.insert(clients).values(data).returning();
+          return rows[0]!;
         });
 
-      const update = (id: string, data: Partial<Client>) =>
+      const update = (id: string, data: Partial<typeof clients.$inferInsert>) =>
         tryAsync('update client', async () => {
-          const result = await repo
-            .createQueryBuilder()
-            .update(Client)
-            .set(data)
-            .where('id = :id', { id })
-            .execute();
-          return result.affected ?? 0;
+          const rows = await db
+            .update(clients)
+            .set({ ...data, updated_at: new Date() })
+            .where(eq(clients.id, id))
+            .returning({ id: clients.id });
+          return rows.length;
         });
 
       const remove = (id: string) =>
         tryAsync('delete client', async () => {
-          await repo.delete(id);
+          await db.delete(clients).where(eq(clients.id, id));
         });
 
       return { findAllPaginated, findById, findByEmail, existsById, create, update, delete: remove };

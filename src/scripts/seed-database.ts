@@ -1,5 +1,5 @@
 import { config } from 'dotenv';
-import { clearDatabase, createDataSource } from './seed/config';
+import { clearDatabase, createDatabase } from './seed/config';
 import { registry } from './seed/registry';
 
 // Import seeders — each file self-registers via registry.register()
@@ -18,14 +18,14 @@ config();
 async function main() {
   console.log('Starting database seed...\n');
 
-  const dataSource = await createDataSource();
+  const db = await createDatabase();
   console.log('Database connected\n');
 
   try {
-    await clearDatabase(dataSource);
+    await clearDatabase(db);
 
     await registry.runAll({
-      dataSource,
+      db,
       store: new Map(),
     });
 
@@ -34,8 +34,9 @@ async function main() {
     console.error('Error seeding database:', error);
     process.exit(1);
   } finally {
-    if (dataSource?.isInitialized) {
-      await dataSource.destroy();
+    const pool = (db as any)._.session?.client;
+    if (pool?.end) {
+      await pool.end();
       console.log('Database connection closed');
     }
   }

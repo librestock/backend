@@ -1,13 +1,13 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
+import { eq, and, ilike, or, gte, lte, desc, sql, type SQL } from 'drizzle-orm';
 import { type OrderQuerySchema } from '@librestock/types/orders';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
-} from '../../platform/query-spec.utils';
-import { TypeOrmDataSource } from '../../platform/typeorm';
-import { Order } from './entities/order.entity';
-import { OrderItem } from './entities/order-item.entity';
+} from '../../platform/drizzle-query.utils';
+import { DrizzleDatabase } from '../../platform/drizzle';
+import { orders, orderItems, clients, products } from '../../platform/db/schema';
 import { OrdersInfrastructureError } from './orders.errors';
 
 type OrderQueryDto = Schema.Schema.Type<typeof OrderQuerySchema>;
@@ -27,93 +27,147 @@ export class OrdersRepository extends Effect.Service<OrdersRepository>()(
   '@librestock/effect/OrdersRepository',
   {
     effect: Effect.gen(function* () {
-      const dataSource = yield* TypeOrmDataSource;
-      const repository = dataSource.getRepository(Order);
+      const db = yield* DrizzleDatabase;
 
       const findAllPaginated = (query: OrderQueryDto) =>
         tryAsync('list orders paginated', async () => {
           const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
-          const qb = repository
-            .createQueryBuilder('order')
-            .leftJoinAndSelect('order.client', 'client')
-            .leftJoinAndSelect('order.items', 'items');
 
+          const conditions: SQL[] = [];
           if (query.client_id) {
-            qb.andWhere('order.client_id = :clientId', { clientId: query.client_id });
+            conditions.push(eq(orders.client_id, query.client_id));
           }
-
           if (query.status) {
-            qb.andWhere('order.status = :status', { status: query.status });
+            conditions.push(eq(orders.status, query.status));
           }
-
           if (query.date_from) {
-            qb.andWhere('order.created_at >= :dateFrom', { dateFrom: query.date_from });
+            conditions.push(gte(orders.created_at, new Date(query.date_from)));
           }
-
           if (query.date_to) {
-            qb.andWhere('order.created_at <= :dateTo', { dateTo: query.date_to });
+            conditions.push(lte(orders.created_at, new Date(query.date_to)));
           }
-
           if (query.q) {
-            qb.andWhere('(order.order_number ILIKE :q OR client.company_name ILIKE :q)', {
-              q: `%${query.q}%`,
-            });
+            conditions.push(
+              or(
+                ilike(orders.order_number, `%${query.q}%`),
+                ilike(clients.company_name, `%${query.q}%`),
+              )!,
+            );
           }
 
-          qb.orderBy('order.created_at', 'DESC');
+          const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-          const total = await qb.getCount();
-          const data = await qb.skip(skip).take(limit).getMany();
+          // Count query — join clients only if q filter needs it
+          const countQuery = query.q
+            ? db
+                .select({ count: sql<number>`count(DISTINCT ${orders.id})::int` })
+                .from(orders)
+                .leftJoin(clients, eq(orders.client_id, clients.id))
+                .where(where)
+            : db
+                .select({ count: sql<number>`count(*)::int` })
+                .from(orders)
+                .where(where);
+
+          const [countResult] = await countQuery;
+          const total = countResult?.count ?? 0;
+
+          // Data query with relations
+          const orderRows = await db
+            .select()
+            .from(orders)
+            .leftJoin(clients, eq(orders.client_id, clients.id))
+            .where(where)
+            .orderBy(desc(orders.created_at))
+            .offset(skip)
+            .limit(limit);
+
+          const orderIds = orderRows.map((r) => r.orders.id);
+          const itemsByOrderId: Record<string, (typeof orderItems.$inferSelect)[]> = {};
+          if (orderIds.length > 0) {
+            const allItems = await db
+              .select()
+              .from(orderItems)
+              .where(sql`${orderItems.order_id} IN ${orderIds}`);
+            for (const item of allItems) {
+              (itemsByOrderId[item.order_id] ??= []).push(item);
+            }
+          }
+
+          const data = orderRows.map((r) => ({
+            ...r.orders,
+            client: r.clients,
+            items: itemsByOrderId[r.orders.id] ?? [],
+          }));
 
           return toRepositoryPaginatedResult(data, total, page, limit);
         });
 
       const findById = (id: string) =>
-        tryAsync('find order by id', () =>
-          repository
-            .createQueryBuilder('order')
-            .leftJoinAndSelect('order.client', 'client')
-            .leftJoinAndSelect('order.items', 'items')
-            .leftJoinAndSelect('items.product', 'product')
-            .where('order.id = :id', { id })
-            .getOne(),
-        );
+        tryAsync('find order by id', async () => {
+          const rows = await db
+            .select()
+            .from(orders)
+            .leftJoin(clients, eq(orders.client_id, clients.id))
+            .where(eq(orders.id, id))
+            .limit(1);
 
-      const create = (data: Partial<Order>) =>
-        tryAsync('create order', async () => {
-          const order = repository.create(data);
-          return repository.save(order);
+          if (!rows[0]) return null;
+
+          const items = await db
+            .select({
+              item: orderItems,
+              product: products,
+            })
+            .from(orderItems)
+            .leftJoin(products, eq(orderItems.product_id, products.id))
+            .where(eq(orderItems.order_id, id));
+
+          return {
+            ...rows[0].orders,
+            client: rows[0].clients,
+            items: items.map((i) => ({ ...i.item, product: i.product })),
+          };
         });
 
-      const update = (id: string, data: Partial<Order>) =>
+      const create = (data: typeof orders.$inferInsert) =>
+        tryAsync('create order', async () => {
+          const rows = await db.insert(orders).values(data).returning();
+          return rows[0]!;
+        });
+
+      const update = (id: string, data: Partial<typeof orders.$inferInsert>) =>
         tryAsync('update order', async () => {
-          const result = await repository
-            .createQueryBuilder()
-            .update(Order)
-            .set(data)
-            .where('id = :id', { id })
-            .execute();
-          return result.affected ?? 0;
+          const rows = await db
+            .update(orders)
+            .set({ ...data, updated_at: new Date() })
+            .where(eq(orders.id, id))
+            .returning({ id: orders.id });
+          return rows.length;
         });
 
       const remove = (id: string) =>
-        tryAsync('delete order', () => repository.delete(id));
+        tryAsync('delete order', () =>
+          db.delete(orders).where(eq(orders.id, id)),
+        );
 
       const getNextOrderNumberSequence = () =>
         tryAsync('get next order number', async () => {
-          const [result] = await repository.query(
-            `SELECT nextval('order_number_seq')::bigint AS value`,
+          const result = await db.execute(
+            sql`SELECT nextval('order_number_seq')::bigint AS value`,
           );
-          return Number(result.value);
+          const res = result as { rows?: { value: unknown }[] };
+          return Number(res.rows?.[0]?.value ?? (result as { value: unknown }[])[0]?.value);
         });
 
       const existsById = (id: string) =>
         tryAsync('check order existence', async () => {
-          const count = await repository
-            .createQueryBuilder('order')
-            .where('order.id = :id', { id })
-            .getCount();
-          return count > 0;
+          const rows = await db
+            .select({ id: orders.id })
+            .from(orders)
+            .where(eq(orders.id, id))
+            .limit(1);
+          return rows.length > 0;
         });
 
       return {
@@ -133,31 +187,30 @@ export class OrderItemsRepository extends Effect.Service<OrderItemsRepository>()
   '@librestock/effect/OrderItemsRepository',
   {
     effect: Effect.gen(function* () {
-      const dataSource = yield* TypeOrmDataSource;
-      const repository = dataSource.getRepository(OrderItem);
+      const db = yield* DrizzleDatabase;
 
       const findByOrderId = (orderId: string) =>
-        tryAsync('find order items by order id', () =>
-          repository
-            .createQueryBuilder('item')
-            .leftJoinAndSelect('item.product', 'product')
-            .where('item.order_id = :orderId', { orderId })
-            .getMany(),
-        );
+        tryAsync('find order items by order id', async () => {
+          const items = await db
+            .select({
+              item: orderItems,
+              product: products,
+            })
+            .from(orderItems)
+            .leftJoin(products, eq(orderItems.product_id, products.id))
+            .where(eq(orderItems.order_id, orderId));
 
-      const createMany = (items: Partial<OrderItem>[]) =>
-        tryAsync('create order items', async () => {
-          const entities = repository.create(items);
-          return repository.save(entities);
+          return items.map((i) => ({ ...i.item, product: i.product }));
         });
+
+      const createMany = (items: (typeof orderItems.$inferInsert)[]) =>
+        tryAsync('create order items', () =>
+          db.insert(orderItems).values(items).returning(),
+        );
 
       const deleteByOrderId = (orderId: string) =>
         tryAsync('delete order items by order id', () =>
-          repository
-            .createQueryBuilder()
-            .delete()
-            .where('order_id = :orderId', { orderId })
-            .execute(),
+          db.delete(orderItems).where(eq(orderItems.order_id, orderId)),
         );
 
       return {

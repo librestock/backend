@@ -1,6 +1,7 @@
 import { Effect } from 'effect';
-import { TypeOrmDataSource } from '../../platform/typeorm';
-import { Photo } from './entities/photo.entity';
+import { eq, asc, sql } from 'drizzle-orm';
+import { DrizzleDatabase } from '../../platform/drizzle';
+import { photos } from '../../platform/db/schema';
 import { PhotosInfrastructureError } from './photos.errors';
 
 const tryAsync = <A>(action: string, run: () => Promise<A>) =>
@@ -18,45 +19,46 @@ export class PhotosRepository extends Effect.Service<PhotosRepository>()(
   '@librestock/effect/PhotosRepository',
   {
     effect: Effect.gen(function* () {
-      const dataSource = yield* TypeOrmDataSource;
-      const repo = dataSource.getRepository(Photo);
+      const db = yield* DrizzleDatabase;
 
       const findByProductId = (productId: string) =>
         tryAsync('list photos by product', () =>
-          repo
-            .createQueryBuilder('photo')
-            .where('photo.product_id = :productId', { productId })
-            .orderBy('photo.display_order', 'ASC')
-            .addOrderBy('photo.created_at', 'ASC')
-            .getMany(),
+          db
+            .select()
+            .from(photos)
+            .where(eq(photos.product_id, productId))
+            .orderBy(asc(photos.display_order), asc(photos.created_at)),
         );
 
       const findById = (id: string) =>
-        tryAsync('load photo', () =>
-          repo
-            .createQueryBuilder('photo')
-            .where('photo.id = :id', { id })
-            .getOne(),
-        );
+        tryAsync('load photo', async () => {
+          const rows = await db
+            .select()
+            .from(photos)
+            .where(eq(photos.id, id))
+            .limit(1);
+          return rows[0] ?? null;
+        });
 
-      const create = (data: Partial<Photo>) =>
+      const create = (data: typeof photos.$inferInsert) =>
         tryAsync('create photo', async () => {
-          const photo = repo.create(data);
-          return repo.save(photo);
+          const rows = await db.insert(photos).values(data).returning();
+          return rows[0]!;
         });
 
       const remove = (id: string) =>
         tryAsync('delete photo metadata', async () => {
-          await repo.delete(id);
+          await db.delete(photos).where(eq(photos.id, id));
         });
 
       const countByProductId = (productId: string) =>
-        tryAsync('count photos by product', () =>
-          repo
-            .createQueryBuilder('photo')
-            .where('photo.product_id = :productId', { productId })
-            .getCount(),
-        );
+        tryAsync('count photos by product', async () => {
+          const rows = await db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(photos)
+            .where(eq(photos.product_id, productId));
+          return rows[0]?.count ?? 0;
+        });
 
       return {
         findByProductId,

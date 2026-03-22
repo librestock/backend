@@ -1,19 +1,22 @@
 import { faker } from '@faker-js/faker';
 import { ClientStatus } from '@librestock/types/clients';
 import { type LocationType } from '@librestock/types/locations';
-import type { DeepPartial } from 'typeorm';
-import type { Client } from '../../../effect/modules/clients/entities/client.entity';
-import type { Inventory } from '../../../effect/modules/inventory/entities/inventory.entity';
-import type { Location } from '../../../effect/modules/locations/entities/location.entity';
-import type { Product } from '../../../effect/modules/products/entities/product.entity';
-import type { SupplierProduct } from '../../../effect/modules/suppliers/entities/supplier-product.entity';
-import type { Supplier } from '../../../effect/modules/suppliers/entities/supplier.entity';
+import {
+  type suppliers,
+  type products,
+  type locations,
+  type clients,
+  type supplierProducts,
+  type inventory,
+} from '../../../effect/platform/db/schema';
 import { MOCK_USER_ID, YACHT_NAMES } from '../config';
 
-// Each factory returns a DeepPartial<Entity> — compatible with repo.create().
+// Each factory returns a partial insert type — compatible with db.insert().values().
 // Pass overrides to pin specific fields: buildSupplier({ is_active: false })
 
-export function buildSupplier(overrides: DeepPartial<Supplier> = {}): DeepPartial<Supplier> {
+export function buildSupplier(
+  overrides: Partial<typeof suppliers.$inferInsert> = {},
+): typeof suppliers.$inferInsert {
   return {
     name: faker.company.name(),
     contact_person: faker.person.fullName(),
@@ -30,8 +33,8 @@ export function buildSupplier(overrides: DeepPartial<Supplier> = {}): DeepPartia
 export function buildProduct(
   categoryId: string,
   supplierId: string,
-  overrides: DeepPartial<Product> = {},
-): DeepPartial<Product> {
+  overrides: Partial<typeof products.$inferInsert> = {},
+): typeof products.$inferInsert {
   const standardCost = faker.number.float({ min: 5, max: 5000, fractionDigits: 2 });
   const markupPercentage = faker.number.float({ min: 10, max: 100, fractionDigits: 2 });
   const standardPrice = standardCost * (1 + markupPercentage / 100);
@@ -71,8 +74,8 @@ export function buildProduct(
 export function buildLocation(
   name: string,
   type: LocationType,
-  overrides: DeepPartial<Location> = {},
-): DeepPartial<Location> {
+  overrides: Partial<typeof locations.$inferInsert> = {},
+): typeof locations.$inferInsert {
   return {
     name,
     type,
@@ -86,8 +89,8 @@ export function buildLocation(
 
 export function buildClient(
   index: number,
-  overrides: DeepPartial<Client> = {},
-): DeepPartial<Client> {
+  overrides: Partial<typeof clients.$inferInsert> = {},
+): typeof clients.$inferInsert {
   return {
     company_name: faker.company.name(),
     yacht_name: YACHT_NAMES[index % YACHT_NAMES.length],
@@ -133,8 +136,8 @@ export function buildSupplierProduct(
   supplierId: string,
   productId: string,
   supplierName: string,
-  overrides: DeepPartial<SupplierProduct> = {},
-): DeepPartial<SupplierProduct> {
+  overrides: Partial<typeof supplierProducts.$inferInsert> = {},
+): typeof supplierProducts.$inferInsert {
   return {
     supplier_id: supplierId,
     product_id: productId,
@@ -157,8 +160,8 @@ export function buildInventory(
   productId: string,
   locationId: string,
   opts: { areaId?: string | null; isPerishable?: boolean; standardCost?: number | null } = {},
-  overrides: DeepPartial<Inventory> = {},
-): DeepPartial<Inventory> {
+  overrides: Partial<typeof inventory.$inferInsert> = {},
+): typeof inventory.$inferInsert {
   const receivedDate = faker.date.recent({ days: 90 });
 
   return {
@@ -166,7 +169,7 @@ export function buildInventory(
     location_id: locationId,
     area_id: opts.areaId ?? undefined,
     quantity: faker.number.int({ min: 0, max: 500 }),
-    batchNumber:
+    batch_number:
       faker.helpers.maybe(
         () => `BATCH-${faker.date.recent({ days: 30 }).toISOString().slice(0, 10).replace(/-/g, '')}-${faker.string.alphanumeric({ length: 4, casing: 'upper' })}`,
         { probability: 0.4 },

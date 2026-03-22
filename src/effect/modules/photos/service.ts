@@ -2,6 +2,7 @@ import * as path from 'node:path';
 import { access, mkdir, unlink, writeFile } from 'node:fs/promises';
 import { Effect } from 'effect';
 import type { PhotoResponseDto } from '@librestock/types/photos';
+import type { photos } from '../../platform/db/schema';
 import { toPhotoResponseDto } from './photos.utils';
 import {
   InvalidPhotoMimeType,
@@ -10,8 +11,9 @@ import {
   PhotoTooLarge,
   PhotosInfrastructureError,
 } from './photos.errors';
-import type { Photo } from './entities/photo.entity';
 import { PhotosRepository } from './repository';
+
+type Photo = typeof photos.$inferSelect;
 
 const ALLOWED_MIMETYPES = [
   'image/jpeg',

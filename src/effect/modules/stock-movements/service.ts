@@ -1,10 +1,10 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
 import type { StockMovementQueryDto } from '@librestock/types/stock-movements';
-import { toPaginatedResponse } from '../../platform/pagination.utils';
+import { toPaginatedResponse, type PaginatedResult } from '../../platform/pagination.utils';
 import { ProductsService } from '../products/service';
 import { LocationsService } from '../locations/service';
-import type { StockMovement } from './entities/stock-movement.entity';
+import type { stockMovements } from '../../platform/db/schema';
 import type { CreateStockMovementSchema } from './stock-movements.schema';
 import {
   toStockMovementResponseDto,
@@ -19,6 +19,13 @@ import {
   type StockMovementsInfrastructureError,
 } from './stock-movements.errors';
 import { StockMovementsRepository } from './repository';
+
+type StockMovementRow = typeof stockMovements.$inferSelect;
+type StockMovement = StockMovementRow & {
+  product?: { id: string; name: string; sku: string } | null;
+  fromLocation?: { id: string; name: string } | null;
+  toLocation?: { id: string; name: string } | null;
+};
 
 type CreateStockMovementDto = Schema.Schema.Type<typeof CreateStockMovementSchema>;
 
@@ -52,7 +59,7 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
       const findAllPaginated = (query: StockMovementQueryDto) =>
         Effect.map(
           repository.findAllPaginated(query),
-          (result) => toPaginatedResponse(result, toStockMovementResponseDto),
+          (result) => toPaginatedResponse(result as PaginatedResult<StockMovement>, toStockMovementResponseDto),
         );
 
       const findOne = (id: string) =>

@@ -1,7 +1,7 @@
-import { type DataSource } from 'typeorm';
+import { type NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 export interface SeedContext {
-  dataSource: DataSource;
+  db: NodePgDatabase;
   store: Map<string, unknown[]>;
 }
 

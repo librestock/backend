@@ -1,12 +1,14 @@
 import { faker } from '@faker-js/faker';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import { OrderStatus } from '@librestock/types/orders';
-import { AuditLog } from '../../effect/modules/audit-logs/entities/audit-log.entity';
-import { type Category } from '../../effect/modules/categories/entities/category.entity';
-import { type Location } from '../../effect/modules/locations/entities/location.entity';
-import { type Order } from '../../effect/modules/orders/entities/order.entity';
-import { type Product } from '../../effect/modules/products/entities/product.entity';
-import { type Supplier } from '../../effect/modules/suppliers/entities/supplier.entity';
+import {
+  auditLogs,
+  type categories,
+  type locations,
+  type orders,
+  type products,
+  type suppliers,
+} from '../../effect/platform/db/schema';
 import { MOCK_USER_ID, SEED_CONFIG } from './config';
 import { registry } from './registry';
 
@@ -16,21 +18,20 @@ registry.register({
   async run(ctx) {
     console.log('Seeding audit logs...');
 
-    const products = ctx.store.get('products') as Product[];
-    const categories = ctx.store.get('categories') as Category[];
-    const suppliers = ctx.store.get('suppliers') as Supplier[];
-    const orders = ctx.store.get('orders') as Order[];
-    const locations = ctx.store.get('locations') as Location[];
+    const allProducts = ctx.store.get('products') as (typeof products.$inferSelect)[];
+    const allCategories = ctx.store.get('categories') as (typeof categories.$inferSelect)[];
+    const allSuppliers = ctx.store.get('suppliers') as (typeof suppliers.$inferSelect)[];
+    const allOrders = ctx.store.get('orders') as (typeof orders.$inferSelect)[];
+    const allLocations = ctx.store.get('locations') as (typeof locations.$inferSelect)[];
 
-    const auditRepo = ctx.dataSource.getRepository(AuditLog);
-    const auditLogs: AuditLog[] = [];
+    const logs: (typeof auditLogs.$inferSelect)[] = [];
 
     const entityPool: { type: AuditEntityType; id: string }[] = [
-      ...products.map((p) => ({ type: AuditEntityType.PRODUCT, id: p.id })),
-      ...categories.map((c) => ({ type: AuditEntityType.CATEGORY, id: c.id })),
-      ...suppliers.map((s) => ({ type: AuditEntityType.SUPPLIER, id: s.id })),
-      ...orders.map((o) => ({ type: AuditEntityType.ORDER, id: o.id })),
-      ...locations.map((l) => ({ type: AuditEntityType.LOCATION, id: l.id })),
+      ...allProducts.map((p) => ({ type: AuditEntityType.PRODUCT, id: p.id })),
+      ...allCategories.map((c) => ({ type: AuditEntityType.CATEGORY, id: c.id })),
+      ...allSuppliers.map((s) => ({ type: AuditEntityType.SUPPLIER, id: s.id })),
+      ...allOrders.map((o) => ({ type: AuditEntityType.ORDER, id: o.id })),
+      ...allLocations.map((l) => ({ type: AuditEntityType.LOCATION, id: l.id })),
     ];
 
     for (let i = 0; i < SEED_CONFIG.auditLogs; i++) {
@@ -67,7 +68,7 @@ registry.register({
         changes = { after: { name: faker.commerce.productName() } };
       }
 
-      const log = auditRepo.create({
+      const [saved] = await ctx.db.insert(auditLogs).values({
         user_id: MOCK_USER_ID,
         action,
         entity_type: entity.type,
@@ -79,13 +80,11 @@ registry.register({
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
         ]),
-      });
-
-      const saved = await auditRepo.save(log);
-      auditLogs.push(saved);
+      }).returning();
+      logs.push(saved!);
     }
 
-    console.log(`  Created ${auditLogs.length} audit logs\n`);
-    ctx.store.set('audit-logs', auditLogs);
+    console.log(`  Created ${logs.length} audit logs\n`);
+    ctx.store.set('audit-logs', logs);
   },
 });

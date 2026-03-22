@@ -1,7 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { LocationType } from '@librestock/types/locations';
-import { Area } from '../../effect/modules/areas/entities/area.entity';
-import { Location } from '../../effect/modules/locations/entities/location.entity';
+import { areas, locations } from '../../effect/platform/db/schema';
 import { AREA_TEMPLATES, LOCATION_NAMES, SEED_CONFIG, SUB_AREA_TEMPLATES } from './config';
 import { buildLocation } from './factories';
 import { registry } from './registry';
@@ -12,16 +11,15 @@ registry.register({
   async run(ctx) {
     console.log('Seeding locations...');
 
-    const locationRepo = ctx.dataSource.getRepository(Location);
-    const locations: Location[] = [];
+    const allLocations: (typeof locations.$inferSelect)[] = [];
 
     for (const loc of LOCATION_NAMES.slice(0, SEED_CONFIG.locations)) {
-      const saved = await locationRepo.save(locationRepo.create(buildLocation(loc.name, loc.type)));
-      locations.push(saved);
+      const [saved] = await ctx.db.insert(locations).values(buildLocation(loc.name, loc.type)).returning();
+      allLocations.push(saved!);
     }
 
-    console.log(`  Created ${locations.length} locations\n`);
-    ctx.store.set('locations', locations);
+    console.log(`  Created ${allLocations.length} locations\n`);
+    ctx.store.set('locations', allLocations);
   },
 });
 
@@ -31,12 +29,10 @@ registry.register({
   async run(ctx) {
     console.log('Seeding areas...');
 
-    const locations = ctx.store.get('locations') as Location[];
+    const allLocations = ctx.store.get('locations') as (typeof locations.$inferSelect)[];
 
-    const areaRepo = ctx.dataSource.getRepository(Area);
-    const areas: Area[] = [];
-
-    const warehouseLocations = locations.filter((l) => l.type === LocationType.WAREHOUSE);
+    const allAreas: (typeof areas.$inferSelect)[] = [];
+    const warehouseLocations = allLocations.filter((l) => l.type === LocationType.WAREHOUSE);
 
     for (const location of warehouseLocations) {
       const templateKey = location.name.toLowerCase().includes('cold')
@@ -52,35 +48,33 @@ registry.register({
       let areaCode = 1;
 
       for (const areaName of areaNames) {
-        const area = areaRepo.create({
+        const [savedArea] = await ctx.db.insert(areas).values({
           location_id: location.id,
           parent_id: null,
           name: areaName,
           code: `${location.name.charAt(0).toUpperCase()}${areaCode}`,
           description: `${areaName} in ${location.name}`,
           is_active: true,
-        });
-        const savedArea = await areaRepo.save(area);
-        areas.push(savedArea);
+        }).returning();
+        allAreas.push(savedArea!);
         areaCode++;
 
         const subAreaCount = faker.number.int({ min: 0, max: SEED_CONFIG.subAreasPerArea });
         for (let j = 0; j < subAreaCount; j++) {
-          const subArea = areaRepo.create({
+          const [savedSub] = await ctx.db.insert(areas).values({
             location_id: location.id,
-            parent_id: savedArea.id,
-            name: SUB_AREA_TEMPLATES[j % SUB_AREA_TEMPLATES.length],
-            code: `${savedArea.code}-${j + 1}`,
+            parent_id: savedArea!.id,
+            name: SUB_AREA_TEMPLATES[j % SUB_AREA_TEMPLATES.length]!,
+            code: `${savedArea!.code}-${j + 1}`,
             description: '',
             is_active: true,
-          });
-          const savedSub = await areaRepo.save(subArea);
-          areas.push(savedSub);
+          }).returning();
+          allAreas.push(savedSub!);
         }
       }
     }
 
-    console.log(`  Created ${areas.length} areas\n`);
-    ctx.store.set('areas', areas);
+    console.log(`  Created ${allAreas.length} areas\n`);
+    ctx.store.set('areas', allAreas);
   },
 });

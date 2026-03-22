@@ -1,14 +1,25 @@
 import { Effect, Layer } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
-import { TypeOrmDataSource } from '../../platform/typeorm';
+import { DrizzleDatabase } from '../../platform/drizzle';
 import { RolesService } from './service';
 import { RolesRepository } from './repository';
 import { SystemRoleDeletionForbidden } from './roles.errors';
 
+// A chainable mock for Drizzle queries
+const createChainableMock = (resolveValue: any) => {
+  const chain: any = {};
+  const methods = ['select', 'from', 'innerJoin', 'where', 'limit', 'orderBy', 'offset'];
+  for (const method of methods) {
+    chain[method] = jest.fn().mockReturnValue(chain);
+  }
+  chain.then = (resolve: any) => resolve(resolveValue);
+  return chain;
+};
+
 describe('Effect RolesService', () => {
   const makeService = async (
     repository: Record<string, jest.Mock>,
-    dataSource: { query: jest.Mock },
+    mockDb: any,
   ) =>
     Effect.runPromise(
       RolesService.pipe(
@@ -17,7 +28,7 @@ describe('Effect RolesService', () => {
             Layer.provide(
               Layer.mergeAll(
                 Layer.succeed(RolesRepository, repository as any),
-                Layer.succeed(TypeOrmDataSource, dataSource as any),
+                Layer.succeed(DrizzleDatabase, mockDb),
               ),
             ),
           ),
@@ -71,8 +82,8 @@ describe('Effect RolesService', () => {
       delete: jest.fn(),
       replacePermissions: jest.fn().mockReturnValue(Effect.succeed(undefined)),
     };
-    const dataSource = { query: jest.fn() };
-    const service = await makeService(repository, dataSource);
+    const mockDb = createChainableMock([]);
+    const service = await makeService(repository, mockDb);
 
     const result = await run(
       service.create({
@@ -102,7 +113,7 @@ describe('Effect RolesService', () => {
       delete: jest.fn(),
       replacePermissions: jest.fn(),
     };
-    const service = await makeService(repository, { query: jest.fn() });
+    const service = await makeService(repository, createChainableMock([]));
 
     await expect(
       fail(
@@ -146,7 +157,7 @@ describe('Effect RolesService', () => {
       delete: jest.fn(),
       replacePermissions: jest.fn().mockReturnValue(Effect.succeed(undefined)),
     };
-    const service = await makeService(repository, { query: jest.fn() });
+    const service = await makeService(repository, createChainableMock([]));
 
     const result = await run(
       service.update('role-2', {
@@ -176,7 +187,7 @@ describe('Effect RolesService', () => {
       delete: jest.fn(),
       replacePermissions: jest.fn(),
     };
-    const service = await makeService(repository, { query: jest.fn() });
+    const service = await makeService(repository, createChainableMock([]));
 
     await expect(fail(service.delete('role-1'))).resolves.toBeInstanceOf(
       SystemRoleDeletionForbidden,
@@ -194,16 +205,14 @@ describe('Effect RolesService', () => {
       delete: jest.fn(),
       replacePermissions: jest.fn(),
     };
-    const dataSource = {
-      query: jest.fn().mockResolvedValue([
-        {
-          role_name: 'Admin',
-          resource: Resource.ROLES,
-          permission: Permission.READ,
-        },
-      ]),
-    };
-    const service = await makeService(repository, dataSource);
+    const mockDb = createChainableMock([
+      {
+        role_name: 'Admin',
+        resource: Resource.ROLES,
+        permission: Permission.READ,
+      },
+    ]);
+    const service = await makeService(repository, mockDb);
     let now = 1_000;
     const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => now);
 
@@ -212,7 +221,7 @@ describe('Effect RolesService', () => {
     now += 61_000;
     await run(service.getPermissionsForUser('user-1'));
 
-    expect(dataSource.query).toHaveBeenCalledTimes(2);
+    expect(mockDb.select).toHaveBeenCalledTimes(2);
     nowSpy.mockRestore();
   });
 });

@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect';
-import { TypeOrmDataSource } from '../../platform/typeorm';
+import { DrizzleDatabase } from '../../platform/drizzle';
 import { BetterAuth } from '../../platform/better-auth';
 import { makeHealthService } from './service';
 
@@ -45,12 +45,12 @@ describe('makeHealthService', () => {
   it('reports readiness when the database is reachable', async () => {
     const service = makeHealthService();
     const dataSource = {
-      query: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
+      execute: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
     };
 
     const result = await Effect.runPromise(
       (service.ready.pipe(
-        Effect.provideService(TypeOrmDataSource, dataSource as any),
+        Effect.provideService(DrizzleDatabase, dataSource as any),
       ) as Effect.Effect<any, never, never>),
     );
 
@@ -73,14 +73,14 @@ describe('makeHealthService', () => {
   it('reports a degraded health-check when the database is down', async () => {
     const service = makeHealthService();
     const dataSource = {
-      query: jest.fn().mockRejectedValue(new Error('database offline')),
+      execute: jest.fn().mockRejectedValue(new Error('database offline')),
     };
 
     const result = await Effect.runPromise(
       (service.healthCheck.pipe(
         Effect.provide(
           Layer.mergeAll(
-            Layer.succeed(TypeOrmDataSource, dataSource as any),
+            Layer.succeed(DrizzleDatabase, dataSource as any),
             Layer.succeed(BetterAuth, {
               auth: {} as any,
               api: {} as any,

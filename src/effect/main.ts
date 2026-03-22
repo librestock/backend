@@ -23,10 +23,10 @@ import { UsersService } from './modules/users/service';
 import { auditLayer } from './platform/audit';
 import { BetterAuth, betterAuthLayer } from './platform/better-auth';
 import {
-  TypeOrmDataSource,
-  TypeOrmInitializationError,
-  typeOrmLayer,
-} from './platform/typeorm';
+  DrizzleDatabase,
+  DrizzleInitializationError,
+  drizzleLayer,
+} from './platform/drizzle';
 
 const VALID_NODE_ENVS = ['development', 'staging', 'production'] as const;
 const nodeEnv = process.env.NODE_ENV ?? 'development';
@@ -40,7 +40,7 @@ const isProduction = nodeEnv === 'production';
 
 const port = Number(process.env.PORT ?? 8080);
 
-const platformLayer = Layer.mergeAll(typeOrmLayer, betterAuthLayer);
+const platformLayer = Layer.mergeAll(drizzleLayer, betterAuthLayer);
 
 // Phase 1 layers
 const rolesApplicationLayer = RolesService.Default.pipe(
@@ -64,7 +64,7 @@ const betterAuthMigrationLayer = Layer.effectDiscard(
       return;
     }
 
-    yield* TypeOrmDataSource;
+    yield* DrizzleDatabase;
     const betterAuth = yield* BetterAuth;
     yield* Effect.tryPromise({
       try: async () => {
@@ -72,7 +72,7 @@ const betterAuthMigrationLayer = Layer.effectDiscard(
         await ctx.runMigrations();
       },
       catch: (cause) =>
-        new TypeOrmInitializationError({
+        new DrizzleInitializationError({
           message: 'Failed to run Better Auth migrations',
           cause,
         }),
@@ -173,7 +173,7 @@ BunRuntime.runMain(
     Effect.provide(applicationLayer),
   ) as Effect.Effect<
     never,
-    RolesInfrastructureError | TypeOrmInitializationError,
+    RolesInfrastructureError | DrizzleInitializationError,
     never
   >,
 );

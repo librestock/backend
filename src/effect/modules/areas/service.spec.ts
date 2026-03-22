@@ -271,7 +271,7 @@ describe('Effect AreasService', () => {
 
     it('fails with AreaNotFound when area does not exist', async () => {
       const repo = makeMockAreasRepository({
-        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
+        delete: jest.fn().mockReturnValue(Effect.succeed(false)),
       });
       const service = await buildService(repo);
 

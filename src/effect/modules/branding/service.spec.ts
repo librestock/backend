@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect';
-import { TypeOrmDataSource } from '../../platform/typeorm';
+import { DrizzleDatabase } from '../../platform/drizzle';
 import { BrandingService } from './service';
 import {
   BRANDING_SETTINGS_ID,
@@ -19,34 +19,34 @@ const makeBrandingEntity = (overrides: Record<string, any> = {}) => ({
   ...overrides,
 });
 
-const makeMockRepository = (overrides: Record<string, jest.Mock> = {}) => ({
-  findOne: jest.fn().mockResolvedValue(makeBrandingEntity()),
-  findOneOrFail: jest.fn().mockResolvedValue(makeBrandingEntity()),
-  upsert: jest.fn().mockResolvedValue(undefined),
-  ...overrides,
-});
+const createChainableMock = (resolveValue: any) => {
+  const chain: any = {};
+  const methods = ['select', 'from', 'where', 'limit', 'insert', 'values', 'onConflictDoUpdate', 'orderBy', 'offset'];
+  for (const method of methods) {
+    chain[method] = jest.fn().mockReturnValue(chain);
+  }
+  chain.then = (resolve: any) => resolve(resolveValue);
+  return chain;
+};
 
-const buildService = (repoMock = makeMockRepository()) => {
-  const dataSource = {
-    getRepository: jest.fn().mockReturnValue(repoMock),
-  } as any;
-
-  return Effect.runPromise(
+const buildService = (mockDb: any) =>
+  Effect.runPromise(
     BrandingService.pipe(
       Effect.provide(
         BrandingService.Default.pipe(
-          Layer.provide(Layer.succeed(TypeOrmDataSource, dataSource)),
+          Layer.provide(Layer.succeed(DrizzleDatabase, mockDb)),
         ),
       ),
     ),
   );
-};
 
 const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runPromise(effect);
 
 describe('Effect BrandingService', () => {
   it('returns stored branding settings', async () => {
-    const service = await buildService();
+    const entity = makeBrandingEntity();
+    const mockDb = createChainableMock([entity]);
+    const service = await buildService(mockDb);
     const result = await run(service.get());
 
     expect(result).toMatchObject({
@@ -58,10 +58,8 @@ describe('Effect BrandingService', () => {
   });
 
   it('returns default branding when no record exists', async () => {
-    const repo = makeMockRepository({
-      findOne: jest.fn().mockResolvedValue(null),
-    } as any);
-    const service = await buildService(repo);
+    const mockDb = createChainableMock([]);
+    const service = await buildService(mockDb);
     const result = await run(service.get());
 
     expect(result).toMatchObject({
@@ -71,21 +69,29 @@ describe('Effect BrandingService', () => {
   });
 
   it('upserts and reloads on update', async () => {
-    const repo = makeMockRepository();
-    const service = await buildService(repo);
+    const entity = makeBrandingEntity();
+    // The mock db needs to handle both insert chain and select chain.
+    // Since the service calls insert().values().onConflictDoUpdate() then
+    // select().from().where().limit(), we create a mock that resolves
+    // to undefined for insert and to [entity] for select.
+    const selectChain = createChainableMock([entity]);
+    const insertChain = createChainableMock(undefined);
 
+    const mockDb: any = {
+      select: jest.fn().mockImplementation(() => {
+        return selectChain;
+      }),
+      insert: jest.fn().mockReturnValue(insertChain),
+    };
+
+    const service = await buildService(mockDb);
     const result = await run(
       service.update({ app_name: 'NewName' }, 'user-1'),
     );
 
-    expect(repo.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: BRANDING_SETTINGS_ID,
-        app_name: 'NewName',
-        updated_by: 'user-1',
-      }),
-      ['id'],
-    );
+    expect(mockDb.insert).toHaveBeenCalled();
+    expect(insertChain.values).toHaveBeenCalled();
+    expect(insertChain.onConflictDoUpdate).toHaveBeenCalled();
     expect(result).toMatchObject({ app_name: 'TestApp' }); // returns reloaded entity
   });
 });

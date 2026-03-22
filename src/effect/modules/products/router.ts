@@ -39,7 +39,6 @@ const PermanentQuery = Schema.Struct({
 });
 
 export const productsRouter = HttpRouter.empty.pipe(
-  // Static GET paths first
   HttpRouter.get(
     '/all',
     Effect.gen(function* () {
@@ -62,7 +61,6 @@ export const productsRouter = HttpRouter.empty.pipe(
       return yield* respondJson(productsService.findAllPaginated(query));
     }),
   ),
-  // Bulk POST before parametric
   HttpRouter.post(
     '/bulk',
     Effect.gen(function* () {
@@ -84,7 +82,6 @@ export const productsRouter = HttpRouter.empty.pipe(
       return yield* respondJson(Effect.succeed(result), { status: 201 });
     }),
   ),
-  // Category paths before parametric :id
   HttpRouter.get(
     '/category/:categoryId/tree',
     Effect.gen(function* () {
@@ -107,7 +104,6 @@ export const productsRouter = HttpRouter.empty.pipe(
       return yield* respondJson(productsService.findByCategory(categoryId));
     }),
   ),
-  // Single POST
   HttpRouter.post(
     '/',
     Effect.gen(function* () {
@@ -126,7 +122,6 @@ export const productsRouter = HttpRouter.empty.pipe(
       return yield* respondJson(Effect.succeed(result), { status: 201 });
     }),
   ),
-  // PATCH bulk paths before parametric
   HttpRouter.patch(
     '/bulk/status',
     Effect.gen(function* () {
@@ -166,7 +161,6 @@ export const productsRouter = HttpRouter.empty.pipe(
       return yield* respondJson(Effect.succeed(result));
     }),
   ),
-  // DELETE bulk before parametric
   HttpRouter.del(
     '/bulk',
     Effect.gen(function* () {
@@ -187,7 +181,6 @@ export const productsRouter = HttpRouter.empty.pipe(
       return yield* respondJson(Effect.succeed(result));
     }),
   ),
-  // Parametric paths
   HttpRouter.get(
     '/:id',
     Effect.gen(function* () {

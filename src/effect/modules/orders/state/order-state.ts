@@ -1,5 +1,7 @@
 import { OrderStatus } from '@librestock/types/orders';
-import { type Order } from '../entities/order.entity';
+import type { orders } from '../../../platform/db/schema';
+
+type Order = typeof orders.$inferSelect;
 
 export abstract class OrderState {
   abstract readonly status: OrderStatus;

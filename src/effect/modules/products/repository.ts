@@ -1,11 +1,12 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
+import { eq, and, ilike, or, gte, lte, isNull, isNotNull, inArray, sql, type SQL } from 'drizzle-orm';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
-} from '../../platform/query-spec.utils';
-import { TypeOrmDataSource } from '../../platform/typeorm';
-import { Product } from './entities/product.entity';
+} from '../../platform/drizzle-query.utils';
+import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
+import { products, categories, suppliers } from '../../platform/db/schema';
 import type { ProductQuerySchema } from './products.schema';
 import { ProductsInfrastructureError } from './products.errors';
 
@@ -22,12 +23,37 @@ const tryAsync = <A>(action: string, run: () => Promise<A>) =>
       }),
   });
 
+interface ProductJoinRow {
+  product: typeof products.$inferSelect;
+  category: typeof categories.$inferSelect | null;
+  supplier: typeof suppliers.$inferSelect | null;
+}
+
+function selectProductWithJoins(db: DrizzleDb) {
+  return db
+    .select({
+      product: products,
+      category: categories,
+      supplier: suppliers,
+    })
+    .from(products)
+    .leftJoin(categories, eq(products.category_id, categories.id))
+    .leftJoin(suppliers, eq(products.primary_supplier_id, suppliers.id));
+}
+
+function mapProductRow(row: ProductJoinRow) {
+  return {
+    ...row.product,
+    category: row.category,
+    primary_supplier: row.supplier,
+  };
+}
+
 export class ProductsRepository extends Effect.Service<ProductsRepository>()(
   '@librestock/effect/ProductsRepository',
   {
     effect: Effect.gen(function* () {
-      const dataSource = yield* TypeOrmDataSource;
-      const repository = dataSource.getRepository(Product);
+      const db = yield* DrizzleDatabase;
 
       const findAllPaginated = (query: ProductQueryDto) =>
         tryAsync('list products paginated', async () => {
@@ -35,246 +61,244 @@ export class ProductsRepository extends Effect.Service<ProductsRepository>()(
             query.page,
             query.limit,
           );
-          const qb = repository.createQueryBuilder('product');
+
+          const conditions: SQL[] = [];
 
           if (!query.include_deleted) {
-            qb.where('product.deleted_at IS NULL');
+            conditions.push(isNull(products.deleted_at));
           }
-
           if (query.search) {
-            qb.andWhere(
-              '(product.name ILIKE :search OR product.sku ILIKE :search)',
-              {
-                search: `%${query.search}%`,
-              },
+            conditions.push(
+              or(
+                ilike(products.name, `%${query.search}%`),
+                ilike(products.sku, `%${query.search}%`),
+              )!,
             );
           }
           if (query.category_id) {
-            qb.andWhere('product.category_id = :category_id', {
-              category_id: query.category_id,
-            });
+            conditions.push(eq(products.category_id, query.category_id));
           }
           if (query.primary_supplier_id) {
-            qb.andWhere('product.primary_supplier_id = :primary_supplier_id', {
-              primary_supplier_id: query.primary_supplier_id,
-            });
+            conditions.push(eq(products.primary_supplier_id, query.primary_supplier_id));
           }
           if (query.is_active !== undefined) {
-            qb.andWhere('product.is_active = :is_active', {
-              is_active: query.is_active,
-            });
+            conditions.push(eq(products.is_active, query.is_active));
           }
           if (query.is_perishable !== undefined) {
-            qb.andWhere('product.is_perishable = :is_perishable', {
-              is_perishable: query.is_perishable,
-            });
+            conditions.push(eq(products.is_perishable, query.is_perishable));
           }
           if (query.min_price !== undefined && query.max_price !== undefined) {
-            qb.andWhere(
-              'product.standard_price BETWEEN :min_price AND :max_price',
-              {
-                min_price: query.min_price,
-                max_price: query.max_price,
-              },
+            conditions.push(
+              sql`${products.standard_price} BETWEEN ${query.min_price} AND ${query.max_price}`,
             );
           } else if (query.min_price !== undefined) {
-            qb.andWhere('product.standard_price >= :min_price', {
-              min_price: query.min_price,
-            });
+            conditions.push(gte(products.standard_price, query.min_price));
           } else if (query.max_price !== undefined) {
-            qb.andWhere('product.standard_price <= :max_price', {
-              max_price: query.max_price,
-            });
+            conditions.push(lte(products.standard_price, query.max_price));
           }
 
-          qb.leftJoinAndSelect(
-            'product.category',
-            'category',
-          ).leftJoinAndSelect('product.primary_supplier', 'supplier');
+          const where = conditions.length > 0 ? and(...conditions) : undefined;
+          const orderBy = sql.raw(`products."${query.sort_by}" ${query.sort_order}`);
 
-          qb.orderBy(`product.${query.sort_by}`, query.sort_order);
+          const [countResult] = await db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(products)
+            .where(where);
 
-          const total = await qb.getCount();
-          const data = await qb.skip(skip).take(limit).getMany();
-          return toRepositoryPaginatedResult(data, total, page, limit);
+          const total = countResult?.count ?? 0;
+
+          const rows = await selectProductWithJoins(db)
+            .where(where)
+            .orderBy(orderBy)
+            .offset(skip)
+            .limit(limit);
+
+          return toRepositoryPaginatedResult(rows.map(mapProductRow), total, page, limit);
         });
 
       const findAll = (includeDeleted = false) =>
         tryAsync('list all products', async () => {
-          const qb = repository
-            .createQueryBuilder('product')
-            .leftJoinAndSelect('product.category', 'category')
-            .leftJoinAndSelect('product.primary_supplier', 'supplier')
-            .orderBy('product.name', 'ASC');
-          if (!includeDeleted) {
-            qb.where('product.deleted_at IS NULL');
-          }
-          return qb.getMany();
+          const where = includeDeleted ? undefined : isNull(products.deleted_at);
+          const rows = await selectProductWithJoins(db)
+            .where(where)
+            .orderBy(sql`products."name" ASC`);
+          return rows.map(mapProductRow);
         });
 
       const findById = (id: string, includeDeleted = false) =>
         tryAsync('find product by id', async () => {
-          const qb = repository
-            .createQueryBuilder('product')
-            .leftJoinAndSelect('product.category', 'category')
-            .leftJoinAndSelect('product.primary_supplier', 'supplier')
-            .where('product.id = :id', { id });
+          const conditions: SQL[] = [eq(products.id, id)];
           if (!includeDeleted) {
-            qb.andWhere('product.deleted_at IS NULL');
+            conditions.push(isNull(products.deleted_at));
           }
-          return qb.getOne();
+          const rows = await selectProductWithJoins(db)
+            .where(and(...conditions))
+            .limit(1);
+          return rows[0] ? mapProductRow(rows[0]) : null;
         });
 
       const findBySku = (sku: string, includeDeleted = false) =>
         tryAsync('find product by sku', async () => {
-          const qb = repository
-            .createQueryBuilder('product')
-            .where('product.sku = :sku', { sku });
+          const conditions: SQL[] = [eq(products.sku, sku)];
           if (!includeDeleted) {
-            qb.andWhere('product.deleted_at IS NULL');
+            conditions.push(isNull(products.deleted_at));
           }
-          return qb.getOne();
+          const rows = await db
+            .select()
+            .from(products)
+            .where(and(...conditions))
+            .limit(1);
+          return rows[0] ?? null;
         });
 
       const findByCategoryId = (categoryId: string) =>
         tryAsync('find products by category', async () => {
-          return repository
-            .createQueryBuilder('product')
-            .leftJoinAndSelect('product.category', 'category')
-            .leftJoinAndSelect('product.primary_supplier', 'supplier')
-            .where('product.category_id = :categoryId', { categoryId })
-            .andWhere('product.deleted_at IS NULL')
-            .orderBy('product.name', 'ASC')
-            .getMany();
+          const rows = await selectProductWithJoins(db)
+            .where(
+              and(
+                eq(products.category_id, categoryId),
+                isNull(products.deleted_at),
+              ),
+            )
+            .orderBy(sql`products."name" ASC`);
+          return rows.map(mapProductRow);
         });
 
       const findByCategoryIds = (categoryIds: string[]) =>
         tryAsync('find products by categories', async () => {
-          return repository
-            .createQueryBuilder('product')
-            .leftJoinAndSelect('product.category', 'category')
-            .leftJoinAndSelect('product.primary_supplier', 'supplier')
-            .where('product.category_id IN (:...categoryIds)', { categoryIds })
-            .andWhere('product.deleted_at IS NULL')
-            .orderBy('product.name', 'ASC')
-            .getMany();
+          const rows = await selectProductWithJoins(db)
+            .where(
+              and(
+                inArray(products.category_id, categoryIds),
+                isNull(products.deleted_at),
+              ),
+            )
+            .orderBy(sql`products."name" ASC`);
+          return rows.map(mapProductRow);
         });
 
       const findByIds = (ids: string[], includeDeleted = false) =>
         tryAsync('find products by ids', async () => {
-          const qb = repository
-            .createQueryBuilder('product')
-            .where('product.id IN (:...ids)', { ids });
+          const conditions: SQL[] = [inArray(products.id, ids)];
           if (!includeDeleted) {
-            qb.andWhere('product.deleted_at IS NULL');
+            conditions.push(isNull(products.deleted_at));
           }
-          return qb.getMany();
+          return db
+            .select()
+            .from(products)
+            .where(and(...conditions));
         });
 
       const findDeletedByIds = (ids: string[]) =>
-        tryAsync('find deleted products by ids', async () => {
-          return repository
-            .createQueryBuilder('product')
-            .where('product.id IN (:...ids)', { ids })
-            .andWhere('product.deleted_at IS NOT NULL')
-            .getMany();
-        });
+        tryAsync('find deleted products by ids', () =>
+          db
+            .select()
+            .from(products)
+            .where(
+              and(inArray(products.id, ids), isNotNull(products.deleted_at)),
+            ),
+        );
 
       const existsById = (id: string) =>
         tryAsync('check product existence', async () => {
-          const count = await repository
-            .createQueryBuilder('product')
-            .where('product.id = :id', { id })
-            .andWhere('product.deleted_at IS NULL')
-            .getCount();
-          return count > 0;
+          const rows = await db
+            .select({ id: products.id })
+            .from(products)
+            .where(and(eq(products.id, id), isNull(products.deleted_at)))
+            .limit(1);
+          return rows.length > 0;
         });
 
-      const create = (data: Partial<Product>) =>
+      const create = (data: typeof products.$inferInsert) =>
         tryAsync('create product', async () => {
-          const product = repository.create(data);
-          return repository.save(product);
+          const rows = await db.insert(products).values(data).returning();
+          return rows[0]!;
         });
 
-      const update = (id: string, data: Partial<Product>) =>
+      const update = (id: string, data: Partial<typeof products.$inferInsert>) =>
         tryAsync('update product', async () => {
-          const result = await repository
-            .createQueryBuilder()
-            .update(Product)
-            .set(data)
-            .where('id = :id', { id })
-            .andWhere('deleted_at IS NULL')
-            .execute();
-          return result.affected ?? 0;
+          const rows = await db
+            .update(products)
+            .set({ ...data, updated_at: new Date() })
+            .where(and(eq(products.id, id), isNull(products.deleted_at)))
+            .returning({ id: products.id });
+          return rows.length;
         });
 
-      const updateMany = (ids: string[], data: Partial<Product>) =>
+      const updateMany = (ids: string[], data: Partial<typeof products.$inferInsert>) =>
         tryAsync('update multiple products', async () => {
-          const result = await repository
-            .createQueryBuilder()
-            .update(Product)
-            .set(data)
-            .where('id IN (:...ids)', { ids })
-            .andWhere('deleted_at IS NULL')
-            .execute();
-          return result.affected ?? 0;
+          const rows = await db
+            .update(products)
+            .set({ ...data, updated_at: new Date() })
+            .where(and(inArray(products.id, ids), isNull(products.deleted_at)))
+            .returning({ id: products.id });
+          return rows.length;
         });
 
       const softDelete = (id: string, deletedBy?: string) =>
         tryAsync('soft delete product', async () => {
-          await repository
-            .createQueryBuilder()
-            .update(Product)
-            .set({ deleted_at: new Date(), deleted_by: deletedBy ?? null })
-            .where('id = :id', { id })
-            .andWhere('deleted_at IS NULL')
-            .execute();
+          await db
+            .update(products)
+            .set({
+              deleted_at: new Date(),
+              deleted_by: deletedBy ?? null,
+              updated_at: new Date(),
+            })
+            .where(and(eq(products.id, id), isNull(products.deleted_at)));
         });
 
       const softDeleteMany = (ids: string[], deletedBy?: string) =>
         tryAsync('soft delete multiple products', async () => {
-          const result = await repository
-            .createQueryBuilder()
-            .update(Product)
-            .set({ deleted_at: new Date(), deleted_by: deletedBy ?? null })
-            .where('id IN (:...ids)', { ids })
-            .andWhere('deleted_at IS NULL')
-            .execute();
-          return result.affected ?? 0;
+          const rows = await db
+            .update(products)
+            .set({
+              deleted_at: new Date(),
+              deleted_by: deletedBy ?? null,
+              updated_at: new Date(),
+            })
+            .where(and(inArray(products.id, ids), isNull(products.deleted_at)))
+            .returning({ id: products.id });
+          return rows.length;
         });
 
       const restore = (id: string) =>
         tryAsync('restore product', async () => {
-          await repository
-            .createQueryBuilder()
-            .update(Product)
-            .set({ deleted_at: null, deleted_by: null })
-            .where('id = :id', { id })
-            .andWhere('deleted_at IS NOT NULL')
-            .execute();
+          await db
+            .update(products)
+            .set({
+              deleted_at: null,
+              deleted_by: null,
+              updated_at: new Date(),
+            })
+            .where(and(eq(products.id, id), isNotNull(products.deleted_at)));
         });
 
       const restoreMany = (ids: string[]) =>
         tryAsync('restore multiple products', async () => {
-          const result = await repository
-            .createQueryBuilder()
-            .update(Product)
-            .set({ deleted_at: null, deleted_by: null })
-            .where('id IN (:...ids)', { ids })
-            .andWhere('deleted_at IS NOT NULL')
-            .execute();
-          return result.affected ?? 0;
+          const rows = await db
+            .update(products)
+            .set({
+              deleted_at: null,
+              deleted_by: null,
+              updated_at: new Date(),
+            })
+            .where(and(inArray(products.id, ids), isNotNull(products.deleted_at)))
+            .returning({ id: products.id });
+          return rows.length;
         });
 
       const hardDelete = (id: string) =>
         tryAsync('hard delete product', async () => {
-          await repository.delete(id);
+          await db.delete(products).where(eq(products.id, id));
         });
 
       const hardDeleteMany = (ids: string[]) =>
         tryAsync('hard delete multiple products', async () => {
-          const result = await repository.delete(ids);
-          return result.affected ?? 0;
+          const rows = await db
+            .delete(products)
+            .where(inArray(products.id, ids))
+            .returning({ id: products.id });
+          return rows.length;
         });
 
       return {

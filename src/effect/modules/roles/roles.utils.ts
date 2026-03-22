@@ -1,8 +1,15 @@
 import { type Permission, type Resource } from '@librestock/types/auth';
 import type { RoleResponseDto } from '@librestock/types/roles';
-import type { RoleEntity } from './entities/role.entity';
+import type { roles, rolePermissions } from '../../platform/db/schema';
 
-export function toRoleResponseDto(entity: RoleEntity): RoleResponseDto {
+type RoleRow = typeof roles.$inferSelect;
+type RolePermissionRow = typeof rolePermissions.$inferSelect;
+
+export interface RoleWithPermissions extends RoleRow {
+  permissions: RolePermissionRow[];
+}
+
+export function toRoleResponseDto(entity: RoleWithPermissions): RoleResponseDto {
   return {
     id: entity.id,
     name: entity.name,

@@ -1,5 +1,7 @@
 import type { PhotoResponseDto } from '@librestock/types/photos';
-import type { Photo } from './entities/photo.entity';
+import type { photos } from '../../platform/db/schema';
+
+type Photo = typeof photos.$inferSelect;
 
 export function toPhotoResponseDto(photo: Photo): PhotoResponseDto {
   return {

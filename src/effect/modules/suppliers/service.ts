@@ -2,6 +2,7 @@ import { Effect } from 'effect';
 import type { Schema } from 'effect';
 import type { SupplierQueryDto } from '@librestock/types/suppliers';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
+import type { suppliers } from '../../platform/db/schema';
 import type {
   CreateSupplierSchema,
   UpdateSupplierSchema,
@@ -11,8 +12,9 @@ import {
   SupplierNotFound,
   type SuppliersInfrastructureError,
 } from './suppliers.errors';
-import type { Supplier } from './entities/supplier.entity';
 import { SuppliersRepository } from './repository';
+
+type Supplier = typeof suppliers.$inferSelect;
 
 type CreateSupplierDto = Schema.Schema.Type<typeof CreateSupplierSchema>;
 type UpdateSupplierDto = Schema.Schema.Type<typeof UpdateSupplierSchema>;

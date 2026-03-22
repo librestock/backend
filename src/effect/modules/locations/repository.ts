@@ -1,14 +1,13 @@
 import { Effect } from 'effect';
+import { eq, ilike, sql, and, type SQL } from 'drizzle-orm';
 import type { LocationQueryDto, LocationSortField } from '@librestock/types/locations';
 import type { SortOrder } from '@librestock/types/common';
 import {
-  applyQuerySpecs,
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
-  type QuerySpec,
-} from '../../platform/query-spec.utils';
-import { TypeOrmDataSource } from '../../platform/typeorm';
-import { Location } from './entities/location.entity';
+} from '../../platform/drizzle-query.utils';
+import { DrizzleDatabase } from '../../platform/drizzle';
+import { locations } from '../../platform/db/schema';
 import { LocationsInfrastructureError } from './locations.errors';
 
 const tryAsync = <A>(action: string, run: () => Promise<A>) =>
@@ -22,103 +21,101 @@ const tryAsync = <A>(action: string, run: () => Promise<A>) =>
       }),
   });
 
-const locationFilterSpec: QuerySpec<Location, LocationQueryDto> = (
-  queryBuilder,
-  query,
-) => {
+function buildLocationFilters(query: LocationQueryDto): SQL[] {
+  const conditions: SQL[] = [];
   if (query.search) {
-    queryBuilder.andWhere('location.name ILIKE :search', {
-      search: `%${query.search}%`,
-    });
+    conditions.push(ilike(locations.name, `%${query.search}%`));
   }
-
   if (query.type) {
-    queryBuilder.andWhere('location.type = :type', { type: query.type });
+    conditions.push(eq(locations.type, query.type));
   }
-
   if (query.is_active !== undefined) {
-    queryBuilder.andWhere('location.is_active = :is_active', {
-      is_active: query.is_active,
-    });
+    conditions.push(eq(locations.is_active, query.is_active));
   }
-};
+  return conditions;
+}
 
-const locationSortSpec: QuerySpec<Location, LocationQueryDto> = (
-  queryBuilder,
-  query,
-) => {
-  const sortBy = query.sort_by ?? ('name' as LocationSortField);
-  const sortOrder = query.sort_order ?? ('ASC' as SortOrder);
-  queryBuilder.orderBy(`location.${sortBy}`, sortOrder);
-};
+function getLocationOrderBy(sortBy?: LocationSortField, sortOrder?: SortOrder) {
+  const col = sortBy ?? 'name';
+  const dir = sortOrder ?? 'ASC';
+  return sql.raw(`"${col}" ${dir}`);
+}
 
 export class LocationsRepository extends Effect.Service<LocationsRepository>()(
   '@librestock/effect/LocationsRepository',
   {
     effect: Effect.gen(function* () {
-      const dataSource = yield* TypeOrmDataSource;
-      const repo = dataSource.getRepository(Location);
+      const db = yield* DrizzleDatabase;
 
       const findAllPaginated = (query: LocationQueryDto) =>
         tryAsync('list locations', async () => {
           const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
-          const queryBuilder = applyQuerySpecs(
-            repo.createQueryBuilder('location'),
-            query,
-            [locationFilterSpec, locationSortSpec],
-          );
+          const conditions = buildLocationFilters(query);
+          const where = conditions.length > 0 ? and(...conditions) : undefined;
+          const orderBy = getLocationOrderBy(query.sort_by, query.sort_order);
 
-          const total = await queryBuilder.getCount();
-          const data = await queryBuilder.skip(skip).take(limit).getMany();
+          const [countResult, data] = await Promise.all([
+            db.select({ count: sql<number>`count(*)::int` }).from(locations).where(where),
+            db
+              .select()
+              .from(locations)
+              .where(where)
+              .orderBy(orderBy)
+              .offset(skip)
+              .limit(limit),
+          ]);
 
+          const total = countResult[0]?.count ?? 0;
           return toRepositoryPaginatedResult(data, total, page, limit);
         });
 
       const findAll = () =>
         tryAsync('list all locations', () =>
-          repo
-            .createQueryBuilder('location')
-            .orderBy('location.name', 'ASC')
-            .getMany(),
+          db
+            .select()
+            .from(locations)
+            .orderBy(sql`"name" ASC`),
         );
 
       const findById = (id: string) =>
-        tryAsync('load location', () =>
-          repo
-            .createQueryBuilder('location')
-            .where('location.id = :id', { id })
-            .getOne(),
-        );
+        tryAsync('load location', async () => {
+          const rows = await db
+            .select()
+            .from(locations)
+            .where(eq(locations.id, id))
+            .limit(1);
+          return rows[0] ?? null;
+        });
 
       const existsById = (id: string) =>
         tryAsync('check location existence', async () => {
-          const count = await repo
-            .createQueryBuilder('location')
-            .where('location.id = :id', { id })
-            .getCount();
-          return count > 0;
+          const rows = await db
+            .select({ id: locations.id })
+            .from(locations)
+            .where(eq(locations.id, id))
+            .limit(1);
+          return rows.length > 0;
         });
 
-      const create = (data: Partial<Location>) =>
+      const create = (data: typeof locations.$inferInsert) =>
         tryAsync('create location', async () => {
-          const location = repo.create(data);
-          return repo.save(location);
+          const rows = await db.insert(locations).values(data).returning();
+          return rows[0]!;
         });
 
-      const update = (id: string, data: Partial<Location>) =>
+      const update = (id: string, data: Partial<typeof locations.$inferInsert>) =>
         tryAsync('update location', async () => {
-          const result = await repo
-            .createQueryBuilder()
-            .update(Location)
-            .set(data)
-            .where('id = :id', { id })
-            .execute();
-          return result.affected ?? 0;
+          const rows = await db
+            .update(locations)
+            .set({ ...data, updated_at: new Date() })
+            .where(eq(locations.id, id))
+            .returning({ id: locations.id });
+          return rows.length;
         });
 
       const remove = (id: string) =>
         tryAsync('delete location', async () => {
-          await repo.delete(id);
+          await db.delete(locations).where(eq(locations.id, id));
         });
 
       return {

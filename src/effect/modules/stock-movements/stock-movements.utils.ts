@@ -1,7 +1,14 @@
 import { Effect } from 'effect';
 import type { StockMovementResponseDto } from '@librestock/types/stock-movements';
-import type { StockMovement } from './entities/stock-movement.entity';
+import type { stockMovements } from '../../platform/db/schema';
 import { StockMovementsInfrastructureError } from './stock-movements.errors';
+
+type StockMovementRow = typeof stockMovements.$inferSelect;
+type StockMovement = StockMovementRow & {
+  product?: { id: string; name: string; sku: string } | null;
+  fromLocation?: { id: string; name: string } | null;
+  toLocation?: { id: string; name: string } | null;
+};
 
 export const stockMovementTryAsync = <A>(
   action: string,

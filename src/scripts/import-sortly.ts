@@ -1,14 +1,12 @@
 import * as fs from 'node:fs';
-import { DataSource, type DataSourceOptions } from 'typeorm';
 import { config } from 'dotenv';
 import { parse } from 'csv-parse/sync';
+import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { eq, and } from 'drizzle-orm';
+import pg from 'pg';
 import { StockMovementReason } from '@librestock/types/stock-movements';
 import { LocationType } from '@librestock/types/locations';
-import { Category } from '../effect/modules/categories/entities/category.entity';
-import { Product } from '../effect/modules/products/entities/product.entity';
-import { Location } from '../effect/modules/locations/entities/location.entity';
-import { Inventory } from '../effect/modules/inventory/entities/inventory.entity';
-import { StockMovement } from '../effect/modules/stock-movements/entities/stock-movement.entity';
+import { categories, products, locations, inventory, stockMovements } from '../effect/platform/db/schema';
 
 config();
 
@@ -51,28 +49,19 @@ interface ImportStats {
   errors: { row: number; error: string }[];
 }
 
-async function createDataSource(): Promise<DataSource> {
-  const dataSourceConfig: DataSourceOptions = process.env.DATABASE_URL
-    ? {
-        type: 'postgres',
-        entities: [Category, Product, Location, Inventory, StockMovement],
-        synchronize: false,
-        url: process.env.DATABASE_URL,
-      }
-    : {
-        type: 'postgres',
-        entities: [Category, Product, Location, Inventory, StockMovement],
-        synchronize: false,
-        host: process.env.PGHOST ?? 'localhost',
-        port: Number.parseInt(process.env.PGPORT ?? '5432'),
-        username: process.env.PGUSER,
-        password: process.env.PGPASSWORD,
-        database: process.env.PGDATABASE ?? 'librestock_inventory',
-      };
-
-  const dataSource = new DataSource(dataSourceConfig);
-  await dataSource.initialize();
-  return dataSource;
+async function createDatabase(): Promise<NodePgDatabase> {
+  const pool = new pg.Pool(
+    process.env.DATABASE_URL
+      ? { connectionString: process.env.DATABASE_URL }
+      : {
+          host: process.env.PGHOST ?? 'localhost',
+          port: Number.parseInt(process.env.PGPORT ?? '5432'),
+          user: process.env.PGUSER,
+          password: process.env.PGPASSWORD,
+          database: process.env.PGDATABASE ?? 'librestock_inventory',
+        },
+  );
+  return drizzle(pool);
 }
 
 function parseDate(dateStr: string): Date | null {
@@ -134,7 +123,7 @@ function mapTransactionTypeToReason(
 }
 
 async function getOrCreateCategory(
-  dataSource: DataSource,
+  db: NodePgDatabase,
   folderName: string,
   categoryCache: Map<string, string>,
 ): Promise<string | null> {
@@ -143,18 +132,15 @@ async function getOrCreateCategory(
     return categoryCache.get(folderName)!;
   }
 
-  const categoryRepo = dataSource.getRepository(Category);
-
-  // Check if category exists
-  let category = await categoryRepo.findOne({ where: { name: folderName } });
+  const rows = await db.select().from(categories).where(eq(categories.name, folderName)).limit(1);
+  let category = rows[0] ?? null;
 
   if (!category) {
-    // Create new category
-    category = categoryRepo.create({
+    const [created] = await db.insert(categories).values({
       name: folderName,
       description: `Imported from Sortly`,
-    });
-    category = await categoryRepo.save(category);
+    }).returning();
+    category = created!;
     console.log(`  ✓ Created category: ${folderName}`);
   }
 
@@ -163,7 +149,7 @@ async function getOrCreateCategory(
 }
 
 async function getOrCreateLocation(
-  dataSource: DataSource,
+  db: NodePgDatabase,
   locationName: string,
   locationCache: Map<string, string>,
 ): Promise<string | null> {
@@ -172,19 +158,16 @@ async function getOrCreateLocation(
     return locationCache.get(locationName)!;
   }
 
-  const locationRepo = dataSource.getRepository(Location);
-
-  // Check if location exists
-  let location = await locationRepo.findOne({ where: { name: locationName } });
+  const rows = await db.select().from(locations).where(eq(locations.name, locationName)).limit(1);
+  let location = rows[0] ?? null;
 
   if (!location) {
-    // Create new location
-    location = locationRepo.create({
+    const [created] = await db.insert(locations).values({
       name: locationName,
       type: LocationType.WAREHOUSE,
       is_active: true,
-    });
-    location = await locationRepo.save(location);
+    }).returning();
+    location = created!;
     console.log(`  ✓ Created location: ${locationName}`);
   }
 
@@ -193,7 +176,7 @@ async function getOrCreateLocation(
 }
 
 async function importSortlyData(
-  dataSource: DataSource,
+  db: NodePgDatabase,
   csvFilePath: string,
 ): Promise<ImportStats> {
   const stats: ImportStats = {
@@ -222,10 +205,6 @@ async function importSortlyData(
   const locationCache = new Map<string, string>();
   const productCache = new Map<string, string>(); // SID -> Product ID
   const inventoryCache = new Map<string, string>(); // product_id:location_id -> Inventory ID
-
-  const productRepo = dataSource.getRepository(Product);
-  const stockMovementRepo = dataSource.getRepository(StockMovement);
-  const inventoryRepo = dataSource.getRepository(Inventory);
 
   // Process records in order (chronological)
   for (let i = 0; i < records.length; i++) {
@@ -256,14 +235,14 @@ async function importSortlyData(
 
       // Get or create category
       const categoryId = await getOrCreateCategory(
-        dataSource,
+        db,
         folderName,
         categoryCache,
       );
 
       // Get or create location
       const locationId = locationName
-        ? await getOrCreateLocation(dataSource, locationName, locationCache)
+        ? await getOrCreateLocation(db, locationName, locationCache)
         : null;
 
       // Check if product exists
@@ -271,9 +250,8 @@ async function importSortlyData(
 
       if (!productId) {
         // Try to find existing product by SKU (using Sortly ID as SKU)
-        let product = await productRepo.findOne({
-          where: { sku: sortlyId },
-        });
+        const rows = await db.select().from(products).where(eq(products.sku, sortlyId)).limit(1);
+        let product = rows[0] ?? null;
 
         if (!product) {
           // Create product on first transaction (usually "Create" type)
@@ -288,7 +266,7 @@ async function importSortlyData(
 
           const price = Number.parseFloat(record.Price) || null;
 
-          product = productRepo.create({
+          const [created] = await db.insert(products).values({
             sku: sortlyId,
             name: entryName,
             description: record.Notes || null,
@@ -301,9 +279,8 @@ async function importSortlyData(
             is_perishable: !!expiryDate,
             created_by: IMPORT_USER_ID,
             updated_by: IMPORT_USER_ID,
-          });
-
-          product = await productRepo.save(product);
+          }).returning();
+          product = created!;
           stats.productsCreated++;
           console.log(`  ✓ Created product: ${entryName} (${sortlyId})`);
         }
@@ -316,7 +293,7 @@ async function importSortlyData(
       if (quantityDelta !== 0) {
         const reason = mapTransactionTypeToReason(transactionType);
 
-        const stockMovement = stockMovementRepo.create({
+        await db.insert(stockMovements).values({
           product_id: productId,
           from_location_id: quantityDelta < 0 ? locationId : null,
           to_location_id: quantityDelta > 0 ? locationId : null,
@@ -329,8 +306,6 @@ async function importSortlyData(
             `${transactionType} from Sortly import`,
           created_at: transactionDate ?? new Date(),
         });
-
-        await stockMovementRepo.save(stockMovement);
         stats.stockMovementsCreated++;
       }
 
@@ -341,37 +316,37 @@ async function importSortlyData(
 
         if (!inventoryId) {
           // Try to find existing inventory
-          let inventory = await inventoryRepo.findOne({
-            where: {
-              product_id: productId,
-              location_id: locationId,
-            },
-          });
+          const rows = await db.select().from(inventory)
+            .where(and(
+              eq(inventory.product_id, productId),
+              eq(inventory.location_id, locationId),
+            ))
+            .limit(1);
+          const existing = rows[0] ?? null;
 
-          if (!inventory) {
-            inventory = inventoryRepo.create({
+          if (!existing) {
+            const [created] = await db.insert(inventory).values({
               product_id: productId,
               location_id: locationId,
               quantity: newQty,
               expiry_date: expiryDate,
-            });
-            inventory = await inventoryRepo.save(inventory);
+            }).returning();
             stats.inventoryRecordsCreated++;
-            inventoryCache.set(inventoryCacheKey, inventory.id);
+            inventoryCache.set(inventoryCacheKey, created!.id);
           } else {
             // Update quantity
-            inventory.quantity = newQty;
-            if (expiryDate) {
-              inventory.expiry_date = expiryDate;
-            }
-            await inventoryRepo.save(inventory);
+            await db.update(inventory).set({
+              quantity: newQty,
+              ...(expiryDate && { expiry_date: expiryDate }),
+            }).where(eq(inventory.id, existing.id));
+            inventoryCache.set(inventoryCacheKey, existing.id);
           }
         } else {
           // Update existing inventory
-          await inventoryRepo.update(inventoryId, {
+          await db.update(inventory).set({
             quantity: newQty,
             ...(expiryDate && { expiry_date: expiryDate }),
-          });
+          }).where(eq(inventory.id, inventoryId));
         }
       }
 
@@ -413,13 +388,13 @@ async function main() {
     process.exit(1);
   }
 
-  let dataSource: DataSource | null = null;
+  let db: NodePgDatabase | null = null;
 
   try {
-    dataSource = await createDataSource();
+    db = await createDatabase();
     console.log('✅ Database connected\n');
 
-    const stats = await importSortlyData(dataSource, csvFilePath);
+    const stats = await importSortlyData(db, csvFilePath);
 
     console.log('\n🎉 Import completed!\n');
     console.log('Summary:');
@@ -445,8 +420,11 @@ async function main() {
     console.error('\n❌ Import failed:', error);
     process.exit(1);
   } finally {
-    if (dataSource?.isInitialized) {
-      await dataSource.destroy();
+    if (db) {
+      const pool = (db as any)._.session?.client;
+      if (pool?.end) {
+        await pool.end();
+      }
       console.log('\n✅ Database connection closed');
     }
   }

@@ -1,7 +1,14 @@
 import { Effect } from 'effect';
 import type { InventoryResponseDto } from '@librestock/types/inventory';
-import type { Inventory } from './entities/inventory.entity';
+import type { inventory } from '../../platform/db/schema';
 import { InventoryInfrastructureError } from './inventory.errors';
+
+type InventoryRow = typeof inventory.$inferSelect;
+type Inventory = InventoryRow & {
+  product?: { id: string; sku: string; name: string; unit: string | null } | null;
+  location?: { id: string; name: string; type: string } | null;
+  area?: { id: string; name: string; code: string } | null;
+};
 
 export const inventoryTryAsync = <A>(action: string, run: () => Promise<A>) =>
   Effect.tryPromise({
@@ -45,7 +52,7 @@ export function toInventoryResponseDto(
         }
       : null,
     quantity: inventory.quantity,
-    batchNumber: inventory.batchNumber,
+    batchNumber: inventory.batch_number,
     expiry_date: inventory.expiry_date,
     cost_per_unit: inventory.cost_per_unit
       ? Number(inventory.cost_per_unit)

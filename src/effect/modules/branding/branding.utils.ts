@@ -1,6 +1,8 @@
 import type { BrandingResponseDto } from '@librestock/types/branding';
+import type { brandingSettings } from '../../platform/db/schema';
 import { POWERED_BY } from './branding.constants';
-import { type BrandingSettings } from './entities/branding.entity';
+
+type BrandingSettings = typeof brandingSettings.$inferSelect;
 
 export function toBrandingResponse(
   settings: BrandingSettings,

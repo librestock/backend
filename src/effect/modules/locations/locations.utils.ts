@@ -1,5 +1,7 @@
 import type { LocationResponseDto } from '@librestock/types/locations';
-import type { Location } from './entities/location.entity';
+import type { locations } from '../../platform/db/schema';
+
+type Location = typeof locations.$inferSelect;
 
 export function toLocationResponseDto(location: Location): LocationResponseDto {
   return {

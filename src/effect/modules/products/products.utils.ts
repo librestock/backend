@@ -1,7 +1,14 @@
 import { Effect } from 'effect';
 import type { CreateProductDto, ProductResponseDto } from '@librestock/types/products';
-import type { Product } from './entities/product.entity';
+import type { products } from '../../platform/db/schema';
 import { ProductsInfrastructureError } from './products.errors';
+
+export type ProductRow = typeof products.$inferSelect;
+export type ProductInsert = typeof products.$inferInsert;
+type Product = ProductRow & {
+  category?: { id: string; name: string; parent_id: string | null } | null;
+  primary_supplier?: { id: string; name: string } | null;
+};
 
 export function toProductResponseDto(product: Product): ProductResponseDto {
   const dto: ProductResponseDto = {
@@ -59,7 +66,7 @@ export function toProductResponseDtoList(
 export function toCreateProductEntity(
   dto: CreateProductDto,
   userId?: string,
-): Partial<Product> {
+): ProductInsert {
   return {
     sku: dto.sku,
     name: dto.name,

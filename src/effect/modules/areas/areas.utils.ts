@@ -1,5 +1,10 @@
 import type { AreaResponseDto } from '@librestock/types/areas';
-import type { Area } from './entities/area.entity';
+import type { areas } from '../../platform/db/schema';
+
+type AreaRow = typeof areas.$inferSelect;
+type Area = AreaRow & {
+  children?: Area[];
+};
 
 export function toAreaResponseDto(area: Area): AreaResponseDto {
   return {

@@ -10,6 +10,7 @@ import {
   partitionByExistence,
 } from '../../platform/bulk-operation.utils';
 import { CategoriesService } from '../categories/service';
+import type { products } from '../../platform/db/schema';
 import type {
   ProductQuerySchema,
   CreateProductSchema,
@@ -19,7 +20,6 @@ import type {
   BulkDeleteSchema,
   BulkRestoreSchema,
 } from './products.schema';
-import type { Product } from './entities/product.entity';
 import {
   toCreateProductEntity,
   toProductResponseDto,
@@ -34,6 +34,12 @@ import {
   SkuAlreadyExists,
 } from './products.errors';
 import { ProductsRepository } from './repository';
+
+type ProductRow = typeof products.$inferSelect;
+type Product = ProductRow & {
+  category?: { id: string; name: string; parent_id: string | null } | null;
+  primary_supplier?: { id: string; name: string } | null;
+};
 
 type ProductQueryDto = Schema.Schema.Type<typeof ProductQuerySchema>;
 type CreateProductDto = Schema.Schema.Type<typeof CreateProductSchema>;

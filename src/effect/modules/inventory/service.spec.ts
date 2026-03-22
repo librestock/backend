@@ -2,6 +2,7 @@ import { Effect, Layer } from 'effect';
 import { ProductsService } from '../products/service';
 import { LocationsService } from '../locations/service';
 import { AreasService } from '../areas/service';
+import { AreaNotFound } from '../areas/areas.errors';
 import { InventoryRepository } from './repository';
 import { InventoryService } from './service';
 
@@ -240,7 +241,7 @@ describe('Effect InventoryService', () => {
         location_id: 'location-1',
         area_id: 'area-1',
         quantity: 10,
-        batchNumber: 'BATCH-NEW',
+        batch_number: 'BATCH-NEW',
         expiry_date: createDto.expiry_date,
         cost_per_unit: 7.5,
         received_date: createDto.received_date,
@@ -271,12 +272,12 @@ describe('Effect InventoryService', () => {
     it('fails when area does not exist', async () => {
       const areasService = makeMockAreasService({
         findById: jest.fn().mockReturnValue(
-          Effect.fail({
-            _tag: 'AreaNotFound',
-            id: 'area-1',
-            message: 'Area not found',
-            statusCode: 404,
-          }),
+          Effect.fail(
+            new AreaNotFound({
+              id: 'area-1',
+              message: 'Area not found',
+            }),
+          ),
         ),
       });
       const service = await buildService(undefined, undefined, undefined, areasService);

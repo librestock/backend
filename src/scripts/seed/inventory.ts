@@ -1,9 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { LocationType } from '@librestock/types/locations';
-import { type Area } from '../../effect/modules/areas/entities/area.entity';
-import { Inventory } from '../../effect/modules/inventory/entities/inventory.entity';
-import { type Location } from '../../effect/modules/locations/entities/location.entity';
-import { type Product } from '../../effect/modules/products/entities/product.entity';
+import { inventory, type areas, type locations, type products } from '../../effect/platform/db/schema';
 import { SEED_CONFIG } from './config';
 import { buildInventory } from './factories';
 import { registry } from './registry';
@@ -14,22 +11,21 @@ registry.register({
   async run(ctx) {
     console.log('Seeding inventory...');
 
-    const products = ctx.store.get('products') as Product[];
-    const locations = ctx.store.get('locations') as Location[];
-    const areas = ctx.store.get('areas') as Area[];
+    const allProducts = ctx.store.get('products') as (typeof products.$inferSelect)[];
+    const allLocations = ctx.store.get('locations') as (typeof locations.$inferSelect)[];
+    const allAreas = ctx.store.get('areas') as (typeof areas.$inferSelect)[];
 
-    const inventoryRepo = ctx.dataSource.getRepository(Inventory);
-    const inventoryRecords: Inventory[] = [];
+    const inventoryRecords: (typeof inventory.$inferSelect)[] = [];
 
-    const warehouseLocations = locations.filter(
+    const warehouseLocations = allLocations.filter(
       (l) => l.type === LocationType.WAREHOUSE || l.type === LocationType.SUPPLIER,
     );
 
     for (let i = 0; i < SEED_CONFIG.inventoryRecords; i++) {
-      const product = faker.helpers.arrayElement(products);
+      const product = faker.helpers.arrayElement(allProducts);
       const location = faker.helpers.arrayElement(warehouseLocations);
 
-      const locationAreas = areas.filter((a) => a.location_id === location.id);
+      const locationAreas = allAreas.filter((a) => a.location_id === location.id);
       const area =
         locationAreas.length > 0
           ? faker.helpers.maybe(() => faker.helpers.arrayElement(locationAreas), { probability: 0.6 })
@@ -40,8 +36,8 @@ registry.register({
         isPerishable: product.is_perishable,
         standardCost: product.standard_cost,
       });
-      const saved = await inventoryRepo.save(inventoryRepo.create(attrs));
-      inventoryRecords.push(saved);
+      const [saved] = await ctx.db.insert(inventory).values(attrs).returning();
+      inventoryRecords.push(saved!);
 
       if ((i + 1) % 50 === 0) {
         console.log(`  ${i + 1}/${SEED_CONFIG.inventoryRecords} inventory records...`);

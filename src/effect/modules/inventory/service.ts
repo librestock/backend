@@ -6,7 +6,7 @@ import { AreaNotFound, AreasInfrastructureError } from '../areas/areas.errors';
 import { AreasService } from '../areas/service';
 import { LocationsService } from '../locations/service';
 import { ProductsService } from '../products/service';
-import type { Inventory } from './entities/inventory.entity';
+import type { inventory } from '../../platform/db/schema';
 import {
   InvalidInventoryArea,
   InvalidInventoryLocation,
@@ -29,6 +29,13 @@ import { InventoryRepository } from './repository';
 import {
   toInventoryResponseDto,
 } from './inventory.utils';
+
+type InventoryRow = typeof inventory.$inferSelect;
+type Inventory = InventoryRow & {
+  product?: { id: string; sku: string; name: string; unit: string | null } | null;
+  location?: { id: string; name: string; type: string } | null;
+  area?: { id: string; name: string; code: string } | null;
+};
 
 type InventoryQueryDto = Schema.Schema.Type<typeof InventoryQuerySchema>;
 type CreateInventoryDto = Schema.Schema.Type<typeof CreateInventorySchema>;
@@ -109,17 +116,14 @@ export class InventoryService extends Effect.Service<InventoryService>()(
                 ),
         ).pipe(
           Effect.mapError((error) => {
-            if (error instanceof AreaNotFound || (error as { _tag?: string })._tag === 'AreaNotFound') {
+            if (error instanceof AreaNotFound) {
               return new InvalidInventoryArea({
                 areaId,
                 message: 'Area not found',
               });
             }
 
-            if (
-              error instanceof AreasInfrastructureError ||
-              (error as { _tag?: string })._tag === 'AreasInfrastructureError'
-            ) {
+            if (error instanceof AreasInfrastructureError) {
               return new InventoryInfrastructureError({
                 action: 'load inventory area',
                 cause: error,
@@ -209,7 +213,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
             location_id: dto.location_id,
             area_id: dto.area_id ?? null,
             quantity: dto.quantity,
-            batchNumber: dto.batchNumber ?? '',
+            batch_number: dto.batchNumber ?? '',
             expiry_date: dto.expiry_date ?? null,
             cost_per_unit: dto.cost_per_unit ?? null,
             received_date: dto.received_date ?? null,
@@ -273,7 +277,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
             updateData.quantity = dto.quantity;
           }
           if (dto.batchNumber !== undefined) {
-            updateData.batchNumber = dto.batchNumber;
+            updateData.batch_number = dto.batchNumber;
           }
           if (dto.expiry_date !== undefined) {
             updateData.expiry_date = dto.expiry_date;

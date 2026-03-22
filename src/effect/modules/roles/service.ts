@@ -1,9 +1,10 @@
 import { Effect } from 'effect';
+import { eq } from 'drizzle-orm';
 import { Permission, Resource } from '@librestock/types/auth';
 import type { CreateRoleDto, UpdateRoleDto } from '@librestock/types/roles';
-import { TypeOrmDataSource } from '../../platform/typeorm';
-import { type RoleEntity } from './entities/role.entity';
-import { toRoleResponseDto } from './roles.utils';
+import { DrizzleDatabase } from '../../platform/drizzle';
+import { userRoles, roles, rolePermissions } from '../../platform/db/schema';
+import { toRoleResponseDto, type RoleWithPermissions } from './roles.utils';
 import {
   RoleNameAlreadyExists,
   RoleNotFound,
@@ -99,13 +100,13 @@ export class RolesService extends Effect.Service<RolesService>()(
   {
     effect: Effect.gen(function* () {
       const repository = yield* RolesRepository;
-      const dataSource = yield* TypeOrmDataSource;
+      const db = yield* DrizzleDatabase;
       const cache = new Map<string, CacheEntry>();
       const cacheTtlMs = 60_000;
 
       const getRoleOrFail = (
         id: string,
-      ): Effect.Effect<RoleEntity, RoleNotFound | RolesInfrastructureError> =>
+      ): Effect.Effect<RoleWithPermissions, RoleNotFound | RolesInfrastructureError> =>
         Effect.flatMap(repository.findById(id), (role) =>
           role
             ? Effect.succeed(role)
@@ -122,15 +123,16 @@ export class RolesService extends Effect.Service<RolesService>()(
       ): Effect.Effect<UserPermissions, RolesInfrastructureError> =>
         Effect.tryPromise({
           try: async () => {
-            const rows: { role_name: string; resource: string; permission: string }[] =
-              await dataSource.query(
-                `SELECT r.name AS role_name, rp.resource, rp.permission
-                 FROM user_roles ur
-                 JOIN roles r ON r.id = ur.role_id
-                 JOIN role_permissions rp ON rp.role_id = ur.role_id
-                 WHERE ur.user_id = $1`,
-                [userId],
-              );
+            const rows = await db
+              .select({
+                role_name: roles.name,
+                resource: rolePermissions.resource,
+                permission: rolePermissions.permission,
+              })
+              .from(userRoles)
+              .innerJoin(roles, eq(roles.id, userRoles.role_id))
+              .innerJoin(rolePermissions, eq(rolePermissions.role_id, userRoles.role_id))
+              .where(eq(userRoles.user_id, userId));
 
             const roleNames = [...new Set(rows.map((row) => row.role_name))];
             const permissionMap: Record<string, Set<string>> = {};
@@ -228,7 +230,7 @@ export class RolesService extends Effect.Service<RolesService>()(
               }
             }
 
-            const updateData: Partial<RoleEntity> = {};
+            const updateData: Partial<typeof roles.$inferInsert> = {};
             if (dto.name !== undefined) updateData.name = dto.name;
             if (dto.description !== undefined) {
               updateData.description = dto.description ?? null;

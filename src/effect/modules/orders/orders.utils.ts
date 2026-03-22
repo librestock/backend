@@ -1,8 +1,16 @@
-import { Effect } from 'effect';
 import type { OrderResponseDto, OrderItemResponseDto } from '@librestock/types/orders';
-import type { Order } from './entities/order.entity';
-import type { OrderItem } from './entities/order-item.entity';
-import { OrdersInfrastructureError } from './orders.errors';
+import type { orders, orderItems } from '../../platform/db/schema';
+
+type OrderItemRow = typeof orderItems.$inferSelect;
+type OrderItem = OrderItemRow & {
+  product?: { name: string; sku: string } | null;
+};
+
+type OrderRow = typeof orders.$inferSelect;
+type Order = OrderRow & {
+  client?: { company_name: string } | null;
+  items?: OrderItem[];
+};
 
 export class OrderUtils {
   public static toOrderItemResponseDto(item: OrderItem): OrderItemResponseDto {
@@ -44,21 +52,6 @@ export class OrderUtils {
       created_at: order.created_at,
       updated_at: order.updated_at,
     };
-  }
-
-  public static tryAsync<A>(
-    action: string,
-    execute: () => Promise<A>,
-  ): Effect.Effect<A, OrdersInfrastructureError> {
-    return Effect.tryPromise({
-      try: execute,
-      catch: (cause) =>
-        new OrdersInfrastructureError({
-          action,
-          cause,
-          message: `Orders service failed to ${action}`,
-        }),
-    });
   }
 
   public static generateOrderPrefix(date: Date): string {

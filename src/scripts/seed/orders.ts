@@ -1,10 +1,8 @@
 import { faker } from '@faker-js/faker';
 import { ClientStatus } from '@librestock/types/clients';
 import { OrderStatus } from '@librestock/types/orders';
-import { type Client } from '../../effect/modules/clients/entities/client.entity';
-import { OrderItem } from '../../effect/modules/orders/entities/order-item.entity';
-import { Order } from '../../effect/modules/orders/entities/order.entity';
-import { type Product } from '../../effect/modules/products/entities/product.entity';
+import { eq } from 'drizzle-orm';
+import { orders, orderItems, type clients, type products } from '../../effect/platform/db/schema';
 import { MOCK_USER_ID, SEED_CONFIG } from './config';
 import { registry } from './registry';
 
@@ -14,15 +12,13 @@ registry.register({
   async run(ctx) {
     console.log('Seeding orders...');
 
-    const clients = ctx.store.get('clients') as Client[];
-    const products = ctx.store.get('products') as Product[];
+    const allClients = ctx.store.get('clients') as (typeof clients.$inferSelect)[];
+    const allProducts = ctx.store.get('products') as (typeof products.$inferSelect)[];
 
-    const orderRepo = ctx.dataSource.getRepository(Order);
-    const orderItemRepo = ctx.dataSource.getRepository(OrderItem);
-    const orders: Order[] = [];
-    const allOrderItems: OrderItem[] = [];
+    const allOrders: (typeof orders.$inferSelect)[] = [];
+    const allOrderItems: (typeof orderItems.$inferSelect)[] = [];
 
-    const activeClients = clients.filter((c) => c.account_status === ClientStatus.ACTIVE);
+    const activeClients = allClients.filter((c) => c.account_status === ClientStatus.ACTIVE);
 
     for (let i = 0; i < SEED_CONFIG.orders; i++) {
       const client = faker.helpers.arrayElement(activeClients);
@@ -55,7 +51,7 @@ registry.register({
 
       const orderNumber = `ORD-${(orderDate.getFullYear() % 100).toString().padStart(2, '0')}${(orderDate.getMonth() + 1).toString().padStart(2, '0')}-${String(i + 1).padStart(4, '0')}`;
 
-      const order = orderRepo.create({
+      const [savedOrder] = await ctx.db.insert(orders).values({
         order_number: orderNumber,
         client_id: client.id,
         status,
@@ -84,19 +80,17 @@ registry.register({
         confirmed_at: confirmedAt,
         shipped_at: shippedAt,
         delivered_at: deliveredAt,
-      });
-
-      const savedOrder = await orderRepo.save(order);
+      }).returning();
 
       const itemCount = faker.number.int({ min: SEED_CONFIG.itemsPerOrder.min, max: SEED_CONFIG.itemsPerOrder.max });
       let totalAmount = 0;
       const usedProductIds = new Set<string>();
 
       for (let j = 0; j < itemCount; j++) {
-        let product: Product;
+        let product: typeof allProducts[number];
         let attempts = 0;
         do {
-          product = faker.helpers.arrayElement(products);
+          product = faker.helpers.arrayElement(allProducts);
           attempts++;
         } while (usedProductIds.has(product.id) && attempts < 20);
 
@@ -117,8 +111,8 @@ registry.register({
           quantityPacked = quantity;
         }
 
-        const orderItem = orderItemRepo.create({
-          order_id: savedOrder.id,
+        const [savedItem] = await ctx.db.insert(orderItems).values({
+          order_id: savedOrder!.id,
           product_id: product.id,
           quantity,
           unit_price: unitPrice,
@@ -126,19 +120,20 @@ registry.register({
           notes: faker.helpers.maybe(() => faker.lorem.sentence(), { probability: 0.2 }),
           quantity_picked: quantityPicked,
           quantity_packed: quantityPacked,
-        });
-
-        const savedItem = await orderItemRepo.save(orderItem);
-        allOrderItems.push(savedItem);
+        }).returning();
+        allOrderItems.push(savedItem!);
       }
 
-      savedOrder.total_amount = Number.parseFloat(totalAmount.toFixed(2));
-      await orderRepo.save(savedOrder);
-      orders.push(savedOrder);
+      await ctx.db.update(orders).set({
+        total_amount: Number.parseFloat(totalAmount.toFixed(2)),
+      }).where(eq(orders.id, savedOrder!.id));
+
+      savedOrder!.total_amount = Number.parseFloat(totalAmount.toFixed(2));
+      allOrders.push(savedOrder!);
     }
 
-    console.log(`  Created ${orders.length} orders with ${allOrderItems.length} line items\n`);
-    ctx.store.set('orders', orders);
+    console.log(`  Created ${allOrders.length} orders with ${allOrderItems.length} line items\n`);
+    ctx.store.set('orders', allOrders);
     ctx.store.set('order-items', allOrderItems);
   },
 });

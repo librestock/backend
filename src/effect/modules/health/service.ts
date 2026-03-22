@@ -1,6 +1,7 @@
 import { Effect } from 'effect';
+import { sql } from 'drizzle-orm';
 import { BetterAuth } from '../../platform/better-auth';
-import { TypeOrmDataSource } from '../../platform/typeorm';
+import { DrizzleDatabase } from '../../platform/drizzle';
 
 interface HealthDetails {
   readonly status: 'up' | 'down';
@@ -33,11 +34,11 @@ const makeHealthResponse = (
 };
 
 const checkDatabase = Effect.gen(function* () {
-  const dataSource = yield* TypeOrmDataSource;
+  const db = yield* DrizzleDatabase;
 
   return yield* Effect.tryPromise({
     try: async () => {
-      await dataSource.query('SELECT 1');
+      await db.execute(sql`SELECT 1`);
       return { status: 'up' as const };
     },
     catch: (cause) => ({

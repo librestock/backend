@@ -1,5 +1,7 @@
 import type { ClientResponseDto } from '@librestock/types/clients';
-import type { Client } from './entities/client.entity';
+import type { clients } from '../../platform/db/schema';
+
+type Client = typeof clients.$inferSelect;
 
 export function toClientResponseDto(client: Client): ClientResponseDto {
   return {

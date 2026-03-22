@@ -7,13 +7,15 @@ import type {
   PaginatedLocationsResponseDto,
 } from '@librestock/types/locations';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
+import type { locations } from '../../platform/db/schema';
 import { toLocationResponseDto } from './locations.utils';
 import {
   LocationNotFound,
   type LocationsInfrastructureError,
 } from './locations.errors';
-import type { Location } from './entities/location.entity';
 import { LocationsRepository } from './repository';
+
+type Location = typeof locations.$inferSelect;
 
 export class LocationsService extends Effect.Service<LocationsService>()(
   '@librestock/effect/LocationsService',

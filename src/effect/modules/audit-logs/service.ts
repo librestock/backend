@@ -5,13 +5,15 @@ import {
   type AuditEntityType,
 } from '@librestock/types/audit-logs';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
+import type { auditLogs } from '../../platform/db/schema';
 import type { AuditLogQueryOptions } from './repository';
 import {
   AuditLogNotFound,
   type AuditLogsInfrastructureError,
 } from './audit-logs.errors';
-import { type AuditLog } from './entities/audit-log.entity';
 import { AuditLogsRepository } from './repository';
+
+type AuditLog = typeof auditLogs.$inferSelect;
 
 const toAuditLogResponseDto = (auditLog: AuditLog): AuditLogResponseDto => ({
   id: auditLog.id,
@@ -19,7 +21,7 @@ const toAuditLogResponseDto = (auditLog: AuditLog): AuditLogResponseDto => ({
   action: auditLog.action,
   entity_type: auditLog.entity_type,
   entity_id: auditLog.entity_id,
-  changes: auditLog.changes,
+  changes: auditLog.changes as AuditLogResponseDto['changes'],
   ip_address: auditLog.ip_address,
   user_agent: auditLog.user_agent,
   created_at: auditLog.created_at,
@@ -64,8 +66,9 @@ export class AuditLogsService extends Effect.Service<AuditLogsService>()(
         entityType: AuditEntityType,
         entityId: string,
       ): Effect.Effect<AuditLogResponseDto[], AuditLogsInfrastructureError> =>
-        Effect.map(repository.findByEntityId(entityType, entityId), (auditLogs) =>
-          auditLogs.map(toAuditLogResponseDto),
+        Effect.map(
+          repository.findByEntityId(entityType, entityId),
+          (auditLogs) => auditLogs.map(toAuditLogResponseDto),
         );
 
       const getUserHistory = (

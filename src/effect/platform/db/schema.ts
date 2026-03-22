@@ -1,0 +1,437 @@
+import {
+  pgTable,
+  pgEnum,
+  uuid,
+  varchar,
+  text,
+  boolean,
+  integer,
+  decimal,
+  timestamp,
+  jsonb,
+  uniqueIndex,
+  index,
+} from 'drizzle-orm/pg-core';
+import {
+  AuditAction,
+  AuditEntityType,
+} from '@librestock/types/audit-logs';
+import { ClientStatus } from '@librestock/types/clients';
+import { LocationType } from '@librestock/types/locations';
+import { OrderStatus } from '@librestock/types/orders';
+import { StockMovementReason } from '@librestock/types/stock-movements';
+
+// ── pgEnums ──────────────────────────────────────────────────────────────
+
+export const locationTypeEnum = pgEnum('locations_type', [
+  LocationType.WAREHOUSE,
+  LocationType.SUPPLIER,
+  LocationType.IN_TRANSIT,
+  LocationType.CLIENT,
+]);
+
+export const clientStatusEnum = pgEnum('clients_account_status', [
+  ClientStatus.ACTIVE,
+  ClientStatus.SUSPENDED,
+  ClientStatus.INACTIVE,
+]);
+
+export const orderStatusEnum = pgEnum('orders_status', [
+  OrderStatus.DRAFT,
+  OrderStatus.CONFIRMED,
+  OrderStatus.SOURCING,
+  OrderStatus.PICKING,
+  OrderStatus.PACKED,
+  OrderStatus.SHIPPED,
+  OrderStatus.DELIVERED,
+  OrderStatus.CANCELLED,
+  OrderStatus.ON_HOLD,
+]);
+
+export const stockMovementReasonEnum = pgEnum('stock_movements_reason', [
+  StockMovementReason.PURCHASE_RECEIVE,
+  StockMovementReason.SALE,
+  StockMovementReason.WASTE,
+  StockMovementReason.DAMAGED,
+  StockMovementReason.EXPIRED,
+  StockMovementReason.COUNT_CORRECTION,
+  StockMovementReason.RETURN_FROM_CLIENT,
+  StockMovementReason.RETURN_TO_SUPPLIER,
+  StockMovementReason.INTERNAL_TRANSFER,
+]);
+
+export const auditActionEnum = pgEnum('audit_logs_action', [
+  AuditAction.CREATE,
+  AuditAction.UPDATE,
+  AuditAction.DELETE,
+  AuditAction.RESTORE,
+  AuditAction.ADJUST_QUANTITY,
+  AuditAction.ADD_PHOTO,
+  AuditAction.STATUS_CHANGE,
+]);
+
+export const auditEntityTypeEnum = pgEnum('audit_logs_entity_type', [
+  AuditEntityType.PRODUCT,
+  AuditEntityType.CATEGORY,
+  AuditEntityType.SUPPLIER,
+  AuditEntityType.ORDER,
+  AuditEntityType.ORDER_ITEM,
+  AuditEntityType.INVENTORY,
+  AuditEntityType.LOCATION,
+  AuditEntityType.STOCK_MOVEMENT,
+  AuditEntityType.PHOTO,
+  AuditEntityType.AREA,
+  AuditEntityType.CLIENT,
+  AuditEntityType.ROLE,
+]);
+
+// ── Tables ───────────────────────────────────────────────────────────────
+
+export const categories = pgTable('categories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 100 }).notNull(),
+  parent_id: uuid('parent_id'),
+  description: varchar('description', { length: 500 }),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const roles = pgTable('roles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 100 }).notNull().unique(),
+  description: varchar('description', { length: 500 }),
+  is_system: boolean('is_system').notNull().default(false),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const rolePermissions = pgTable(
+  'role_permissions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    role_id: uuid('role_id')
+      .notNull()
+      .references(() => roles.id, { onDelete: 'cascade' }),
+    resource: varchar('resource', { length: 50 }).notNull(),
+    permission: varchar('permission', { length: 20 }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('role_permissions_role_resource_permission_unique').on(
+      table.role_id,
+      table.resource,
+      table.permission,
+    ),
+  ],
+);
+
+export const userRoles = pgTable(
+  'user_roles',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    user_id: uuid('user_id').notNull(),
+    role_id: uuid('role_id')
+      .notNull()
+      .references(() => roles.id, { onDelete: 'cascade' }),
+  },
+  (table) => [
+    uniqueIndex('user_roles_user_role_unique').on(table.user_id, table.role_id),
+    index('user_roles_user_id_idx').on(table.user_id),
+  ],
+);
+
+export const locations = pgTable('locations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name').notNull(),
+  type: locationTypeEnum('type').notNull(),
+  address: text('address').notNull().default(''),
+  contact_person: varchar('contact_person').notNull().default(''),
+  phone: varchar('phone').notNull().default(''),
+  is_active: boolean('is_active').notNull().default(true),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const areas = pgTable(
+  'areas',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    location_id: uuid('location_id')
+      .notNull()
+      .references(() => locations.id, { onDelete: 'cascade' }),
+    parent_id: uuid('parent_id'),
+    name: varchar('name', { length: 100 }).notNull(),
+    code: varchar('code', { length: 50 }).notNull().default(''),
+    description: text('description').notNull().default(''),
+    is_active: boolean('is_active').notNull().default(true),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('areas_location_id_idx').on(table.location_id),
+    index('areas_parent_id_idx').on(table.parent_id),
+    index('areas_location_parent_idx').on(table.location_id, table.parent_id),
+  ],
+);
+
+export const suppliers = pgTable('suppliers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name').notNull(),
+  contact_person: varchar('contact_person'),
+  email: varchar('email'),
+  phone: varchar('phone'),
+  address: text('address'),
+  website: varchar('website'),
+  notes: text('notes'),
+  is_active: boolean('is_active').notNull().default(true),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const products = pgTable(
+  'products',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sku: varchar('sku', { length: 50 }).notNull().unique(),
+    name: varchar('name', { length: 200 }).notNull(),
+    description: text('description'),
+    category_id: uuid('category_id')
+      .notNull()
+      .references(() => categories.id, { onDelete: 'restrict' }),
+    volume_ml: integer('volume_ml'),
+    weight_kg: decimal('weight_kg', { precision: 10, scale: 3, mode: 'number' }),
+    dimensions_cm: varchar('dimensions_cm', { length: 50 }),
+    standard_cost: decimal('standard_cost', { precision: 12, scale: 2, mode: 'number' }),
+    standard_price: decimal('standard_price', { precision: 12, scale: 2, mode: 'number' }),
+    markup_percentage: decimal('markup_percentage', {
+      precision: 6,
+      scale: 2,
+      mode: 'number',
+    }),
+    reorder_point: integer('reorder_point').notNull().default(0),
+    primary_supplier_id: uuid('primary_supplier_id').references(() => suppliers.id, {
+      onDelete: 'set null',
+    }),
+    supplier_sku: varchar('supplier_sku', { length: 50 }),
+    barcode: varchar('barcode', { length: 100 }),
+    unit: varchar('unit', { length: 50 }),
+    is_active: boolean('is_active').notNull().default(true),
+    is_perishable: boolean('is_perishable').notNull().default(false),
+    notes: text('notes'),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    deleted_at: timestamp('deleted_at', { withTimezone: true }),
+    created_by: varchar('created_by', { length: 255 }),
+    updated_by: varchar('updated_by', { length: 255 }),
+    deleted_by: varchar('deleted_by', { length: 255 }),
+  },
+  (table) => [
+    index('products_deleted_at_idx').on(table.deleted_at),
+    index('products_active_deleted_idx').on(table.is_active, table.deleted_at),
+    index('products_category_deleted_idx').on(table.category_id, table.deleted_at),
+  ],
+);
+
+export const photos = pgTable(
+  'photos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    product_id: uuid('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    filename: varchar('filename', { length: 255 }).notNull(),
+    mimetype: varchar('mimetype', { length: 100 }).notNull(),
+    size: integer('size').notNull(),
+    storage_path: varchar('storage_path', { length: 500 }).notNull(),
+    display_order: integer('display_order').notNull().default(0),
+    uploaded_by: uuid('uploaded_by'),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('photos_product_id_idx').on(table.product_id)],
+);
+
+export const supplierProducts = pgTable('supplier_products', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  supplier_id: uuid('supplier_id')
+    .notNull()
+    .references(() => suppliers.id),
+  product_id: uuid('product_id').notNull(),
+  supplier_sku: varchar('supplier_sku'),
+  cost_per_unit: decimal('cost_per_unit', { precision: 12, scale: 2, mode: 'number' }),
+  lead_time_days: integer('lead_time_days'),
+  minimum_order_quantity: integer('minimum_order_quantity'),
+  is_preferred: boolean('is_preferred').notNull().default(false),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const clients = pgTable(
+  'clients',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    company_name: varchar('company_name').notNull(),
+    yacht_name: varchar('yacht_name'),
+    contact_person: varchar('contact_person').notNull(),
+    email: varchar('email').notNull(),
+    phone: varchar('phone'),
+    billing_address: text('billing_address'),
+    default_delivery_address: text('default_delivery_address'),
+    account_status: clientStatusEnum('account_status').notNull().default(ClientStatus.ACTIVE),
+    payment_terms: varchar('payment_terms'),
+    credit_limit: decimal('credit_limit', { precision: 12, scale: 2, mode: 'number' }),
+    notes: text('notes'),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('clients_email_idx').on(table.email),
+    index('clients_account_status_idx').on(table.account_status),
+  ],
+);
+
+export const orders = pgTable(
+  'orders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    order_number: varchar('order_number').notNull(),
+    client_id: uuid('client_id')
+      .notNull()
+      .references(() => clients.id),
+    status: orderStatusEnum('status').notNull().default(OrderStatus.DRAFT),
+    delivery_deadline: timestamp('delivery_deadline', { withTimezone: true }),
+    delivery_address: text('delivery_address').notNull(),
+    yacht_name: varchar('yacht_name'),
+    special_instructions: text('special_instructions'),
+    total_amount: decimal('total_amount', { precision: 12, scale: 2, mode: 'number' })
+      .notNull()
+      .default(0),
+    assigned_to: uuid('assigned_to'),
+    created_by: uuid('created_by').notNull(),
+    confirmed_at: timestamp('confirmed_at', { withTimezone: true }),
+    shipped_at: timestamp('shipped_at', { withTimezone: true }),
+    delivered_at: timestamp('delivered_at', { withTimezone: true }),
+    kanban_task_id: varchar('kanban_task_id'),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('orders_order_number_unique').on(table.order_number),
+    index('orders_client_id_idx').on(table.client_id),
+    index('orders_status_idx').on(table.status),
+  ],
+);
+
+export const orderItems = pgTable(
+  'order_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    order_id: uuid('order_id')
+      .notNull()
+      .references(() => orders.id),
+    product_id: uuid('product_id')
+      .notNull()
+      .references(() => products.id),
+    quantity: integer('quantity').notNull(),
+    unit_price: decimal('unit_price', { precision: 12, scale: 2, mode: 'number' }).notNull(),
+    subtotal: decimal('subtotal', { precision: 12, scale: 2, mode: 'number' }).notNull(),
+    notes: text('notes'),
+    quantity_picked: integer('quantity_picked').notNull().default(0),
+    quantity_packed: integer('quantity_packed').notNull().default(0),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('order_items_order_id_idx').on(table.order_id),
+    index('order_items_product_id_idx').on(table.product_id),
+  ],
+);
+
+export const inventory = pgTable(
+  'inventory',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    product_id: uuid('product_id')
+      .notNull()
+      .references(() => products.id),
+    location_id: uuid('location_id')
+      .notNull()
+      .references(() => locations.id),
+    area_id: uuid('area_id').references(() => areas.id, { onDelete: 'set null' }),
+    quantity: integer('quantity').notNull().default(0),
+    batch_number: varchar('batch_number').notNull().default(''),
+    expiry_date: timestamp('expiry_date', { withTimezone: true }),
+    cost_per_unit: decimal('cost_per_unit', { precision: 12, scale: 2, mode: 'number' }),
+    received_date: timestamp('received_date', { withTimezone: true }),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('inventory_product_id_idx').on(table.product_id),
+    index('inventory_location_id_idx').on(table.location_id),
+    index('inventory_area_id_idx').on(table.area_id),
+    index('inventory_product_location_idx').on(table.product_id, table.location_id),
+    index('inventory_product_location_area_idx').on(
+      table.product_id,
+      table.location_id,
+      table.area_id,
+    ),
+  ],
+);
+
+export const stockMovements = pgTable(
+  'stock_movements',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    product_id: uuid('product_id')
+      .notNull()
+      .references(() => products.id),
+    from_location_id: uuid('from_location_id').references(() => locations.id),
+    to_location_id: uuid('to_location_id').references(() => locations.id),
+    quantity: integer('quantity').notNull(),
+    reason: stockMovementReasonEnum('reason').notNull(),
+    order_id: uuid('order_id').references(() => orders.id),
+    reference_number: varchar('reference_number'),
+    cost_per_unit: decimal('cost_per_unit', { precision: 12, scale: 2, mode: 'number' }),
+    kanban_task_id: varchar('kanban_task_id'),
+    user_id: uuid('user_id').notNull(),
+    notes: text('notes'),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('stock_movements_product_id_idx').on(table.product_id),
+    index('stock_movements_from_location_id_idx').on(table.from_location_id),
+    index('stock_movements_to_location_id_idx').on(table.to_location_id),
+    index('stock_movements_reason_idx').on(table.reason),
+    index('stock_movements_created_at_idx').on(table.created_at),
+  ],
+);
+
+export const auditLogs = pgTable(
+  'audit_logs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    user_id: uuid('user_id'),
+    action: auditActionEnum('action').notNull(),
+    entity_type: auditEntityTypeEnum('entity_type').notNull(),
+    entity_id: uuid('entity_id').notNull(),
+    changes: jsonb('changes'),
+    ip_address: varchar('ip_address'),
+    user_agent: varchar('user_agent'),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('audit_logs_entity_type_entity_id_idx').on(table.entity_type, table.entity_id),
+    index('audit_logs_user_id_idx').on(table.user_id),
+    index('audit_logs_created_at_idx').on(table.created_at),
+  ],
+);
+
+export const brandingSettings = pgTable('branding_settings', {
+  id: integer('id').primaryKey().default(1),
+  app_name: varchar('app_name', { length: 100 }).notNull(),
+  tagline: varchar('tagline', { length: 255 }).notNull(),
+  logo_url: varchar('logo_url', { length: 500 }),
+  favicon_url: varchar('favicon_url', { length: 500 }),
+  primary_color: varchar('primary_color', { length: 7 }).notNull(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_by: varchar('updated_by'),
+});

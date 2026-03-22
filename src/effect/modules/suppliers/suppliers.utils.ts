@@ -1,5 +1,7 @@
 import type { SupplierResponseDto } from '@librestock/types/suppliers';
-import type { Supplier } from './entities/supplier.entity';
+import type { suppliers } from '../../platform/db/schema';
+
+type Supplier = typeof suppliers.$inferSelect;
 
 export function toSupplierResponseDto(
   supplier: Supplier,

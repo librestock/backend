@@ -38,6 +38,6 @@ export default tseslint.config(
 
   // Ignores
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**'],
+    ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**', '**/scripts/**'],
   },
 )

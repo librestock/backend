@@ -1,4 +1,4 @@
-import { Client } from '../../effect/modules/clients/entities/client.entity';
+import { clients } from '../../effect/platform/db/schema';
 import { SEED_CONFIG } from './config';
 import { buildClient } from './factories';
 import { registry } from './registry';
@@ -9,15 +9,14 @@ registry.register({
   async run(ctx) {
     console.log('Seeding clients...');
 
-    const clientRepo = ctx.dataSource.getRepository(Client);
-    const clients: Client[] = [];
+    const allClients: (typeof clients.$inferSelect)[] = [];
 
     for (let i = 0; i < SEED_CONFIG.clients; i++) {
-      const saved = await clientRepo.save(clientRepo.create(buildClient(i)));
-      clients.push(saved);
+      const [saved] = await ctx.db.insert(clients).values(buildClient(i)).returning();
+      allClients.push(saved!);
     }
 
-    console.log(`  Created ${clients.length} clients\n`);
-    ctx.store.set('clients', clients);
+    console.log(`  Created ${allClients.length} clients\n`);
+    ctx.store.set('clients', allClients);
   },
 });

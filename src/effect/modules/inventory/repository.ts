@@ -1,14 +1,13 @@
 import { Effect } from 'effect';
+import { eq, and, ilike, or, gte, lte, desc, sql, isNull, type SQL } from 'drizzle-orm';
 import type { InventoryQueryDto } from '@librestock/types/inventory';
 import { InventorySortField } from '@librestock/types/inventory';
 import {
-  applyQuerySpecs,
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
-  type QuerySpec,
-} from '../../platform/query-spec.utils';
-import { TypeOrmDataSource } from '../../platform/typeorm';
-import { Inventory } from './entities/inventory.entity';
+} from '../../platform/drizzle-query.utils';
+import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
+import { inventory, products, locations, areas } from '../../platform/db/schema';
 import { InventoryInfrastructureError } from './inventory.errors';
 
 const tryAsync = <A>(action: string, run: () => Promise<A>) =>
@@ -22,198 +21,206 @@ const tryAsync = <A>(action: string, run: () => Promise<A>) =>
       }),
   });
 
-const inventoryFilterSpec: QuerySpec<Inventory, InventoryQueryDto> = (
-  queryBuilder,
-  query,
-) => {
+function buildInventoryFilters(query: InventoryQueryDto): SQL[] {
+  const conditions: SQL[] = [];
   if (query.product_id) {
-    queryBuilder.andWhere('inventory.product_id = :product_id', {
-      product_id: query.product_id,
-    });
+    conditions.push(eq(inventory.product_id, query.product_id));
   }
-
   if (query.location_id) {
-    queryBuilder.andWhere('inventory.location_id = :location_id', {
-      location_id: query.location_id,
-    });
+    conditions.push(eq(inventory.location_id, query.location_id));
   }
-
   if (query.area_id) {
-    queryBuilder.andWhere('inventory.area_id = :area_id', {
-      area_id: query.area_id,
-    });
+    conditions.push(eq(inventory.area_id, query.area_id));
   }
-
   if (query.search) {
-    queryBuilder.andWhere('(product.name ILIKE :search OR product.sku ILIKE :search)', {
-      search: `%${query.search}%`,
-    });
-  }
-
-  if (query.low_stock) {
-    queryBuilder.andWhere('inventory.quantity <= product.reorder_point');
-  }
-
-  if (query.expiring_soon) {
-    queryBuilder.andWhere(
-      'inventory.expiry_date IS NOT NULL AND inventory.expiry_date <= NOW() + INTERVAL \'30 days\'',
+    conditions.push(
+      or(
+        ilike(products.name, `%${query.search}%`),
+        ilike(products.sku, `%${query.search}%`),
+      )!,
     );
   }
-
+  if (query.low_stock) {
+    conditions.push(sql`${inventory.quantity} <= ${products.reorder_point}`);
+  }
+  if (query.expiring_soon) {
+    conditions.push(
+      sql`${inventory.expiry_date} IS NOT NULL AND ${inventory.expiry_date} <= NOW() + INTERVAL '30 days'`,
+    );
+  }
   if (query.min_quantity !== undefined && query.max_quantity !== undefined) {
-    queryBuilder.andWhere(
-      'inventory.quantity BETWEEN :min_quantity AND :max_quantity',
-      { min_quantity: query.min_quantity, max_quantity: query.max_quantity },
+    conditions.push(
+      sql`${inventory.quantity} BETWEEN ${query.min_quantity} AND ${query.max_quantity}`,
     );
   } else if (query.min_quantity !== undefined) {
-    queryBuilder.andWhere('inventory.quantity >= :min_quantity', {
-      min_quantity: query.min_quantity,
-    });
+    conditions.push(gte(inventory.quantity, query.min_quantity));
   } else if (query.max_quantity !== undefined) {
-    queryBuilder.andWhere('inventory.quantity <= :max_quantity', {
-      max_quantity: query.max_quantity,
-    });
+    conditions.push(lte(inventory.quantity, query.max_quantity));
   }
-};
+  return conditions;
+}
 
-const inventorySortSpec: QuerySpec<Inventory, InventoryQueryDto> = (
-  queryBuilder,
-  query,
-) => {
-  queryBuilder.orderBy(
-    `inventory.${query.sort_by ?? InventorySortField.UPDATED_AT}`,
-    query.sort_order ?? 'DESC',
-  );
-};
+function getInventoryOrderBy(sortBy?: string, sortOrder?: string) {
+  const col = sortBy ?? InventorySortField.UPDATED_AT;
+  const dir = sortOrder ?? 'DESC';
+  return sql.raw(`inventory."${col}" ${dir}`);
+}
+
+interface InventoryJoinRow {
+  inv: typeof inventory.$inferSelect;
+  product: typeof products.$inferSelect | null;
+  location: typeof locations.$inferSelect | null;
+  area: typeof areas.$inferSelect | null;
+}
+
+function selectInventoryWithJoins(db: DrizzleDb) {
+  return db
+    .select({
+      inv: inventory,
+      product: products,
+      location: locations,
+      area: areas,
+    })
+    .from(inventory)
+    .leftJoin(products, eq(inventory.product_id, products.id))
+    .leftJoin(locations, eq(inventory.location_id, locations.id))
+    .leftJoin(areas, eq(inventory.area_id, areas.id));
+}
+
+function mapInventoryRow(row: InventoryJoinRow) {
+  return {
+    ...row.inv,
+    product: row.product,
+    location: row.location,
+    area: row.area,
+  };
+}
 
 export class InventoryRepository extends Effect.Service<InventoryRepository>()(
   '@librestock/effect/InventoryRepository',
   {
     effect: Effect.gen(function* () {
-      const dataSource = yield* TypeOrmDataSource;
-      const repository = dataSource.getRepository(Inventory);
+      const db = yield* DrizzleDatabase;
 
       const findAllPaginated = (query: InventoryQueryDto) =>
         tryAsync('list inventory paginated', async () => {
           const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
+          const conditions = buildInventoryFilters(query);
+          const where = conditions.length > 0 ? and(...conditions) : undefined;
+          const orderBy = getInventoryOrderBy(query.sort_by, query.sort_order);
 
-          const qb = applyQuerySpecs(
-            repository
-              .createQueryBuilder('inventory')
-              .leftJoinAndSelect('inventory.product', 'product')
-              .leftJoinAndSelect('inventory.location', 'location')
-              .leftJoinAndSelect('inventory.area', 'area'),
-            query,
-            [inventoryFilterSpec, inventorySortSpec],
-          );
+          // Count needs the products join for search/low_stock filters
+          const [countResult] = await selectInventoryWithJoins(db)
+            .where(where)
+            .then(async () => {
+              // Use a separate count query to avoid issues
+              return db
+                .select({ count: sql<number>`count(*)::int` })
+                .from(inventory)
+                .leftJoin(products, eq(inventory.product_id, products.id))
+                .where(where);
+            });
 
-          const total = await qb.getCount();
-          const data = await qb.skip(skip).take(limit).getMany();
+          const total = countResult?.count ?? 0;
 
-          return toRepositoryPaginatedResult(data, total, page, limit);
+          const rows = await selectInventoryWithJoins(db)
+            .where(where)
+            .orderBy(orderBy)
+            .offset(skip)
+            .limit(limit);
+
+          return toRepositoryPaginatedResult(rows.map(mapInventoryRow), total, page, limit);
         });
 
       const findAll = () =>
-        tryAsync('list all inventory', () =>
-          repository
-            .createQueryBuilder('inventory')
-            .leftJoinAndSelect('inventory.product', 'product')
-            .leftJoinAndSelect('inventory.location', 'location')
-            .leftJoinAndSelect('inventory.area', 'area')
-            .orderBy('inventory.updated_at', 'DESC')
-            .getMany(),
-        );
+        tryAsync('list all inventory', async () => {
+          const rows = await selectInventoryWithJoins(db)
+            .orderBy(desc(inventory.updated_at));
+          return rows.map(mapInventoryRow);
+        });
 
       const findById = (id: string) =>
-        tryAsync('find inventory by id', () =>
-          repository
-            .createQueryBuilder('inventory')
-            .leftJoinAndSelect('inventory.product', 'product')
-            .leftJoinAndSelect('inventory.location', 'location')
-            .leftJoinAndSelect('inventory.area', 'area')
-            .where('inventory.id = :id', { id })
-            .getOne(),
-        );
+        tryAsync('find inventory by id', async () => {
+          const rows = await selectInventoryWithJoins(db)
+            .where(eq(inventory.id, id))
+            .limit(1);
+          return rows[0] ? mapInventoryRow(rows[0]) : null;
+        });
 
       const findByProductId = (productId: string) =>
-        tryAsync('find inventory by product', () =>
-          repository
-            .createQueryBuilder('inventory')
-            .leftJoinAndSelect('inventory.product', 'product')
-            .leftJoinAndSelect('inventory.location', 'location')
-            .leftJoinAndSelect('inventory.area', 'area')
-            .where('inventory.product_id = :productId', { productId })
-            .orderBy('inventory.updated_at', 'DESC')
-            .getMany(),
-        );
+        tryAsync('find inventory by product', async () => {
+          const rows = await selectInventoryWithJoins(db)
+            .where(eq(inventory.product_id, productId))
+            .orderBy(desc(inventory.updated_at));
+          return rows.map(mapInventoryRow);
+        });
 
       const findByLocationId = (locationId: string) =>
-        tryAsync('find inventory by location', () =>
-          repository
-            .createQueryBuilder('inventory')
-            .leftJoinAndSelect('inventory.product', 'product')
-            .leftJoinAndSelect('inventory.location', 'location')
-            .leftJoinAndSelect('inventory.area', 'area')
-            .where('inventory.location_id = :locationId', { locationId })
-            .orderBy('inventory.updated_at', 'DESC')
-            .getMany(),
-        );
+        tryAsync('find inventory by location', async () => {
+          const rows = await selectInventoryWithJoins(db)
+            .where(eq(inventory.location_id, locationId))
+            .orderBy(desc(inventory.updated_at));
+          return rows.map(mapInventoryRow);
+        });
 
       const findByProductAndLocation = (productId: string, locationId: string, areaId?: string | null) =>
         tryAsync('find inventory by product and location', async () => {
-          const qb = repository
-            .createQueryBuilder('inventory')
-            .leftJoinAndSelect('inventory.product', 'product')
-            .leftJoinAndSelect('inventory.location', 'location')
-            .leftJoinAndSelect('inventory.area', 'area')
-            .where('inventory.product_id = :productId', { productId })
-            .andWhere('inventory.location_id = :locationId', { locationId });
+          const conditions: SQL[] = [
+            eq(inventory.product_id, productId),
+            eq(inventory.location_id, locationId),
+          ];
 
           if (areaId) {
-            qb.andWhere('inventory.area_id = :areaId', { areaId });
+            conditions.push(eq(inventory.area_id, areaId));
           } else {
-            qb.andWhere('inventory.area_id IS NULL');
+            conditions.push(isNull(inventory.area_id));
           }
 
-          return qb.getOne();
+          const rows = await selectInventoryWithJoins(db)
+            .where(and(...conditions))
+            .limit(1);
+
+          return rows[0] ? mapInventoryRow(rows[0]) : null;
         });
 
-      const create = (data: Partial<Inventory>) =>
+      const create = (data: typeof inventory.$inferInsert) =>
         tryAsync('create inventory', async () => {
-          const inventory = repository.create(data);
-          return repository.save(inventory);
+          const rows = await db.insert(inventory).values(data).returning();
+          return rows[0]!;
         });
 
-      const update = (id: string, data: Partial<Inventory>) =>
+      const update = (id: string, data: Partial<typeof inventory.$inferInsert>) =>
         tryAsync('update inventory', async () => {
-          const result = await repository
-            .createQueryBuilder()
-            .update(Inventory)
-            .set(data)
-            .where('id = :id', { id })
-            .execute();
-
-          return result.affected ?? 0;
+          const rows = await db
+            .update(inventory)
+            .set({ ...data, updated_at: new Date() })
+            .where(eq(inventory.id, id))
+            .returning({ id: inventory.id });
+          return rows.length;
         });
 
       const adjustQuantity = (id: string, adjustment: number) =>
         tryAsync('adjust inventory quantity', async () => {
-          const result = await repository
-            .createQueryBuilder()
-            .update(Inventory)
+          const rows = await db
+            .update(inventory)
             .set({
-              quantity: () => 'quantity + :adjustment',
+              quantity: sql`${inventory.quantity} + ${adjustment}`,
+              updated_at: new Date(),
             })
-            .where('id = :id', { id })
-            .andWhere('quantity + :adjustment >= 0', { adjustment })
-            .setParameter('adjustment', adjustment)
-            .execute();
-
-          return result.affected ?? 0;
+            .where(
+              and(
+                eq(inventory.id, id),
+                sql`${inventory.quantity} + ${adjustment} >= 0`,
+              ),
+            )
+            .returning({ id: inventory.id });
+          return rows.length;
         });
 
       const remove = (id: string) =>
-        tryAsync('delete inventory', () => repository.delete(id));
+        tryAsync('delete inventory', () =>
+          db.delete(inventory).where(eq(inventory.id, id)),
+        );
 
       return {
         findAllPaginated,

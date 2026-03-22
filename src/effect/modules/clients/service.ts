@@ -5,6 +5,7 @@ import {
   type PaginationMeta,
   toPaginatedResponse,
 } from '../../platform/pagination.utils';
+import type { clients } from '../../platform/db/schema';
 import type {
   CreateClientSchema,
   UpdateClientSchema,
@@ -15,8 +16,9 @@ import {
   ClientNotFound,
   type ClientsInfrastructureError,
 } from './clients.errors';
-import type { Client } from './entities/client.entity';
 import { ClientsRepository } from './repository';
+
+type Client = typeof clients.$inferSelect;
 
 type CreateClientDto = Schema.Schema.Type<typeof CreateClientSchema>;
 type UpdateClientDto = Schema.Schema.Type<typeof UpdateClientSchema>;

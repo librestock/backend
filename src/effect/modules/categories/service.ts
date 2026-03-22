@@ -1,6 +1,6 @@
 import { Effect } from 'effect';
 import type { CategoryWithChildrenResponseDto, CreateCategoryDto, UpdateCategoryDto } from '@librestock/types/categories';
-import type { Category } from './entities/category.entity';
+import type { categories } from '../../platform/db/schema';
 import {
   type CategoriesInfrastructureError,
   CategoryCircularReference,
@@ -10,6 +10,8 @@ import {
   ParentCategoryNotFound,
 } from './categories.errors';
 import { CategoriesRepository } from './repository';
+
+type Category = typeof categories.$inferSelect;
 
 const buildTree = (categories: Category[]): CategoryWithChildrenResponseDto[] => {
   const categoryMap = new Map<string, CategoryWithChildrenResponseDto>();
@@ -74,8 +76,7 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
             }
 
             const parent: Category | null = yield* repository.findOne({
-              where: { id: currentId },
-              select: ['parent_id'],
+              id: currentId,
             });
 
             currentId = parent?.parent_id ?? null;
