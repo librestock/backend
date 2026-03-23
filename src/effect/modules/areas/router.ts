@@ -89,7 +89,7 @@ export const areasRouter = HttpRouter.empty.pipe(
         entityId: id,
       });
       return yield* respondJson(
-        Effect.succeed({ message: 'Area deleted successfully' }),
+        Effect.succeed({ message: 'Area deleted successfully', messageKey: 'areas.deleted' }),
       );
     }),
   ),

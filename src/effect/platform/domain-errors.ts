@@ -2,6 +2,8 @@ import { Data } from 'effect';
 
 interface AppErrorFields {
   readonly message: string;
+  readonly messageKey?: string;
+  readonly code?: string;
 }
 
 type AppErrorInstance<
@@ -40,6 +42,8 @@ export interface AppError<
 > extends Error {
   readonly _tag: Tag;
   readonly message: string;
+  readonly messageKey?: string;
+  readonly code?: string;
   readonly statusCode: StatusCode;
 }
 

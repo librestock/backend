@@ -83,7 +83,7 @@ export const clientsRouter = HttpRouter.empty.pipe(
         entityId: id,
       });
       return yield* respondJson(
-        Effect.succeed({ message: 'Client deleted successfully' }),
+        Effect.succeed({ message: 'Client deleted successfully', messageKey: 'clients.deleted' }),
       );
     }),
   ),

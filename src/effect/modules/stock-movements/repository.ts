@@ -9,7 +9,6 @@ import { DrizzleDatabase } from '../../platform/drizzle';
 import { stockMovements } from '../../platform/db/schema';
 import { StockMovementsInfrastructureError } from './stock-movements.errors';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RawRow = Record<string, any>;
 
 /** Extract rows array from a raw `db.execute()` result (handles both pg and test shapes). */
@@ -62,7 +61,10 @@ export class StockMovementsRepository extends Effect.Service<StockMovementsRepos
 
       const findAllPaginated = (query: StockMovementQueryDto) =>
         tryAsync('list stock movements paginated', async () => {
-          const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
+          const { page, limit, skip } = resolvePaginationWindow(
+            query.page,
+            query.limit,
+          );
           const conditions = buildStockMovementFilters(query);
           const where = conditions.length > 0 ? and(...conditions) : undefined;
 

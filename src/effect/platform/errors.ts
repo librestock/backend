@@ -118,7 +118,9 @@ export const respondCause = <E>(cause: Cause.Cause<E>) =>
 
     if (details.statusCode >= 500) {
       yield* Effect.logError({
-        message: `[effect-http] ${details.statusCode} ${path}`,
+        messageKey: 'http.serverError',
+        statusCode: details.statusCode,
+        path,
         error: firstError,
       });
     }

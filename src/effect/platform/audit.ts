@@ -41,8 +41,12 @@ export const makeAuditLogWriter = Effect.gen(function* () {
         catch: (cause) => cause,
       }).pipe(
         Effect.catchAll((cause) =>
-          Effect.sync(() => {
-            console.error('[effect-audit] Failed to write audit log', cause);
+          Effect.logError({
+            messageKey: 'audit.writeFailed',
+            action: params.action,
+            entityType: params.entityType,
+            entityId: params.entityId,
+            cause,
           }),
         ),
         Effect.asVoid,

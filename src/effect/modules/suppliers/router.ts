@@ -83,7 +83,7 @@ export const suppliersRouter = HttpRouter.empty.pipe(
         entityId: id,
       });
       return yield* respondJson(
-        Effect.succeed({ message: 'Supplier deleted successfully' }),
+        Effect.succeed({ message: 'Supplier deleted successfully', messageKey: 'suppliers.deleted' }),
       );
     }),
   ),

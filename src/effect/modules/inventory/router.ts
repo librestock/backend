@@ -129,7 +129,7 @@ export const inventoryRouter = HttpRouter.empty.pipe(
         entityId: id,
       });
       return yield* respondJson(
-        Effect.succeed({ message: 'Inventory item deleted successfully' }),
+        Effect.succeed({ message: 'Inventory item deleted successfully', messageKey: 'inventory.deleted' }),
       );
     }),
   ),

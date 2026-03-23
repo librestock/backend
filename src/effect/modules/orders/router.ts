@@ -103,7 +103,7 @@ export const ordersRouter = HttpRouter.empty.pipe(
         entityId: id,
       });
       return yield* respondJson(
-        Effect.succeed({ message: 'Order deleted successfully' }),
+        Effect.succeed({ message: 'Order deleted successfully', messageKey: 'orders.deleted' }),
       );
     }),
   ),

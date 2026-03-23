@@ -20,7 +20,7 @@ export const requestLoggingMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>): 
 
     return Effect.flatMap(httpApp, (response) => {
       const payload = {
-        message: 'HTTP request',
+        messageKey: 'http.request',
         requestId,
         method: request.method,
         path,

@@ -70,7 +70,7 @@ export const categoriesRouter = HttpRouter.empty.pipe(
         entityId: id,
       });
       return yield* respondJson(
-        Effect.succeed({ message: 'Category deleted successfully' }),
+        Effect.succeed({ message: 'Category deleted successfully', messageKey: 'categories.deleted' }),
       );
     }),
   ),

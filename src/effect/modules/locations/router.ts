@@ -91,7 +91,7 @@ export const locationsRouter = HttpRouter.empty.pipe(
         entityId: id,
       });
       return yield* respondJson(
-        Effect.succeed({ message: 'Location deleted successfully' }),
+        Effect.succeed({ message: 'Location deleted successfully', messageKey: 'locations.deleted' }),
       );
     }),
   ),

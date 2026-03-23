@@ -115,7 +115,7 @@ export const photosRouter = HttpRouter.empty.pipe(
       const photosService = yield* PhotosService;
       yield* photosService.deletePhoto(id);
       return yield* respondJson(
-        Effect.succeed({ message: 'Photo deleted successfully' }),
+        Effect.succeed({ message: 'Photo deleted successfully', messageKey: 'photos.deleted' }),
       );
     }),
   ),

@@ -259,6 +259,9 @@ export const productsRouter = HttpRouter.empty.pipe(
           message: query.permanent
             ? 'Product permanently deleted'
             : 'Product deleted successfully',
+          messageKey: query.permanent
+            ? 'products.deletedPermanent'
+            : 'products.deleted',
         }),
       );
     }),
