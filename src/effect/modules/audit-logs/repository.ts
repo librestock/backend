@@ -30,7 +30,7 @@ const tryAsync = <A>(action: string, run: () => Promise<A>) =>
       new AuditLogsInfrastructureError({
         action,
         cause,
-        message: `Failed to ${action}`,
+        messageKey: 'auditLogs.repositoryFailed',
       }),
   });
 

@@ -3,6 +3,12 @@ import { Effect, Cause, ParseResult } from 'effect';
 import { TreeFormatter } from 'effect/ParseResult';
 import { isAppError } from './domain-errors';
 import { getRequestContext } from './request-context';
+import {
+  localizeMessageTree,
+  translateMessage,
+  type AnyMessageKey,
+  type MessageArgs,
+} from './messages';
 
 const STATUS_NAMES: Record<number, string> = {
   400: 'Bad Request',
@@ -29,12 +35,16 @@ const withRequestIdHeader = (response: HttpServerResponse.HttpServerResponse) =>
 const makeErrorEnvelope = (
   statusCode: number,
   error: string,
-  message: string,
+  messageKey: AnyMessageKey,
   path: string,
+  locale: Parameters<typeof translateMessage>[0],
+  messageArgs?: MessageArgs,
 ) => ({
   statusCode,
   error,
-  message,
+  messageKey,
+  ...(messageArgs ? { messageArgs } : {}),
+  message: translateMessage(locale, messageKey, messageArgs),
   path,
   timestamp: new Date().toISOString(),
 });
@@ -56,15 +66,21 @@ const getFirstError = <E>(cause: Cause.Cause<E>): unknown => {
 const toErrorDetails = (
   error: unknown,
   path: string,
-): { statusCode: number; error: string; message: string } => {
+): {
+  statusCode: number;
+  error: string;
+  messageKey: AnyMessageKey;
+  messageArgs?: MessageArgs;
+} => {
   if (isAppError(error)) {
+    const isMasked =
+      process.env.NODE_ENV === 'production' && error.statusCode >= 500;
+
     return {
       statusCode: error.statusCode,
       error: getStatusName(error.statusCode),
-      message:
-        process.env.NODE_ENV === 'production' && error.statusCode >= 500
-          ? 'Internal Server Error'
-          : error.message,
+      messageKey: isMasked ? 'errors.internalServerError' : error.messageKey,
+      ...(isMasked || !error.messageArgs ? {} : { messageArgs: error.messageArgs }),
     };
   }
 
@@ -72,7 +88,8 @@ const toErrorDetails = (
     return {
       statusCode: 400,
       error: getStatusName(400),
-      message: TreeFormatter.formatErrorSync(error),
+      messageKey: 'http.parseError',
+      messageArgs: { details: TreeFormatter.formatErrorSync(error) },
     };
   }
 
@@ -80,7 +97,8 @@ const toErrorDetails = (
     return {
       statusCode: 404,
       error: getStatusName(404),
-      message: `Cannot ${error.request.method} ${path}`,
+      messageKey: 'http.routeNotFound',
+      messageArgs: { method: error.request.method, path },
     };
   }
 
@@ -88,31 +106,40 @@ const toErrorDetails = (
     return {
       statusCode: 400,
       error: getStatusName(400),
-      message: error.description ?? error.message,
+      messageKey: 'http.requestError',
+      messageArgs: {
+        details: error.description ?? error.message,
+      },
     };
   }
 
   if (error instanceof Error) {
+    if (process.env.NODE_ENV === 'production') {
+      return {
+        statusCode: 500,
+        error: getStatusName(500),
+        messageKey: 'errors.internalServerError',
+      };
+    }
+
     return {
       statusCode: 500,
       error: getStatusName(500),
-      message:
-        process.env.NODE_ENV === 'production'
-          ? 'Internal Server Error'
-          : error.message,
+      messageKey: 'http.unexpectedError',
+      messageArgs: { details: error.message },
     };
   }
 
   return {
     statusCode: 500,
     error: getStatusName(500),
-    message: 'Internal Server Error',
+    messageKey: 'errors.internalServerError',
   };
 };
 
 export const respondCause = <E>(cause: Cause.Cause<E>) =>
   Effect.gen(function* () {
-    const { path } = yield* getRequestContext;
+    const { path, locale } = yield* getRequestContext;
     const firstError = getFirstError(cause);
     const details = toErrorDetails(firstError, path);
 
@@ -129,8 +156,10 @@ export const respondCause = <E>(cause: Cause.Cause<E>) =>
       makeErrorEnvelope(
         details.statusCode,
         details.error,
-        details.message,
+        details.messageKey,
         path,
+        locale,
+        details.messageArgs,
       ),
       { status: details.statusCode },
     );
@@ -142,11 +171,11 @@ export const respondJson = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
   options?: HttpServerResponse.Options.WithContentType,
 ) =>
-  effect.pipe(
-    Effect.flatMap((body) => HttpServerResponse.json(body, options)),
-    Effect.catchAllCause(respondCause),
-    Effect.flatMap(withRequestIdHeader),
-  );
+  Effect.gen(function* () {
+    const body = yield* effect;
+    const { locale } = yield* getRequestContext;
+    return yield* HttpServerResponse.json(localizeMessageTree(body, locale), options);
+  }).pipe(Effect.catchAllCause(respondCause), Effect.flatMap(withRequestIdHeader));
 
 export const respondEmpty = <E, R>(
   effect: Effect.Effect<unknown, E, R>,
@@ -162,6 +191,11 @@ export const respondStaticJson = (
   body: unknown,
   options?: HttpServerResponse.Options.WithContentType,
 ) =>
-  Effect.flatMap(HttpServerResponse.json(body, options), withRequestIdHeader).pipe(
-    Effect.catchAllCause(respondCause),
-  );
+  Effect.gen(function* () {
+    const { locale } = yield* getRequestContext;
+    const response = yield* HttpServerResponse.json(
+      localizeMessageTree(body, locale),
+      options,
+    );
+    return yield* withRequestIdHeader(response);
+  }).pipe(Effect.catchAllCause(respondCause));

@@ -58,7 +58,7 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
             : Effect.fail(
                 new CategoryNotFound({
                   id,
-                  message: 'Category not found',
+                  messageKey: 'categories.notFound',
                 }),
               ),
         );
@@ -104,7 +104,7 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
               return yield* Effect.fail(
                 new ParentCategoryNotFound({
                   parentId: dto.parent_id,
-                  message: 'Parent category not found',
+                  messageKey: 'categories.parentNotFound',
                 }),
               );
             }
@@ -116,7 +116,7 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
               new CategoryNameAlreadyExists({
                 name: dto.name,
                 parentId: dto.parent_id,
-                message: 'Category with this name already exists',
+                messageKey: 'categories.nameAlreadyExists',
               }),
             );
           }
@@ -148,7 +148,7 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
               return yield* Effect.fail(
                 new CategorySelfParent({
                   id,
-                  message: 'Category cannot be its own parent',
+                  messageKey: 'categories.selfParent',
                 }),
               );
             }
@@ -159,7 +159,7 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
                 return yield* Effect.fail(
                   new ParentCategoryNotFound({
                     parentId: dto.parent_id,
-                    message: 'Parent category not found',
+                    messageKey: 'categories.parentNotFound',
                   }),
                 );
               }
@@ -170,7 +170,7 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
                   new CategoryCircularReference({
                     id,
                     parentId: dto.parent_id,
-                    message: 'Cannot set parent: would create a circular reference',
+                    messageKey: 'categories.circularReference',
                   }),
                 );
               }
@@ -191,7 +191,7 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
                 new CategoryNameAlreadyExists({
                   name: targetName,
                   parentId: targetParentId,
-                  message: 'Category with this name already exists',
+                  messageKey: 'categories.nameAlreadyExists',
                 }),
               );
             }

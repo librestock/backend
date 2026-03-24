@@ -9,6 +9,7 @@ import { Effect, Schema } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson, respondCause } from '../../platform/errors';
+import { makeMessageResponse } from '../../platform/messages';
 import { getOptionalSession } from '../../platform/session';
 import {
   PhotoIdSchema,
@@ -44,7 +45,7 @@ export const productPhotosRouter = HttpRouter.empty.pipe(
           new PhotosInfrastructureError({
             action: 'read uploaded file',
             cause,
-            message: 'Failed to read uploaded file',
+            messageKey: 'photos.readUploadFailed',
           }),
       });
       const fileStats = yield* Effect.tryPromise({
@@ -53,7 +54,7 @@ export const productPhotosRouter = HttpRouter.empty.pipe(
           new PhotosInfrastructureError({
             action: 'stat uploaded file',
             cause,
-            message: 'Failed to stat uploaded file',
+            messageKey: 'photos.statUploadFailed',
           }),
       });
 
@@ -115,7 +116,7 @@ export const photosRouter = HttpRouter.empty.pipe(
       const photosService = yield* PhotosService;
       yield* photosService.deletePhoto(id);
       return yield* respondJson(
-        Effect.succeed({ message: 'Photo deleted successfully', messageKey: 'photos.deleted' }),
+        Effect.succeed(makeMessageResponse('photos.deleted')),
       );
     }),
   ),

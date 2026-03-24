@@ -1,63 +1,48 @@
-import { Data } from 'effect';
+import {
+  BadRequestError,
+  InternalError,
+  NotFoundError,
+} from '../../platform/domain-errors';
 
-export class StockMovementNotFound extends Data.TaggedError('StockMovementNotFound')<{
+export class StockMovementNotFound extends NotFoundError(
+  'StockMovementNotFound',
+)<{
   readonly id: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 404 as const;
-}
+}> {}
 
-export class StockMovementProductNotFound extends Data.TaggedError(
+export class StockMovementProductNotFound extends NotFoundError(
   'StockMovementProductNotFound',
 )<{
   readonly productId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 404 as const;
-}
+}> {}
 
-export class StockMovementLocationNotFound extends Data.TaggedError(
+export class StockMovementLocationNotFound extends NotFoundError(
   'StockMovementLocationNotFound',
 )<{
   readonly locationId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 404 as const;
-}
+}> {}
 
-export class InvalidStockMovementProduct extends Data.TaggedError(
+export class InvalidStockMovementProduct extends BadRequestError(
   'InvalidStockMovementProduct',
 )<{
   readonly productId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class InvalidSourceLocation extends Data.TaggedError(
+export class InvalidSourceLocation extends BadRequestError(
   'InvalidSourceLocation',
 )<{
   readonly locationId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class InvalidDestinationLocation extends Data.TaggedError(
+export class InvalidDestinationLocation extends BadRequestError(
   'InvalidDestinationLocation',
 )<{
   readonly locationId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class StockMovementsInfrastructureError extends Data.TaggedError(
+export class StockMovementsInfrastructureError extends InternalError(
   'StockMovementsInfrastructureError',
 )<{
   readonly action: string;
   readonly cause?: unknown;
-  readonly message: string;
-}> {
-  readonly statusCode = 500 as const;
-}
+}> {}

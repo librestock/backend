@@ -73,7 +73,7 @@ const betterAuthMigrationLayer = Layer.effectDiscard(
       },
       catch: (cause) =>
         new DrizzleInitializationError({
-          message: 'Failed to run Better Auth migrations',
+          messageKey: 'drizzle.migrationsFailed',
           cause,
         }),
     });

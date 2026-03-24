@@ -1,46 +1,35 @@
-import { Data } from 'effect';
 import type { OrderStatus } from '@librestock/types/orders';
+import {
+  BadRequestError,
+  InternalError,
+  NotFoundError,
+} from '../../platform/domain-errors';
 
-export class OrderNotFound extends Data.TaggedError('OrderNotFound')<{
+export class OrderNotFound extends NotFoundError('OrderNotFound')<{
   readonly id: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 404 as const;
-}
+}> {}
 
-export class ClientNotFound extends Data.TaggedError('ClientNotFound')<{
+export class ClientNotFound extends BadRequestError('ClientNotFound')<{
   readonly clientId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class InvalidOrderStatusTransition extends Data.TaggedError(
+export class InvalidOrderStatusTransition extends BadRequestError(
   'InvalidOrderStatusTransition',
 )<{
   readonly from: OrderStatus;
   readonly to: OrderStatus;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class CannotDeleteNonDraftOrder extends Data.TaggedError(
+export class CannotDeleteNonDraftOrder extends BadRequestError(
   'CannotDeleteNonDraftOrder',
 )<{
   readonly orderId: string;
   readonly status: OrderStatus;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class OrdersInfrastructureError extends Data.TaggedError(
+export class OrdersInfrastructureError extends InternalError(
   'OrdersInfrastructureError',
 )<{
   readonly action: string;
-  readonly message: string;
   readonly cause?: unknown;
-}> {
-  readonly statusCode = 500 as const;
-}
+}> {}

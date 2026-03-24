@@ -1,9 +1,19 @@
 import { Data } from 'effect';
+import {
+  DEFAULT_LOCALE,
+  translateMessage,
+  type AnyMessageKey,
+  type MessageArgs,
+} from './messages';
 
-interface AppErrorFields {
-  readonly message: string;
-  readonly messageKey?: string;
+interface AppErrorInputFields {
+  readonly messageKey: AnyMessageKey;
+  readonly messageArgs?: MessageArgs;
   readonly code?: string;
+}
+
+interface AppErrorFields extends AppErrorInputFields {
+  readonly message: string;
 }
 
 type AppErrorInstance<
@@ -15,7 +25,7 @@ type AppErrorInstance<
 type AppErrorConstructor<
   Tag extends string,
   StatusCode extends number,
-  BaseFields extends object = AppErrorFields,
+  BaseFields extends object = AppErrorInputFields,
 > = new <Fields extends object = object>(
   args: Readonly<Fields & BaseFields>,
 ) => AppErrorInstance<Tag, StatusCode, Fields & BaseFields>;
@@ -24,12 +34,12 @@ type AppErrorConstructor<
  * Convention for Effect domain errors in this codebase:
  *
  * - Every domain error extends Data.TaggedError with a unique _tag
- * - Every error carries a `message` (human-readable) and `statusCode` (HTTP mapping)
+ * - Every error carries a `messageKey` and `statusCode` (HTTP mapping)
  * - The `runEffect` bridge reads these to produce the correct HTTP error response
  *
  * Usage:
  *   class ProductNotFound extends NotFoundError("ProductNotFound")<{ readonly id: string }> {}
- *   yield* new ProductNotFound({ id, message: "Product not found" })
+ *   yield* new ProductNotFound({ id, messageKey: "products.notFound" })
  */
 
 // ---------------------------------------------------------------------------
@@ -42,7 +52,8 @@ export interface AppError<
 > extends Error {
   readonly _tag: Tag;
   readonly message: string;
-  readonly messageKey?: string;
+  readonly messageKey: AnyMessageKey;
+  readonly messageArgs?: MessageArgs;
   readonly code?: string;
   readonly statusCode: StatusCode;
 }
@@ -53,7 +64,7 @@ const isRecord = (value: unknown): value is Record<PropertyKey, unknown> =>
 export const isAppError = (value: unknown): value is AppError =>
   isRecord(value) &&
   typeof value._tag === 'string' &&
-  typeof value.message === 'string' &&
+  typeof value.messageKey === 'string' &&
   typeof value.statusCode === 'number';
 
 // ---------------------------------------------------------------------------
@@ -76,8 +87,15 @@ function makeErrorFactory<StatusCode extends number>(statusCode: StatusCode) {
     class EffectError extends Data.TaggedError(tag)<AppErrorFields> {
       readonly statusCode: StatusCode = statusCode;
 
-      constructor(args: Readonly<object & AppErrorFields>) {
-        super(args);
+      constructor(args: Readonly<object & AppErrorInputFields>) {
+        super({
+          ...args,
+          message: translateMessage(
+            DEFAULT_LOCALE,
+            args.messageKey,
+            args.messageArgs,
+          ),
+        });
       }
     }
 
@@ -91,3 +109,4 @@ export const ConflictError = makeErrorFactory(409);
 export const ForbiddenError = makeErrorFactory(403);
 export const UnauthorizedError = makeErrorFactory(401);
 export const InternalError = makeErrorFactory(500);
+export const NotImplementedError = makeErrorFactory(501);

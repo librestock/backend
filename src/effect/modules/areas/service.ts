@@ -38,7 +38,7 @@ export class AreasService extends Effect.Service<AreasService>()(
             : Effect.fail(
                 new AreaNotFound({
                   id,
-                  message: `Area with ID ${id} not found`,
+                  messageKey: 'areas.notFound',
                 }),
               ),
         );
@@ -70,7 +70,7 @@ export class AreasService extends Effect.Service<AreasService>()(
             return yield* Effect.fail(
               new AreaLocationNotFound({
                 locationId: dto.location_id,
-                message: `Location with ID ${dto.location_id} not found`,
+                messageKey: 'areas.locationNotFound',
               }),
             );
           }
@@ -81,7 +81,7 @@ export class AreasService extends Effect.Service<AreasService>()(
               return yield* Effect.fail(
                 new ParentAreaNotFound({
                   parentId: dto.parent_id,
-                  message: `Parent area with ID ${dto.parent_id} not found`,
+                  messageKey: 'areas.parentNotFound',
                 }),
               );
             }
@@ -90,7 +90,7 @@ export class AreasService extends Effect.Service<AreasService>()(
                 new AreaParentLocationMismatch({
                   parentId: dto.parent_id,
                   locationId: dto.location_id,
-                  message: 'Parent area must belong to the same location',
+                  messageKey: 'areas.parentLocationMismatch',
                 }),
               );
             }
@@ -130,7 +130,7 @@ export class AreasService extends Effect.Service<AreasService>()(
             : Effect.fail(
                 new AreaNotFound({
                   id,
-                  message: `Area with ID ${id} not found`,
+                  messageKey: 'areas.notFound',
                 }),
               ),
         );
@@ -155,7 +155,7 @@ export class AreasService extends Effect.Service<AreasService>()(
               return yield* Effect.fail(
                 new AreaSelfParent({
                   id,
-                  message: 'Area cannot be its own parent',
+                  messageKey: 'areas.selfParent',
                 }),
               );
             }
@@ -165,7 +165,7 @@ export class AreasService extends Effect.Service<AreasService>()(
               return yield* Effect.fail(
                 new ParentAreaNotFound({
                   parentId: dto.parent_id,
-                  message: `Parent area with ID ${dto.parent_id} not found`,
+                  messageKey: 'areas.parentNotFound',
                 }),
               );
             }
@@ -174,7 +174,7 @@ export class AreasService extends Effect.Service<AreasService>()(
                 new AreaParentLocationMismatch({
                   parentId: dto.parent_id,
                   locationId: existingArea.location_id,
-                  message: 'Parent area must belong to the same location',
+                  messageKey: 'areas.parentLocationMismatch',
                 }),
               );
             }
@@ -188,7 +188,7 @@ export class AreasService extends Effect.Service<AreasService>()(
                 new AreaCircularReference({
                   id,
                   parentId: dto.parent_id,
-                  message: 'Cannot set parent: would create circular reference',
+                  messageKey: 'areas.circularReference',
                 }),
               );
             }
@@ -199,7 +199,7 @@ export class AreasService extends Effect.Service<AreasService>()(
             return yield* Effect.fail(
               new AreaNotFound({
                 id,
-                message: `Area with ID ${id} not found`,
+                messageKey: 'areas.notFound',
               }),
             );
           }
@@ -215,7 +215,7 @@ export class AreasService extends Effect.Service<AreasService>()(
             return yield* Effect.fail(
               new AreaNotFound({
                 id,
-                message: `Area with ID ${id} not found`,
+                messageKey: 'areas.notFound',
               }),
             );
           }

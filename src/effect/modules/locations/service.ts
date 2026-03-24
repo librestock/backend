@@ -32,7 +32,7 @@ export class LocationsService extends Effect.Service<LocationsService>()(
             : Effect.fail(
                 new LocationNotFound({
                   id,
-                  message: 'Location not found',
+                  messageKey: 'locations.notFound',
                 }),
               ),
         );

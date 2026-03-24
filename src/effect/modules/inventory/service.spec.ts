@@ -275,7 +275,7 @@ describe('Effect InventoryService', () => {
           Effect.fail(
             new AreaNotFound({
               id: 'area-1',
-              message: 'Area not found',
+              messageKey: 'areas.notFound',
             }),
           ),
         ),

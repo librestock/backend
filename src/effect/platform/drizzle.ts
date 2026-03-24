@@ -1,4 +1,4 @@
-import { Data, Context, Effect, Layer } from 'effect';
+import { Context, Effect, Layer } from 'effect';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import {
@@ -9,16 +9,16 @@ import {
 } from '../../config/db-connection.utils';
 import * as schema from './db/schema';
 import * as relations from './db/relations';
+import { InternalError } from './domain-errors';
 
 export type DrizzleDb = NodePgDatabase<typeof schema & typeof relations>;
 
 const __pool = Symbol('__pool');
 type DrizzleDbWithPool = DrizzleDb & { [__pool]?: pg.Pool };
 
-export class DrizzleInitializationError extends Data.TaggedError(
+export class DrizzleInitializationError extends InternalError(
   'DrizzleInitializationError',
 )<{
-  readonly message: string;
   readonly cause?: unknown;
 }> {}
 
@@ -75,7 +75,7 @@ export const drizzleLayer = Layer.scoped(
       catch: (cause) =>
         new DrizzleInitializationError({
           cause,
-          message: 'Failed to initialize Drizzle database connection',
+          messageKey: 'drizzle.initializationFailed',
         }),
     }),
     (db) =>

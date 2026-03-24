@@ -13,6 +13,7 @@ import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
 import { getOptionalSession } from '../../platform/session';
+import { makeMessageResponse } from '../../platform/messages';
 import { OrdersService } from './service';
 
 const OrderPathParams = Schema.Struct({ id: OrderIdSchema });
@@ -103,7 +104,7 @@ export const ordersRouter = HttpRouter.empty.pipe(
         entityId: id,
       });
       return yield* respondJson(
-        Effect.succeed({ message: 'Order deleted successfully', messageKey: 'orders.deleted' }),
+        Effect.succeed(makeMessageResponse('orders.deleted')),
       );
     }),
   ),

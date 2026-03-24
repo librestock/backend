@@ -11,7 +11,7 @@ const tryAsync = <A>(action: string, run: () => Promise<A>) =>
       new RolesInfrastructureError({
         action,
         cause,
-        message: `Failed to ${action}`,
+        messageKey: 'roles.repositoryFailed',
       }),
   });
 

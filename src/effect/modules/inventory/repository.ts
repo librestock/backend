@@ -17,7 +17,7 @@ const tryAsync = <A>(action: string, run: () => Promise<A>) =>
       new InventoryInfrastructureError({
         action,
         cause,
-        message: `Failed to ${action}`,
+        messageKey: 'inventory.infrastructureFailed',
       }),
   });
 

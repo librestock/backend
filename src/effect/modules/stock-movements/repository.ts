@@ -8,6 +8,7 @@ import {
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { stockMovements } from '../../platform/db/schema';
 import { StockMovementsInfrastructureError } from './stock-movements.errors';
+import type { StockMovementWithRelations } from './stock-movements.utils';
 
 type RawRow = Record<string, any>;
 
@@ -24,7 +25,7 @@ const tryAsync = <A>(action: string, run: () => Promise<A>) =>
       new StockMovementsInfrastructureError({
         action,
         cause,
-        message: `Failed to ${action}`,
+        messageKey: 'stockMovements.repositoryFailed',
       }),
   });
 
@@ -92,12 +93,14 @@ export class StockMovementsRepository extends Effect.Service<StockMovementsRepos
             LIMIT ${limit}
           `);
 
-          const data = extractRows(rows).map((r) => ({
-            ...r,
-            product: r.product?.id ? r.product : null,
-            fromLocation: r.fromLocation?.id ? r.fromLocation : null,
-            toLocation: r.toLocation?.id ? r.toLocation : null,
-          }));
+          const data = extractRows(rows).map(
+            (r): StockMovementWithRelations => ({
+              ...(r as typeof stockMovements.$inferSelect),
+              product: r.product?.id ? r.product : null,
+              fromLocation: r.fromLocation?.id ? r.fromLocation : null,
+              toLocation: r.toLocation?.id ? r.toLocation : null,
+            }),
+          );
 
           return toRepositoryPaginatedResult(data, total, page, limit);
         });
@@ -119,11 +122,11 @@ export class StockMovementsRepository extends Effect.Service<StockMovementsRepos
         const row = extractRows(rows)[0];
         if (!row) return null;
         return {
-          ...row,
+          ...(row as typeof stockMovements.$inferSelect),
           product: row.product?.id ? row.product : null,
           fromLocation: row.fromLocation?.id ? row.fromLocation : null,
           toLocation: row.toLocation?.id ? row.toLocation : null,
-        };
+        } satisfies StockMovementWithRelations;
       };
 
       const findById = (id: string) =>
@@ -144,12 +147,14 @@ export class StockMovementsRepository extends Effect.Service<StockMovementsRepos
             WHERE sm.product_id = ${productId}
             ORDER BY sm.created_at DESC
           `);
-          return extractRows(rows).map((r) => ({
-            ...r,
-            product: r.product?.id ? r.product : null,
-            fromLocation: r.fromLocation?.id ? r.fromLocation : null,
-            toLocation: r.toLocation?.id ? r.toLocation : null,
-          }));
+          return extractRows(rows).map(
+            (r): StockMovementWithRelations => ({
+              ...(r as typeof stockMovements.$inferSelect),
+              product: r.product?.id ? r.product : null,
+              fromLocation: r.fromLocation?.id ? r.fromLocation : null,
+              toLocation: r.toLocation?.id ? r.toLocation : null,
+            }),
+          );
         });
 
       const findByLocationId = (locationId: string) =>
@@ -167,12 +172,14 @@ export class StockMovementsRepository extends Effect.Service<StockMovementsRepos
             WHERE sm.from_location_id = ${locationId} OR sm.to_location_id = ${locationId}
             ORDER BY sm.created_at DESC
           `);
-          return extractRows(rows).map((r) => ({
-            ...r,
-            product: r.product?.id ? r.product : null,
-            fromLocation: r.fromLocation?.id ? r.fromLocation : null,
-            toLocation: r.toLocation?.id ? r.toLocation : null,
-          }));
+          return extractRows(rows).map(
+            (r): StockMovementWithRelations => ({
+              ...(r as typeof stockMovements.$inferSelect),
+              product: r.product?.id ? r.product : null,
+              fromLocation: r.fromLocation?.id ? r.fromLocation : null,
+              toLocation: r.toLocation?.id ? r.toLocation : null,
+            }),
+          );
         });
 
       const create = (data: typeof stockMovements.$inferInsert) =>

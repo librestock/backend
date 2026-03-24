@@ -23,7 +23,7 @@ const brandingTryAsync = <A>(action: string, run: () => Promise<A>) =>
       new BrandingInfrastructureError({
         action,
         cause,
-        message: `Branding service failed to ${action}`,
+        messageKey: 'branding.repositoryFailed',
       }),
   });
 

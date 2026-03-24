@@ -24,7 +24,7 @@ const tryAsync = <A>(action: string, run: () => Promise<A>) =>
       new OrdersInfrastructureError({
         action,
         cause,
-        message: `Failed to ${action}`,
+        messageKey: 'orders.infrastructureFailed',
       }),
   });
 

@@ -19,7 +19,7 @@ const tryAsync = <A>(action: string, run: () => Promise<A>) =>
       new ProductsInfrastructureError({
         action,
         cause,
-        message: `Failed to ${action}`,
+        messageKey: 'products.repositoryFailed',
       }),
   });
 

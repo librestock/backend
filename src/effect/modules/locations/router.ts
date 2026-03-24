@@ -9,6 +9,7 @@ import {
 import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
+import { makeMessageResponse } from '../../platform/messages';
 import {
   CreateLocationSchema,
   UpdateLocationSchema,
@@ -91,7 +92,7 @@ export const locationsRouter = HttpRouter.empty.pipe(
         entityId: id,
       });
       return yield* respondJson(
-        Effect.succeed({ message: 'Location deleted successfully', messageKey: 'locations.deleted' }),
+        Effect.succeed(makeMessageResponse('locations.deleted')),
       );
     }),
   ),

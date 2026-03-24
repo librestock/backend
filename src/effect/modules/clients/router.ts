@@ -9,6 +9,7 @@ import {
 import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
+import { makeMessageResponse } from '../../platform/messages';
 import {
   CreateClientSchema,
   UpdateClientSchema,
@@ -83,7 +84,7 @@ export const clientsRouter = HttpRouter.empty.pipe(
         entityId: id,
       });
       return yield* respondJson(
-        Effect.succeed({ message: 'Client deleted successfully', messageKey: 'clients.deleted' }),
+        Effect.succeed(makeMessageResponse('clients.deleted')),
       );
     }),
   ),

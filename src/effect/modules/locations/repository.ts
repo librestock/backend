@@ -17,7 +17,7 @@ const tryAsync = <A>(action: string, run: () => Promise<A>) =>
       new LocationsInfrastructureError({
         action,
         cause,
-        message: `Failed to ${action}`,
+        messageKey: 'locations.repositoryFailed',
       }),
   });
 

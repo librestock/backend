@@ -1,12 +1,12 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
 import type { StockMovementQueryDto } from '@librestock/types/stock-movements';
-import { toPaginatedResponse, type PaginatedResult } from '../../platform/pagination.utils';
+import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { ProductsService } from '../products/service';
 import { LocationsService } from '../locations/service';
-import type { stockMovements } from '../../platform/db/schema';
 import type { CreateStockMovementSchema } from './stock-movements.schema';
 import {
+  type StockMovementWithRelations,
   toStockMovementResponseDto,
 } from './stock-movements.utils';
 import {
@@ -19,13 +19,6 @@ import {
   type StockMovementsInfrastructureError,
 } from './stock-movements.errors';
 import { StockMovementsRepository } from './repository';
-
-type StockMovementRow = typeof stockMovements.$inferSelect;
-type StockMovement = StockMovementRow & {
-  product?: { id: string; name: string; sku: string } | null;
-  fromLocation?: { id: string; name: string } | null;
-  toLocation?: { id: string; name: string } | null;
-};
 
 type CreateStockMovementDto = Schema.Schema.Type<typeof CreateStockMovementSchema>;
 
@@ -40,7 +33,7 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
       const getMovementOrFail = (
         id: string,
       ): Effect.Effect<
-        StockMovement,
+        StockMovementWithRelations,
         StockMovementNotFound | StockMovementsInfrastructureError
       > =>
         Effect.flatMap(
@@ -51,7 +44,7 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
               : Effect.fail(
                   new StockMovementNotFound({
                     id,
-                    message: 'Stock movement not found',
+                    messageKey: 'stockMovements.notFound',
                   }),
                 ),
         );
@@ -59,7 +52,7 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
       const findAllPaginated = (query: StockMovementQueryDto) =>
         Effect.map(
           repository.findAllPaginated(query),
-          (result) => toPaginatedResponse(result as PaginatedResult<StockMovement>, toStockMovementResponseDto),
+          (result) => toPaginatedResponse(result, toStockMovementResponseDto),
         );
 
       const findOne = (id: string) =>
@@ -72,7 +65,7 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
             return yield* Effect.fail(
               new StockMovementProductNotFound({
                 productId,
-                message: 'Product not found',
+                messageKey: 'stockMovements.productNotFound',
               }),
             );
           }
@@ -88,7 +81,7 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
             return yield* Effect.fail(
               new StockMovementLocationNotFound({
                 locationId,
-                message: 'Location not found',
+                messageKey: 'stockMovements.locationNotFound',
               }),
             );
           }
@@ -104,7 +97,7 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
             return yield* Effect.fail(
               new InvalidStockMovementProduct({
                 productId: dto.product_id,
-                message: 'Product not found',
+                messageKey: 'stockMovements.productNotFound',
               }),
             );
           }
@@ -115,7 +108,7 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
               return yield* Effect.fail(
                 new InvalidSourceLocation({
                   locationId: dto.from_location_id,
-                  message: 'Source location not found',
+                  messageKey: 'stockMovements.sourceLocationNotFound',
                 }),
               );
             }
@@ -127,7 +120,7 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
               return yield* Effect.fail(
                 new InvalidDestinationLocation({
                   locationId: dto.to_location_id,
-                  message: 'Destination location not found',
+                  messageKey: 'stockMovements.destinationLocationNotFound',
                 }),
               );
             }

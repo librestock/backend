@@ -9,6 +9,7 @@ import {
 import { requirePermission } from '../../platform/authorization';
 import { AuditLogWriter } from '../../platform/audit';
 import { respondJson } from '../../platform/errors';
+import { makeMessageResponse } from '../../platform/messages';
 import {
   AdjustInventorySchema,
   CreateInventorySchema,
@@ -129,7 +130,7 @@ export const inventoryRouter = HttpRouter.empty.pipe(
         entityId: id,
       });
       return yield* respondJson(
-        Effect.succeed({ message: 'Inventory item deleted successfully', messageKey: 'inventory.deleted' }),
+        Effect.succeed(makeMessageResponse('inventory.deleted')),
       );
     }),
   ),

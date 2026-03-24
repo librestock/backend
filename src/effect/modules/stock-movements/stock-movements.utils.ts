@@ -4,7 +4,7 @@ import type { stockMovements } from '../../platform/db/schema';
 import { StockMovementsInfrastructureError } from './stock-movements.errors';
 
 type StockMovementRow = typeof stockMovements.$inferSelect;
-type StockMovement = StockMovementRow & {
+export type StockMovementWithRelations = StockMovementRow & {
   product?: { id: string; name: string; sku: string } | null;
   fromLocation?: { id: string; name: string } | null;
   toLocation?: { id: string; name: string } | null;
@@ -20,12 +20,12 @@ export const stockMovementTryAsync = <A>(
       new StockMovementsInfrastructureError({
         action,
         cause,
-        message: `Stock movements service failed to ${action}`,
+        messageKey: 'stockMovements.infrastructureFailed',
       }),
   });
 
 export function toStockMovementResponseDto(
-  sm: StockMovement,
+  sm: StockMovementWithRelations,
 ): StockMovementResponseDto {
   return {
     id: sm.id,

@@ -99,7 +99,7 @@ export function productTryAsync<A>(
       new ProductsInfrastructureError({
         action,
         cause,
-        message: `Products service failed to ${action}`,
+        messageKey: 'products.infrastructureFailed',
       }),
   });
 }

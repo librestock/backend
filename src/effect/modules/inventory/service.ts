@@ -62,7 +62,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
               : Effect.fail(
                   new InventoryNotFound({
                     id,
-                    message: 'Inventory item not found',
+                    messageKey: 'inventory.notFound',
                   }),
                 ),
         );
@@ -76,7 +76,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
               : Effect.fail(
                   new InvalidInventoryProduct({
                     productId,
-                    message: 'Product not found',
+                    messageKey: 'inventory.productNotFound',
                   }),
                 ),
         );
@@ -90,7 +90,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
               : Effect.fail(
                   new InvalidInventoryLocation({
                     locationId,
-                    message: 'Location not found',
+                    messageKey: 'inventory.locationNotFound',
                   }),
                 ),
         );
@@ -111,7 +111,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
                   new InventoryAreaLocationMismatch({
                     areaId,
                     locationId,
-                    message: 'Area must belong to the specified location',
+                    messageKey: 'inventory.areaLocationMismatch',
                   }),
                 ),
         ).pipe(
@@ -119,7 +119,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
             if (error instanceof AreaNotFound) {
               return new InvalidInventoryArea({
                 areaId,
-                message: 'Area not found',
+                messageKey: 'inventory.areaNotFound',
               });
             }
 
@@ -127,7 +127,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
               return new InventoryInfrastructureError({
                 action: 'load inventory area',
                 cause: error,
-                message: 'Inventory service failed to load inventory area',
+                messageKey: 'inventory.infrastructureFailed',
               });
             }
 
@@ -157,7 +157,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
             return yield* Effect.fail(
               new InventoryProductNotFound({
                 productId,
-                message: 'Product not found',
+                messageKey: 'inventory.productNotFound',
               }),
             );
           }
@@ -173,7 +173,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
             return yield* Effect.fail(
               new InventoryLocationNotFound({
                 locationId,
-                message: 'Location not found',
+                messageKey: 'inventory.locationNotFound',
               }),
             );
           }
@@ -202,8 +202,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
                 productId: dto.product_id,
                 locationId: dto.location_id,
                 areaId: dto.area_id,
-                message:
-                  'Inventory for this product at this location/area already exists. Use the update or adjust endpoint instead.',
+                messageKey: 'inventory.alreadyExists',
               }),
             );
           }
@@ -259,8 +258,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
                   productId: inventory.product_id,
                   locationId: newLocationId,
                   areaId: newAreaId,
-                  message:
-                    'Inventory for this product at this location/area already exists. Use the update or adjust endpoint instead.',
+                  messageKey: 'inventory.alreadyExists',
                 }),
               );
             }
@@ -305,7 +303,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
               new InventoryQuantityAdjustmentFailed({
                 id,
                 adjustment: dto.adjustment,
-                message: 'Inventory quantity adjustment would result in a negative quantity',
+                messageKey: 'inventory.quantityAdjustmentNegative',
               }),
             );
           }

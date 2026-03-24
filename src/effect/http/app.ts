@@ -5,6 +5,12 @@ import { auth } from '../../auth';
 import { apiRouter } from '../modules';
 import { healthRouter } from '../modules/health/router';
 import { respondCause } from '../platform/errors';
+import {
+  resolveLocale,
+  translateMessage,
+  type AnyMessageKey,
+  type MessageArgs,
+} from '../platform/messages';
 import { corsMiddleware } from './cors';
 import { securityHeadersMiddleware } from './security-headers';
 import { requestLoggingMiddleware } from './logging';
@@ -19,15 +25,19 @@ const stripQueryString = (url: string) => {
 const makeErrorResponse = (
   statusCode: number,
   error: string,
-  message: string,
+  messageKey: AnyMessageKey,
   path: string,
+  locale: ReturnType<typeof resolveLocale>,
+  messageArgs?: MessageArgs,
   headers?: Record<string, string>,
 ) =>
   HttpServerResponse.unsafeJson(
     {
       statusCode,
       error,
-      message,
+      messageKey,
+      ...(messageArgs ? { messageArgs } : {}),
+      message: translateMessage(locale, messageKey, messageArgs),
       path,
       timestamp: new Date().toISOString(),
     },
@@ -49,12 +59,18 @@ const bodyLimitMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>) =>
       Number.isFinite(contentLength) &&
       contentLength > MAX_REQUEST_BODY_BYTES
     ) {
+      const acceptLanguageHeader = request.headers['accept-language'];
+      const locale = resolveLocale(
+        typeof acceptLanguageHeader === 'string' ? acceptLanguageHeader : null,
+      );
+
       return Effect.succeed(
         makeErrorResponse(
           413,
           'Payload Too Large',
-          'Request body exceeds the 10MB limit',
+          'http.requestBodyTooLarge',
           stripQueryString(request.url),
+          locale,
         ),
       );
     }

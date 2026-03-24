@@ -11,7 +11,7 @@ const tryAsync = <A>(action: string, run: () => Promise<A>) =>
       new UsersInfrastructureError({
         action,
         cause,
-        message: `Failed to ${action}`,
+        messageKey: 'users.repositoryFailed',
       }),
   });
 

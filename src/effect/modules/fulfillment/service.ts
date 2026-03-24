@@ -42,7 +42,7 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
         new FulfillmentInfrastructureError({
           action,
           cause,
-          message: `Fulfillment failed to ${action}`,
+          messageKey: 'fulfillment.infrastructureFailed',
         });
 
       const loadOrderOrFail = (
@@ -62,7 +62,6 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
               : Effect.fail(
                   new FulfillmentOrderNotFound({
                     orderId,
-                    message: 'Order not found',
                     messageKey: 'fulfillment.orderNotFound',
                   }),
                 ),
@@ -93,7 +92,6 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
                 orderId,
                 from: order.status,
                 to: OrderStatus.CONFIRMED,
-                message: 'Only draft orders can be confirmed',
                 messageKey: 'fulfillment.onlyDraftCanConfirm',
               }),
             );
@@ -130,7 +128,6 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
                 orderId: input.orderId,
                 from: order.status,
                 to: OrderStatus.PICKING,
-                message: 'Order must be confirmed or already picking',
                 messageKey: 'fulfillment.notPickable',
               }),
             );
@@ -160,7 +157,6 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
               return yield* Effect.fail(
                 new FulfillmentPickFailed({
                   orderItemId: p.orderItemId,
-                  message: 'Order item not found',
                   messageKey: 'fulfillment.orderItemNotFound',
                 }),
               );
@@ -177,7 +173,6 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
               return yield* Effect.fail(
                 new FulfillmentPickFailed({
                   orderItemId: p.orderItemId,
-                  message: 'Insufficient inventory to fulfil pick',
                   messageKey: 'fulfillment.insufficientInventory',
                 }),
               );
@@ -196,8 +191,6 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
               return yield* Effect.fail(
                 new FulfillmentPickFailed({
                   orderItemId: p.orderItemId,
-                  message:
-                    'Quantity would exceed ordered amount (already picked or over-pick)',
                   messageKey: 'fulfillment.overPick',
                 }),
               );
@@ -244,8 +237,7 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
           return yield* Effect.fail(
             new FulfillmentNotImplemented({
               operation: 'pack',
-              message:
-                'Packing requires order-item progress writes and workflow validation inside one fulfillment boundary',
+              messageKey: 'fulfillment.packNotImplemented',
             }),
           );
         });
@@ -261,8 +253,7 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
           return yield* Effect.fail(
             new FulfillmentNotImplemented({
               operation: 'ship',
-              message:
-                'Shipping requires atomic inventory decrement, stock movement creation, and status transition logic',
+              messageKey: 'fulfillment.shipNotImplemented',
             }),
           );
         });

@@ -113,7 +113,7 @@ export class RolesService extends Effect.Service<RolesService>()(
             : Effect.fail(
                 new RoleNotFound({
                   id,
-                  message: `Role with ID ${id} not found`,
+                  messageKey: 'roles.notFound',
                 }),
               ),
         );
@@ -153,7 +153,7 @@ export class RolesService extends Effect.Service<RolesService>()(
             new RolesInfrastructureError({
               action: 'load user permissions',
               cause,
-              message: 'Failed to load user permissions',
+              messageKey: 'roles.loadPermissionsFailed',
             }),
         });
 
@@ -197,7 +197,7 @@ export class RolesService extends Effect.Service<RolesService>()(
               return yield* Effect.fail(
                 new RoleNameAlreadyExists({
                   name: dto.name,
-                  message: `Role with name "${dto.name}" already exists`,
+                  messageKey: 'roles.nameAlreadyExists',
                 }),
               );
             }
@@ -224,7 +224,7 @@ export class RolesService extends Effect.Service<RolesService>()(
                 return yield* Effect.fail(
                   new RoleNameAlreadyExists({
                     name: nextName,
-                    message: `Role with name "${nextName}" already exists`,
+                    messageKey: 'roles.nameAlreadyExists',
                   }),
                 );
               }
@@ -256,7 +256,7 @@ export class RolesService extends Effect.Service<RolesService>()(
               return yield* Effect.fail(
                 new SystemRoleDeletionForbidden({
                   id,
-                  message: 'System roles cannot be deleted',
+                  messageKey: 'roles.systemDeletionForbidden',
                 }),
               );
             }

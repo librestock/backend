@@ -9,6 +9,7 @@ import {
 import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
+import { makeMessageResponse } from '../../platform/messages';
 import {
   CreateSupplierSchema,
   UpdateSupplierSchema,
@@ -83,7 +84,7 @@ export const suppliersRouter = HttpRouter.empty.pipe(
         entityId: id,
       });
       return yield* respondJson(
-        Effect.succeed({ message: 'Supplier deleted successfully', messageKey: 'suppliers.deleted' }),
+        Effect.succeed(makeMessageResponse('suppliers.deleted')),
       );
     }),
   ),

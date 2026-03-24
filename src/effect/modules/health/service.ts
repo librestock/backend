@@ -2,10 +2,13 @@ import { Effect } from 'effect';
 import { sql } from 'drizzle-orm';
 import { BetterAuth } from '../../platform/better-auth';
 import { DrizzleDatabase } from '../../platform/drizzle';
+import { type AnyMessageKey, type MessageArgs } from '../../platform/messages';
 
 interface HealthDetails {
   readonly status: 'up' | 'down';
   readonly message?: string;
+  readonly messageKey?: AnyMessageKey;
+  readonly messageArgs?: MessageArgs;
 }
 
 export interface HealthCheckResponse {
@@ -41,9 +44,9 @@ const checkDatabase = Effect.gen(function* () {
       await db.execute(sql`SELECT 1`);
       return { status: 'up' as const };
     },
-    catch: (cause) => ({
+    catch: () => ({
       status: 'down' as const,
-      message: cause instanceof Error ? cause.message : 'Database is unreachable',
+      messageKey: 'health.databaseUnreachable' as const,
     }),
   });
 });
@@ -54,13 +57,13 @@ const checkBetterAuth = Effect.gen(function* () {
   if (!process.env.BETTER_AUTH_SECRET) {
     return {
       status: 'down' as const,
-      message: 'BETTER_AUTH_SECRET is not configured',
+      messageKey: 'health.betterAuthSecretMissing' as const,
     };
   }
 
   return {
     status: 'up' as const,
-    message: 'Better Auth is properly configured',
+    messageKey: 'health.betterAuthConfigured' as const,
   };
 });
 

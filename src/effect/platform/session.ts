@@ -1,22 +1,18 @@
 import { HttpServerRequest } from '@effect/platform';
-import { Data, Effect } from 'effect';
+import { Effect } from 'effect';
 import type { UserSession } from './auth/user-session';
 import { BetterAuth } from './better-auth';
+import { InternalError, UnauthorizedError } from './domain-errors';
 
-export class SessionUnauthorized extends Data.TaggedError('SessionUnauthorized')<{
-  readonly message: string;
-}> {
-  readonly statusCode = 401 as const;
-}
+export class SessionUnauthorized extends UnauthorizedError(
+  'SessionUnauthorized',
+)<{}> {}
 
-export class SessionInfrastructureError extends Data.TaggedError(
+export class SessionInfrastructureError extends InternalError(
   'SessionInfrastructureError',
 )<{
-  readonly message: string;
   readonly cause?: unknown;
-}> {
-  readonly statusCode = 500 as const;
-}
+}> {}
 
 export const getRequestHeaders: Effect.Effect<
   globalThis.Headers,
@@ -36,7 +32,7 @@ export const getOptionalSession = Effect.gen(function* () {
     catch: (cause) =>
       new SessionInfrastructureError({
         cause,
-        message: 'Failed to resolve user session',
+        messageKey: 'session.resolveFailed',
       }),
   });
 
@@ -58,7 +54,7 @@ export const requireSession = Effect.flatMap(getOptionalSession, (session) =>
     ? Effect.succeed(session)
     : Effect.fail(
         new SessionUnauthorized({
-          message: 'Unauthorized',
+          messageKey: 'auth.unauthorized',
         }),
       ),
 );

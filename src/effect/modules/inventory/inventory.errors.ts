@@ -1,92 +1,68 @@
-import { Data } from 'effect';
+import {
+  BadRequestError,
+  InternalError,
+  NotFoundError,
+} from '../../platform/domain-errors';
 
-export class InventoryNotFound extends Data.TaggedError('InventoryNotFound')<{
+export class InventoryNotFound extends NotFoundError('InventoryNotFound')<{
   readonly id: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 404 as const;
-}
+}> {}
 
-export class InventoryProductNotFound extends Data.TaggedError(
+export class InventoryProductNotFound extends NotFoundError(
   'InventoryProductNotFound',
 )<{
   readonly productId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 404 as const;
-}
+}> {}
 
-export class InventoryLocationNotFound extends Data.TaggedError(
+export class InventoryLocationNotFound extends NotFoundError(
   'InventoryLocationNotFound',
 )<{
   readonly locationId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 404 as const;
-}
+}> {}
 
-export class InvalidInventoryProduct extends Data.TaggedError(
+export class InvalidInventoryProduct extends BadRequestError(
   'InvalidInventoryProduct',
 )<{
   readonly productId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class InvalidInventoryLocation extends Data.TaggedError(
+export class InvalidInventoryLocation extends BadRequestError(
   'InvalidInventoryLocation',
 )<{
   readonly locationId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class InvalidInventoryArea extends Data.TaggedError('InvalidInventoryArea')<{
+export class InvalidInventoryArea extends BadRequestError(
+  'InvalidInventoryArea',
+)<{
   readonly areaId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class InventoryAreaLocationMismatch extends Data.TaggedError(
+export class InventoryAreaLocationMismatch extends BadRequestError(
   'InventoryAreaLocationMismatch',
 )<{
   readonly areaId: string;
   readonly locationId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class InventoryAlreadyExists extends Data.TaggedError(
+export class InventoryAlreadyExists extends BadRequestError(
   'InventoryAlreadyExists',
 )<{
   readonly productId: string;
   readonly locationId: string;
   readonly areaId?: string | null;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class InventoryQuantityAdjustmentFailed extends Data.TaggedError(
+export class InventoryQuantityAdjustmentFailed extends BadRequestError(
   'InventoryQuantityAdjustmentFailed',
 )<{
   readonly id: string;
   readonly adjustment: number;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class InventoryInfrastructureError extends Data.TaggedError(
+export class InventoryInfrastructureError extends InternalError(
   'InventoryInfrastructureError',
 )<{
   readonly action: string;
   readonly cause?: unknown;
-  readonly message: string;
-}> {
-  readonly statusCode = 500 as const;
-}
+}> {}

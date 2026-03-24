@@ -5,6 +5,7 @@ import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
+import { makeMessageResponse } from '../../platform/messages';
 import {
   CategoryIdSchema,
   CreateCategorySchema,
@@ -70,7 +71,7 @@ export const categoriesRouter = HttpRouter.empty.pipe(
         entityId: id,
       });
       return yield* respondJson(
-        Effect.succeed({ message: 'Category deleted successfully', messageKey: 'categories.deleted' }),
+        Effect.succeed(makeMessageResponse('categories.deleted')),
       );
     }),
   ),

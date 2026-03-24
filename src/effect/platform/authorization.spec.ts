@@ -84,6 +84,7 @@ describe('requirePermission', () => {
     mockRequireSession.mockReturnValue(
       Effect.fail({
         _tag: 'SessionUnauthorized',
+        messageKey: 'auth.unauthorized',
         message: 'Unauthorized',
         statusCode: 401,
       }),
@@ -113,7 +114,7 @@ describe('requirePermission', () => {
       Effect.fail(
         new RolesInfrastructureError({
           action: 'load permissions',
-          message: 'Roles service failed to load permissions',
+          messageKey: 'roles.loadPermissionsFailed',
         }),
       ),
     );

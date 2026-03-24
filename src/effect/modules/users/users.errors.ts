@@ -1,18 +1,12 @@
-import { Data } from 'effect';
+import { InternalError, NotFoundError } from '../../platform/domain-errors';
 
-export class UserNotFound extends Data.TaggedError('UserNotFound')<{
+export class UserNotFound extends NotFoundError('UserNotFound')<{
   readonly id: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 404 as const;
-}
+}> {}
 
-export class UsersInfrastructureError extends Data.TaggedError(
+export class UsersInfrastructureError extends InternalError(
   'UsersInfrastructureError',
 )<{
   readonly action: string;
   readonly cause?: unknown;
-  readonly message: string;
-}> {
-  readonly statusCode = 500 as const;
-}
+}> {}

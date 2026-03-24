@@ -70,7 +70,12 @@ export class PhotosService extends Effect.Service<PhotosService>()(
         Effect.flatMap(repository.findById(id), (photo) =>
           photo
             ? Effect.succeed(photo)
-            : Effect.fail(new PhotoNotFound({ id, message: 'Photo not found' })),
+            : Effect.fail(
+                new PhotoNotFound({
+                  id,
+                  messageKey: 'photos.notFound',
+                }),
+              ),
         );
 
       const uploadPhoto = (
@@ -85,7 +90,8 @@ export class PhotosService extends Effect.Service<PhotosService>()(
           return Effect.fail(
             new InvalidPhotoMimeType({
               mimetype: file.mimetype,
-              message: `Invalid file type: ${file.mimetype}. Allowed types: ${ALLOWED_MIMETYPES.join(', ')}`,
+              messageKey: 'photos.invalidMimeType',
+              messageArgs: { allowedTypes: ALLOWED_MIMETYPES.join(', ') },
             }),
           );
         }
@@ -95,7 +101,8 @@ export class PhotosService extends Effect.Service<PhotosService>()(
             new PhotoTooLarge({
               size: file.size,
               maxSize: MAX_FILE_SIZE,
-              message: `File too large: ${file.size} bytes. Maximum allowed: ${MAX_FILE_SIZE} bytes`,
+              messageKey: 'photos.tooLarge',
+              messageArgs: { maxSize: MAX_FILE_SIZE },
             }),
           );
         }
@@ -115,7 +122,7 @@ export class PhotosService extends Effect.Service<PhotosService>()(
               new PhotosInfrastructureError({
                 action: 'write photo file',
                 cause,
-                message: 'Failed to write photo file',
+                messageKey: 'photos.writeFailed',
               }),
           });
 
@@ -167,7 +174,7 @@ export class PhotosService extends Effect.Service<PhotosService>()(
               new PhotosInfrastructureError({
                 action: 'check photo file existence',
                 cause,
-                message: 'Failed to check photo file existence',
+                messageKey: 'photos.existenceCheckFailed',
               }),
           });
 
@@ -176,7 +183,7 @@ export class PhotosService extends Effect.Service<PhotosService>()(
               new PhotoFileNotFound({
                 id,
                 path: photo.storage_path,
-                message: 'Photo file not found on disk',
+                messageKey: 'photos.fileNotFound',
               }),
             );
           }
@@ -199,7 +206,7 @@ export class PhotosService extends Effect.Service<PhotosService>()(
                 new PhotosInfrastructureError({
                   action: 'delete photo file',
                   cause,
-                  message: 'Failed to delete photo file',
+                  messageKey: 'photos.deleteFailed',
                 }),
               ),
             ),

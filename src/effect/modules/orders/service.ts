@@ -59,7 +59,7 @@ export class OrdersService extends Effect.Service<OrdersService>()(
               : Effect.fail(
                   new OrderNotFound({
                     id,
-                    message: 'Order not found',
+                    messageKey: 'orders.notFound',
                   }),
                 ),
         );
@@ -76,14 +76,15 @@ export class OrdersService extends Effect.Service<OrdersService>()(
             currentState.validateTransition(nextStatus);
             targetState.validateEntry(order);
           },
-          catch: (error) =>
+          catch: () =>
             new InvalidOrderStatusTransition({
               from: order.status,
               to: nextStatus,
-              message:
-                error instanceof Error
-                  ? error.message
-                  : `Cannot transition from ${order.status} to ${nextStatus}`,
+              messageKey: 'orders.invalidStatusTransition',
+              messageArgs: {
+                from: order.status,
+                to: nextStatus,
+              },
             }),
         });
 
@@ -118,7 +119,7 @@ export class OrdersService extends Effect.Service<OrdersService>()(
             return yield* Effect.fail(
               new ClientNotFound({
                 clientId: dto.client_id,
-                message: 'Client not found',
+                messageKey: 'orders.clientNotFound',
               }),
             );
           }
@@ -130,7 +131,7 @@ export class OrdersService extends Effect.Service<OrdersService>()(
                 return yield* Effect.fail(
                   new ProductNotFound({
                     productId: item.product_id,
-                    message: `Product ${item.product_id} not found`,
+                    messageKey: 'orders.productNotFound',
                   }),
                 );
               }
@@ -227,7 +228,7 @@ export class OrdersService extends Effect.Service<OrdersService>()(
               new CannotDeleteNonDraftOrder({
                 orderId: id,
                 status: order.status,
-                message: 'Only draft orders can be deleted',
+                messageKey: 'orders.deleteOnlyDraft',
               }),
             );
           }

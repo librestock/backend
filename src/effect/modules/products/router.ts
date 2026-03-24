@@ -6,6 +6,7 @@ import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
 import { getOptionalSession } from '../../platform/session';
+import { makeMessageResponse } from '../../platform/messages';
 import {
   ProductIdSchema,
   ProductQuerySchema,
@@ -255,14 +256,11 @@ export const productsRouter = HttpRouter.empty.pipe(
         entityId: id,
       });
       return yield* respondJson(
-        Effect.succeed({
-          message: query.permanent
-            ? 'Product permanently deleted'
-            : 'Product deleted successfully',
-          messageKey: query.permanent
-            ? 'products.deletedPermanent'
-            : 'products.deleted',
-        }),
+        Effect.succeed(
+          makeMessageResponse(
+            query.permanent ? 'products.deletedPermanent' : 'products.deleted',
+          ),
+        ),
       );
     }),
   ),

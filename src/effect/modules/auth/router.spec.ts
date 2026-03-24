@@ -87,6 +87,7 @@ describe('authRouter', () => {
       me: () =>
         Effect.fail({
           _tag: 'SessionUnauthorized',
+          messageKey: 'auth.unauthorized',
           message: 'Unauthorized',
           statusCode: 401,
         }),
@@ -99,7 +100,7 @@ describe('authRouter', () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toMatchObject({
       statusCode: 401,
-      message: 'Unauthorized',
+      message: 'Unauthorized.',
     });
   });
 });

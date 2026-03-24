@@ -35,7 +35,12 @@ export class ClientsService extends Effect.Service<ClientsService>()(
         Effect.flatMap(repository.findById(id), (client) =>
           client
             ? Effect.succeed(client)
-            : Effect.fail(new ClientNotFound({ id, message: 'Client not found' })),
+            : Effect.fail(
+                new ClientNotFound({
+                  id,
+                  messageKey: 'clients.notFound',
+                }),
+              ),
         );
 
       const findAllPaginated = (
@@ -65,7 +70,7 @@ export class ClientsService extends Effect.Service<ClientsService>()(
             return yield* Effect.fail(
               new ClientEmailAlreadyExists({
                 email: dto.email,
-                message: 'A client with this email already exists',
+                messageKey: 'clients.emailAlreadyExists',
               }),
             );
           }
@@ -107,7 +112,7 @@ export class ClientsService extends Effect.Service<ClientsService>()(
               return yield* Effect.fail(
                 new ClientEmailAlreadyExists({
                   email: dto.email,
-                  message: 'A client with this email already exists',
+                  messageKey: 'clients.emailAlreadyExists',
                 }),
               );
             }

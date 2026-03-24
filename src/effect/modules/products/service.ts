@@ -70,7 +70,7 @@ export class ProductsService extends Effect.Service<ProductsService>()(
               : Effect.fail(
                   new ProductNotFound({
                     productId: id,
-                    message: 'Product not found',
+                    messageKey: 'products.notFound',
                   }),
                 ),
         );
@@ -84,7 +84,7 @@ export class ProductsService extends Effect.Service<ProductsService>()(
               : Effect.fail(
                   new CategoryNotFound({
                     categoryId,
-                    message: 'Category not found',
+                    messageKey: 'products.categoryNotFound',
                   }),
                 ),
         );
@@ -99,7 +99,7 @@ export class ProductsService extends Effect.Service<ProductsService>()(
               ? Effect.fail(
                   new SkuAlreadyExists({
                     sku,
-                    message: 'A product with this SKU already exists',
+                    messageKey: 'products.skuAlreadyExists',
                   }),
                 )
               : Effect.void,
@@ -118,8 +118,7 @@ export class ProductsService extends Effect.Service<ProductsService>()(
             new PriceBelowCost({
               standardPrice,
               standardCost,
-              message:
-                'Standard price must be greater than or equal to standard cost',
+              messageKey: 'products.priceBelowCost',
             }),
           );
         }
@@ -173,7 +172,7 @@ export class ProductsService extends Effect.Service<ProductsService>()(
                 : Effect.fail(
                     new ProductsInfrastructureError({
                       action: 'load created product',
-                      message: 'Products service failed to load created product',
+                      messageKey: 'products.createdProductLoadFailed',
                     }),
                   ),
           );
@@ -328,7 +327,7 @@ export class ProductsService extends Effect.Service<ProductsService>()(
             return yield* Effect.fail(
               new ProductNotDeleted({
                 productId: id,
-                message: 'Product is not deleted',
+                messageKey: 'products.notDeleted',
               }),
             );
           }

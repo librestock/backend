@@ -6,6 +6,7 @@ import { AreaIdSchema, AreaQuerySchema } from '@librestock/types/areas';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
+import { makeMessageResponse } from '../../platform/messages';
 import {
   CreateAreaSchema,
   UpdateAreaSchema,
@@ -89,7 +90,7 @@ export const areasRouter = HttpRouter.empty.pipe(
         entityId: id,
       });
       return yield* respondJson(
-        Effect.succeed({ message: 'Area deleted successfully', messageKey: 'areas.deleted' }),
+        Effect.succeed(makeMessageResponse('areas.deleted')),
       );
     }),
   ),

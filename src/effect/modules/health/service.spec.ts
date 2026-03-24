@@ -96,23 +96,23 @@ describe('makeHealthService', () => {
       info: {
         'better-auth': {
           status: 'up',
-          message: 'Better Auth is properly configured',
+          messageKey: 'health.betterAuthConfigured',
         },
       },
       error: {
         database: {
           status: 'down',
-          message: 'database offline',
+          messageKey: 'health.databaseUnreachable',
         },
       },
       details: {
         database: {
           status: 'down',
-          message: 'database offline',
+          messageKey: 'health.databaseUnreachable',
         },
         'better-auth': {
           status: 'up',
-          message: 'Better Auth is properly configured',
+          messageKey: 'health.betterAuthConfigured',
         },
       },
     });

@@ -1,58 +1,44 @@
-import { Data } from 'effect';
 import type { OrderStatus } from '@librestock/types/orders';
+import {
+  BadRequestError,
+  ConflictError,
+  InternalError,
+  NotFoundError,
+  NotImplementedError,
+} from '../../platform/domain-errors';
 
-export class FulfillmentOrderNotFound extends Data.TaggedError(
+export class FulfillmentOrderNotFound extends NotFoundError(
   'FulfillmentOrderNotFound',
 )<{
   readonly orderId: string;
-  readonly message: string;
-  readonly messageKey?: string;
-}> {
-  readonly statusCode = 404 as const;
-}
+}> {}
 
-export class FulfillmentInvalidTransition extends Data.TaggedError(
+export class FulfillmentInvalidTransition extends BadRequestError(
   'FulfillmentInvalidTransition',
 )<{
   readonly orderId: string;
   readonly from: OrderStatus;
   readonly to: OrderStatus;
-  readonly message: string;
-  readonly messageKey?: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class FulfillmentPickFailed extends Data.TaggedError(
+export class FulfillmentPickFailed extends ConflictError(
   'FulfillmentPickFailed',
 )<{
   readonly orderItemId: string;
-  readonly message: string;
-  readonly messageKey?: string;
-}> {
-  readonly statusCode = 409 as const;
-}
+}> {}
 
-export class FulfillmentNotImplemented extends Data.TaggedError(
+export class FulfillmentNotImplemented extends NotImplementedError(
   'FulfillmentNotImplemented',
 )<{
   readonly operation: string;
-  readonly message: string;
-  readonly messageKey?: string;
-}> {
-  readonly statusCode = 501 as const;
-}
+}> {}
 
-export class FulfillmentInfrastructureError extends Data.TaggedError(
+export class FulfillmentInfrastructureError extends InternalError(
   'FulfillmentInfrastructureError',
 )<{
   readonly action: string;
-  readonly message: string;
-  readonly messageKey?: string;
   readonly cause?: unknown;
-}> {
-  readonly statusCode = 500 as const;
-}
+}> {}
 
 export type FulfillmentError =
   | FulfillmentOrderNotFound

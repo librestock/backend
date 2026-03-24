@@ -1,47 +1,33 @@
-import { Data } from 'effect';
+import {
+  BadRequestError,
+  InternalError,
+  NotFoundError,
+} from '../../platform/domain-errors';
 
-export class ProductNotFound extends Data.TaggedError('ProductNotFound')<{
+export class ProductNotFound extends NotFoundError('ProductNotFound')<{
   readonly productId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 404 as const;
-}
+}> {}
 
-export class CategoryNotFound extends Data.TaggedError('CategoryNotFound')<{
+export class CategoryNotFound extends NotFoundError('CategoryNotFound')<{
   readonly categoryId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 404 as const;
-}
+}> {}
 
-export class SkuAlreadyExists extends Data.TaggedError('SkuAlreadyExists')<{
+export class SkuAlreadyExists extends BadRequestError('SkuAlreadyExists')<{
   readonly sku: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class PriceBelowCost extends Data.TaggedError('PriceBelowCost')<{
+export class PriceBelowCost extends BadRequestError('PriceBelowCost')<{
   readonly standardPrice: number;
   readonly standardCost: number;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class ProductNotDeleted extends Data.TaggedError('ProductNotDeleted')<{
+export class ProductNotDeleted extends BadRequestError('ProductNotDeleted')<{
   readonly productId: string;
-  readonly message: string;
-}> {
-  readonly statusCode = 400 as const;
-}
+}> {}
 
-export class ProductsInfrastructureError extends Data.TaggedError(
+export class ProductsInfrastructureError extends InternalError(
   'ProductInfrastructureError',
 )<{
   readonly action: string;
-  readonly message: string;
   readonly cause?: unknown;
-}> {
-  readonly statusCode = 500 as const;
-}
+}> {}

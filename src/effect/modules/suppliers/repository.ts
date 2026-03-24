@@ -27,7 +27,7 @@ const tryAsync = <A>(action: string, run: () => Promise<A>) =>
       new SuppliersInfrastructureError({
         action,
         cause,
-        message: `Failed to ${action}`,
+        messageKey: 'suppliers.repositoryFailed',
       }),
   });
 

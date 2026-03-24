@@ -45,7 +45,7 @@ export class AuditLogsService extends Effect.Service<AuditLogsService>()(
             : Effect.fail(
                 new AuditLogNotFound({
                   id,
-                  message: `Audit log with ID ${id} not found`,
+                  messageKey: 'auditLogs.notFound',
                 }),
               ),
         );

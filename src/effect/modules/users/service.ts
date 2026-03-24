@@ -56,7 +56,7 @@ export class UsersService extends Effect.Service<UsersService>()(
             new UsersInfrastructureError({
               action,
               cause,
-              message: `Failed to ${action}`,
+              messageKey: 'users.infrastructureFailed',
             }),
         });
 
@@ -84,7 +84,7 @@ export class UsersService extends Effect.Service<UsersService>()(
               : Effect.fail(
                   new UserNotFound({
                     id,
-                    message: `User with ID ${id} not found`,
+                    messageKey: 'users.notFound',
                   }),
                 );
           },

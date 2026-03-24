@@ -31,7 +31,12 @@ export class SuppliersService extends Effect.Service<SuppliersService>()(
         Effect.flatMap(repository.findById(id), (supplier) =>
           supplier
             ? Effect.succeed(supplier)
-            : Effect.fail(new SupplierNotFound({ id, message: 'Supplier not found' })),
+            : Effect.fail(
+                new SupplierNotFound({
+                  id,
+                  messageKey: 'suppliers.notFound',
+                }),
+              ),
         );
 
       const findAllPaginated = (query: SupplierQueryDto) =>

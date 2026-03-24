@@ -28,7 +28,7 @@ export const brandingRouter = HttpRouter.empty.pipe(
         return yield* respondJson(
           Effect.fail(
             new BrandingUnauthorized({
-              message: 'Session user not available',
+              messageKey: 'branding.sessionUserUnavailable',
             }),
           ),
         );
