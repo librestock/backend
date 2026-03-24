@@ -1,45 +1,59 @@
 # LibreStock API Module
 
-## Conventions (not enforced by code)
+## Tooling
 
-- **Module export rule:** Modules only export their Service, never the Repository. Cross-module access goes through the Service layer.
-- **HATEOAS definitions** use relative paths (e.g. `/products/${id}`). The `HateoasInterceptor` auto-prepends `{protocol}://{host}/api/v1`.
-- **RolesGuard** queries the `user_roles` table in the DB, not session claims. Falls back to session roles only if the DB returns nothing.
-- **Users module** skips the repository pattern — it calls Better Auth's admin API directly (`auth.api.*`) and only uses TypeORM for the `user_roles` table.
+- `backend/` uses **Bun** as its package manager/runtime. Use `bun install` and `bun run ...` here.
+- The shared `packages/` repo is separate and uses `pnpm`. Do not assume the same package manager across repos.
+- This backend currently depends on published `@librestock/types` versions, so shared type changes must be released before this repo consumes them.
+
+## Architecture
+
+- The app entrypoint is [`src/effect/main.ts`](src/effect/main.ts). It wires `Effect` layers explicitly rather than using Nest modules.
+- Feature code lives under `src/effect/modules/<feature>/`.
+- The common pattern is:
+  - `router.ts`: HTTP boundary
+  - `service.ts`: application service
+  - `repository.ts`: DB access
+  - `*.schema.ts`: query/body decoding
+  - `*.errors.ts`: tagged errors
+- Cross-module access should normally go through Services, not repositories.
+- Platform concerns live under `src/effect/platform/`:
+  - Drizzle connection/layer
+  - Better Auth integration
+  - request/session/auth helpers
+  - audit logging
+
+## Conventions
+
+- Routers usually follow the sequence: `requirePermission` -> decode request -> call service -> `respondJson` -> optionally `AuditLogWriter`.
+- `UsersService` is the main exception to the repository pattern: it talks to Better Auth admin APIs directly and uses local persistence for role assignment concerns.
+- `AuditLogWriter` is fire-and-forget. Do not build correctness around audit writes succeeding synchronously.
+- Shared request/response contracts should come from `@librestock/types`, not backend-local DTO files.
 
 ## Gotchas
 
-- **Jest 30** uses `--testPathPatterns` (plural), not `--testPathPattern`
-- **`DB_SYNCHRONIZE`** is `false` by default. New tables must be created manually or by setting it to `true`. Blocked in production regardless.
+- `README.md` and older notes may still mention NestJS/TypeORM-era concepts. Prefer the `src/effect/` code over stale docs.
+- Better Auth migrations are run from [`src/effect/main.ts`](src/effect/main.ts) outside production unless explicitly disabled/enabled by env.
+- This repo still has some legacy TypeORM migration scripts/config, but the runtime data layer is Drizzle.
+- `bun.lock` is the lockfile that matters for this repo.
 
-## Security (policy decisions)
+## Shared Types Workflow
 
-- Never interpolate values into SQL — use parameterized queries (`:paramName` with `.setParameter()`)
-- Validate user-submitted URLs with `@IsUrl()` — reject `javascript:` and `data:` protocols
-- Use `request.ip` for audit log IP extraction (respects trust proxy)
-- `BETTER_AUTH_SECRET` must be 32+ random bytes and must never appear in the frontend `.env`
+When request/response shapes change:
 
-## Testing patterns (non-obvious)
+1. update `packages/types`
+2. publish the new `@librestock/types` version
+3. bump the dependency here
+4. then switch imports in `backend/`
 
-- **Controller tests with RolesGuard:** Must `.overrideGuard(RolesGuard).useValue({ canActivate: () => true })` because `RolesGuard` depends on `DataSource`
-- **Async fire-and-forget:** Use `await flushPromises()` (via `new Promise(r => process.nextTick(r))`) instead of `setTimeout` with `done()` callbacks
-- **E2E:** Override `AuthGuard` with mock, clean DB in `beforeEach` with raw SQL deletes
+If a new `@librestock/types` version is not published yet, pointing `backend/package.json` at it will break installs.
 
-## Issue tracking
+## Testing
+
+- Unit tests are Jest-based and mostly service-level today.
+- For cross-module workflows, prefer a deeper boundary over adding more mocks around neighboring services.
+- If type-check fails, confirm whether the failure is from your change or from existing repo-wide issues before chasing unrelated errors.
+
+## Issue Tracking
 
 Before starting work on any issue, ensure it is added to the **[LibreStock Improvements Tracker](https://github.com/orgs/librestock/projects/2)** GitHub Project. Move the issue to "In Progress" when starting and "Done" when complete.
-
-## Adding a new entity
-
-Follow existing module patterns, but don't forget these easy-to-miss steps:
-
-1. Register module in `app.module.ts` imports **and** `app.routes.ts`
-2. Update shared DTOs/enums in the `librestock/packages` repo under `types/src/<feature>/`
-3. Publish a new `@librestock/types` version and bump this repo's dependency before using the new exports here
-
-## Adding an endpoint
-
-After adding the controller method + service logic, don't forget:
-
-1. Update shared DTOs/enums in the `librestock/packages` repo if response/request shapes change
-2. Publish the updated `@librestock/types` package and bump the dependency here

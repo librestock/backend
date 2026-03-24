@@ -1,29 +1,28 @@
 # LibreStock API
 
-REST API for LibreStock inventory management, built with NestJS.
+REST API for LibreStock inventory management, built with Effect, Drizzle, Better Auth, and Bun.
 
 ## Prerequisites
 
-- Node.js >= 20
-- pnpm >= 10
+- Bun >= 1.0
 - PostgreSQL 16
 
-This repo is part of the [LibreStock workspace](https://github.com/librestock/meta). Dependencies must be installed from the workspace root.
+This repo is part of the [LibreStock workspace](https://github.com/librestock/meta). In the workspace bootstrap flow, `backend/` uses Bun for dependency installation and script execution.
 
 ## Getting Started
 
 ```bash
-# From the workspace root (libre/):
-pnpm install
+# From backend/
+bun install
 
 # Copy env template and set BETTER_AUTH_SECRET
-cp backend/.env.template backend/.env
+cp .env.template .env
 
 # Start in dev mode (needs PostgreSQL running)
-pnpm --filter @librestock/api start:dev
+bun run start
 ```
 
-The API will be at http://localhost:8080. Swagger docs at http://localhost:8080/api/docs.
+The API will be at `http://localhost:8080`.
 
 ### Environment Variables
 
@@ -42,59 +41,55 @@ PGHOST=localhost  PGPORT=5432  PGUSER=postgres  PGPASSWORD=postgres  PGDATABASE=
 
 ## Project Structure
 
-```
+```text
 src/
-├── main.ts                  # Bootstrap, global prefix /api/v1
-├── app.module.ts            # Root module
-├── app.routes.ts            # Route registration
-├── config/                  # DB config
-├── common/
-│   ├── auth/                # Auth utilities
-│   ├── decorators/          # @RequirePermission, @Auditable, @Transactional, @StandardThrottle
-│   ├── dto/                 # BaseResponseDto, ErrorResponseDto
-│   ├── entities/            # BaseEntity, BaseAuditEntity
-│   ├── enums/               # Shared enums
-│   ├── filters/             # Exception filters
-│   ├── guards/              # PermissionGuard
-│   ├── hateoas/             # HATEOAS link system
-│   ├── interceptors/        # Logging, Transaction, Audit
-│   ├── middleware/          # RequestIdMiddleware
-│   └── utils/               # Shared utilities
-└── routes/
-    ├── areas/               # /api/v1/areas/*
-    ├── audit-logs/          # /api/v1/audit-logs/* (admin only)
-    ├── auth/                # /api/v1/auth/*
-    ├── branding/            # /api/v1/branding/*
-    ├── categories/          # /api/v1/categories/*
-    ├── clients/             # /api/v1/clients/*
-    ├── health/              # /health-check (no auth)
-    ├── inventory/           # /api/v1/inventory/*
-    ├── locations/           # /api/v1/locations/*
-    ├── orders/              # /api/v1/orders/*
-    ├── photos/              # /api/v1/photos/*
-    ├── products/            # /api/v1/products/*
-    ├── roles/               # /api/v1/roles/* (admin only)
-    ├── stock-movements/     # /api/v1/stock-movements/*
-    ├── suppliers/           # /api/v1/suppliers/*
-    └── users/               # /api/v1/users/* (admin only)
+├── effect/
+│   ├── main.ts            # Bun entrypoint and layer wiring
+│   ├── http/              # HTTP app, middleware, logging, security headers
+│   ├── modules/           # Routers, services, repositories, schemas, errors
+│   └── platform/          # Drizzle, Better Auth, request/session/audit helpers
+├── auth.ts                # Better Auth setup
+├── scripts/               # Seed/import scripts
+└── migrations/            # TypeORM migrations still used for legacy schema flow
+test/
+└── mocks/                 # Auth/UUID test helpers
 ```
+
+Most business features live under `src/effect/modules/<feature>/` with the pattern:
+
+- `router.ts`: HTTP boundary
+- `service.ts`: application logic
+- `repository.ts`: DB access
+- `*.schema.ts`: request/query decoding
+- `*.errors.ts`: tagged domain/infrastructure errors
 
 ## Commands
 
 ```bash
-pnpm start:dev          # Dev server with hot reload
-pnpm build              # Production build
-pnpm start:prod         # Run production build
-pnpm test               # Unit tests (Jest 30)
-pnpm test:e2e           # E2E tests (needs running DB)
-pnpm test:cov           # Coverage report
-pnpm lint               # ESLint
-pnpm type-check         # TypeScript check
+bun install              # Install backend dependencies
+bun run start            # Run the API
+bun run build            # Production build
+bun run start:prod       # Run production build
+bun run test             # Unit tests (Jest)
+bun run test:e2e         # E2E tests
+bun run lint             # ESLint
+bun run type-check       # TypeScript check
+bun run seed             # Seed database
 ```
+
+## Shared Types
+
+Shared API contracts live in the separate `packages` repo as `@librestock/types`.
+
+When request/response shapes change:
+
+1. update `packages/types`
+2. publish the new `@librestock/types` version
+3. bump the dependency in this repo
 
 ## Authentication
 
-All `/api/v1/*` endpoints require Better Auth authentication (global guard). Health checks at `/health-check` are unauthenticated.
+All `/api/v1/*` endpoints require Better Auth authentication except the health check route.
 
 ```bash
 curl -H "Authorization: Bearer <token>" http://localhost:8080/api/v1/products
