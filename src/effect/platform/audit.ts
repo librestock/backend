@@ -2,6 +2,7 @@ import { Context, Effect, Layer } from 'effect';
 import { type AuditAction, type AuditEntityType } from '@librestock/types/audit-logs';
 import { DrizzleDatabase } from './drizzle';
 import { auditLogs } from './db/schema';
+import type { LogPayload } from './messages';
 import { getOptionalSession } from './session';
 import { getRequestContext } from './request-context';
 
@@ -47,7 +48,7 @@ export const makeAuditLogWriter = Effect.gen(function* () {
             entityType: params.entityType,
             entityId: params.entityId,
             cause,
-          }),
+          } satisfies LogPayload),
         ),
         Effect.asVoid,
       );

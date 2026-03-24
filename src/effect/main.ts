@@ -22,6 +22,7 @@ import { SuppliersService } from './modules/suppliers/service';
 import { UsersService } from './modules/users/service';
 import { auditLayer } from './platform/audit';
 import { BetterAuth, betterAuthLayer } from './platform/better-auth';
+import { runtimeLoggingLayer } from './platform/console-logging';
 import {
   DrizzleDatabase,
   DrizzleInitializationError,
@@ -171,6 +172,7 @@ const serverLayer = HttpServer.serve(httpApp).pipe(
 BunRuntime.runMain(
   Layer.launch(serverLayer).pipe(
     Effect.provide(applicationLayer),
+    Effect.provide(runtimeLoggingLayer),
   ) as Effect.Effect<
     never,
     RolesInfrastructureError | DrizzleInitializationError,

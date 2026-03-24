@@ -9,6 +9,7 @@ import {
 } from '../../config/db-connection.utils';
 import * as schema from './db/schema';
 import * as relations from './db/relations';
+import { makeDrizzleLogger } from './console-logging';
 import { InternalError } from './domain-errors';
 
 export type DrizzleDb = NodePgDatabase<typeof schema & typeof relations>;
@@ -64,7 +65,7 @@ export const drizzleLayer = Layer.scoped(
 
         const db = drizzle(pool, {
           schema: { ...schema, ...relations },
-          logger: process.env.NODE_ENV === 'development',
+          logger: makeDrizzleLogger(),
         });
 
         // Attach pool for cleanup

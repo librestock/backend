@@ -7,6 +7,7 @@ import {
   localizeMessageTree,
   translateMessage,
   type AnyMessageKey,
+  type LogPayload,
   type MessageArgs,
 } from './messages';
 
@@ -149,7 +150,7 @@ export const respondCause = <E>(cause: Cause.Cause<E>) =>
         statusCode: details.statusCode,
         path,
         error: firstError,
-      });
+      } satisfies LogPayload);
     }
 
     const response = HttpServerResponse.unsafeJson(

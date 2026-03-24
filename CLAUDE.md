@@ -30,6 +30,13 @@
 - `AuditLogWriter` is fire-and-forget. Do not build correctness around audit writes succeeding synchronously.
 - Shared request/response contracts should come from `@librestock/types`, not backend-local DTO files.
 
+## Structured Logging
+
+- All log message arguments must use properties defined in `LogProperties` (`src/effect/platform/messages.ts`). Do **not** pass arbitrary key-value pairs — every field must be known so it can be indexed by Datadog / OpenSearch.
+- `MessageArgs` is `Partial<LogProperties>`. When a new message template introduces a `{placeholder}`, add the corresponding property to `LogProperties` with its exact type (`string` or `number`).
+- Message catalogs live in `src/effect/platform/catalogs/` — one file per locale (`en.ts`, `fr.ts`, `de.ts`). The English catalog (`en.ts`) is the source of truth for `MessageKey`.
+- Use `createLogger(scope)` for structured logging. The logger prepends the scope to each message key automatically.
+
 ## Gotchas
 
 - `README.md` and older notes may still mention NestJS/TypeORM-era concepts. Prefer the `src/effect/` code over stale docs.

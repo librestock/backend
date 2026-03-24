@@ -15,26 +15,17 @@ export const CurrentRequestContext = Context.GenericTag<RequestContext>(
   '@librestock/effect/CurrentRequestContext',
 );
 
-export const getRequestId = Effect.map(HttpServerRequest.HttpServerRequest, (request) => {
+export const makeRequestContext = Effect.gen(function* () {
+  const request = yield* HttpServerRequest.HttpServerRequest;
   const headerValue = Headers.get(request.headers, 'x-request-id');
 
-  if (Option.isSome(headerValue) && uuidValidate(headerValue.value)) {
-    return headerValue.value;
-  }
-
-  return uuidv4();
-});
-
-export const getRequestPath = Effect.map(HttpServerRequest.HttpServerRequest, (request) => {
-  const {url} = request;
+  const requestId =
+    Option.isSome(headerValue) && uuidValidate(headerValue.value)
+      ? headerValue.value
+      : uuidv4();
+  const { url } = request;
   const queryStart = url.indexOf('?');
-  return queryStart >= 0 ? url.slice(0, queryStart) : url;
-});
-
-export const getRequestContext = Effect.gen(function* () {
-  const request = yield* HttpServerRequest.HttpServerRequest;
-  const requestId = yield* getRequestId;
-  const path = yield* getRequestPath;
+  const path = queryStart >= 0 ? url.slice(0, queryStart) : url;
   const locale = resolveLocale(
     Option.getOrNull(Headers.get(request.headers, 'accept-language')),
   );
@@ -47,3 +38,21 @@ export const getRequestContext = Effect.gen(function* () {
     locale,
   } satisfies RequestContext;
 });
+
+export const getRequestContext = Effect.flatMap(
+  Effect.serviceOption(CurrentRequestContext),
+  Option.match({
+    onNone: () => makeRequestContext,
+    onSome: Effect.succeed,
+  }),
+);
+
+export const getRequestId = Effect.map(
+  getRequestContext,
+  (context) => context.requestId,
+);
+
+export const getRequestPath = Effect.map(
+  getRequestContext,
+  (context) => context.path,
+);
