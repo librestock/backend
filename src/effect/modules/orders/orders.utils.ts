@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import type { OrderResponseDto, OrderItemResponseDto } from '@librestock/types/orders';
 import type { orders, orderItems } from '../../platform/db/schema';
 
@@ -55,6 +56,6 @@ export class OrderUtils {
   }
 
   public static generateOrderPrefix(date: Date): string {
-    return `ORD-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+    return `ORD-${format(date, 'yyyyMMdd')}`;
   }
 }
