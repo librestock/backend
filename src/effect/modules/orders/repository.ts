@@ -7,7 +7,12 @@ import {
   toRepositoryPaginatedResult,
 } from '../../platform/drizzle-query.utils';
 import { DrizzleDatabase } from '../../platform/drizzle';
-import { orders, orderItems, clients, products } from '../../platform/db/schema';
+import {
+  orders,
+  orderItems,
+  clients,
+  products,
+} from '../../platform/db/schema';
 import { OrdersInfrastructureError } from './orders.errors';
 
 type OrderQueryDto = Schema.Schema.Type<typeof OrderQuerySchema>;
@@ -31,7 +36,10 @@ export class OrdersRepository extends Effect.Service<OrdersRepository>()(
 
       const findAllPaginated = (query: OrderQueryDto) =>
         tryAsync('list orders paginated', async () => {
-          const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
+          const { page, limit, skip } = resolvePaginationWindow(
+            query.page,
+            query.limit,
+          );
 
           const conditions: SQL[] = [];
           if (query.client_id) {
@@ -58,16 +66,15 @@ export class OrdersRepository extends Effect.Service<OrdersRepository>()(
           const where = conditions.length > 0 ? and(...conditions) : undefined;
 
           // Count query — join clients only if q filter needs it
+          const distinctCount = sql<number>`count(DISTINCT ${orders.id})::int`;
+          const totalCount = sql<number>`count(*)::int`;
           const countQuery = query.q
             ? db
-                .select({ count: sql<number>`count(DISTINCT ${orders.id})::int` })
+                .select({ count: distinctCount })
                 .from(orders)
                 .leftJoin(clients, eq(orders.client_id, clients.id))
                 .where(where)
-            : db
-                .select({ count: sql<number>`count(*)::int` })
-                .from(orders)
-                .where(where);
+            : db.select({ count: totalCount }).from(orders).where(where);
 
           const [countResult] = await countQuery;
           const total = countResult?.count ?? 0;
@@ -83,7 +90,10 @@ export class OrdersRepository extends Effect.Service<OrdersRepository>()(
             .limit(limit);
 
           const orderIds = orderRows.map((r) => r.orders.id);
-          const itemsByOrderId: Record<string, (typeof orderItems.$inferSelect)[]> = {};
+          const itemsByOrderId: Record<
+            string,
+            (typeof orderItems.$inferSelect)[]
+          > = {};
           if (orderIds.length > 0) {
             const allItems = await db
               .select()
@@ -156,8 +166,10 @@ export class OrdersRepository extends Effect.Service<OrdersRepository>()(
           const result = await db.execute(
             sql`SELECT nextval('order_number_seq')::bigint AS value`,
           );
-          const res = result as { rows?: { value: unknown }[] };
-          return Number(res.rows?.[0]?.value ?? (result as { value: unknown }[])[0]?.value);
+          const rows =
+            (result as unknown as { rows: { value: unknown }[] }).rows ??
+            (result as unknown as { value: unknown }[]);
+          return Number(rows[0]?.value);
         });
 
       const existsById = (id: string) =>
@@ -189,6 +201,19 @@ export class OrderItemsRepository extends Effect.Service<OrderItemsRepository>()
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;
 
+      const findByIds = (ids: string[]) =>
+        tryAsync('find order items by ids', async () => {
+          const rows = await db
+            .select()
+            .from(orderItems)
+            .where(sql`${orderItems.id} IN ${ids}`)
+            .limit(ids.length);
+
+          if (!rows[0]) return null;
+
+          return rows;
+        });
+
       const findByOrderId = (orderId: string) =>
         tryAsync('find order items by order id', async () => {
           const items = await db
@@ -208,14 +233,34 @@ export class OrderItemsRepository extends Effect.Service<OrderItemsRepository>()
           db.insert(orderItems).values(items).returning(),
         );
 
+      const incrementPicked = (orderItemId: string, quantity: number) =>
+        tryAsync('increment order item quantity_picked', async () => {
+          const rows = await db
+            .update(orderItems)
+            .set({
+              quantity_picked: sql`${orderItems.quantity_picked} + ${quantity}`,
+              updated_at: new Date(),
+            })
+            .where(
+              and(
+                eq(orderItems.id, orderItemId),
+                sql`${orderItems.quantity_picked} + ${quantity} <= ${orderItems.quantity}`,
+              ),
+            )
+            .returning({ id: orderItems.id });
+          return rows.length;
+        });
+
       const deleteByOrderId = (orderId: string) =>
         tryAsync('delete order items by order id', () =>
           db.delete(orderItems).where(eq(orderItems.order_id, orderId)),
         );
 
       return {
+        findByIds,
         findByOrderId,
         createMany,
+        incrementPicked,
         deleteByOrderId,
       };
     }),

@@ -6,6 +6,7 @@ export class FulfillmentOrderNotFound extends Data.TaggedError(
 )<{
   readonly orderId: string;
   readonly message: string;
+  readonly messageKey?: string;
 }> {
   readonly statusCode = 404 as const;
 }
@@ -17,8 +18,19 @@ export class FulfillmentInvalidTransition extends Data.TaggedError(
   readonly from: OrderStatus;
   readonly to: OrderStatus;
   readonly message: string;
+  readonly messageKey?: string;
 }> {
   readonly statusCode = 400 as const;
+}
+
+export class FulfillmentPickFailed extends Data.TaggedError(
+  'FulfillmentPickFailed',
+)<{
+  readonly orderItemId: string;
+  readonly message: string;
+  readonly messageKey?: string;
+}> {
+  readonly statusCode = 409 as const;
 }
 
 export class FulfillmentNotImplemented extends Data.TaggedError(
@@ -26,6 +38,7 @@ export class FulfillmentNotImplemented extends Data.TaggedError(
 )<{
   readonly operation: string;
   readonly message: string;
+  readonly messageKey?: string;
 }> {
   readonly statusCode = 501 as const;
 }
@@ -35,6 +48,7 @@ export class FulfillmentInfrastructureError extends Data.TaggedError(
 )<{
   readonly action: string;
   readonly message: string;
+  readonly messageKey?: string;
   readonly cause?: unknown;
 }> {
   readonly statusCode = 500 as const;
@@ -43,5 +57,6 @@ export class FulfillmentInfrastructureError extends Data.TaggedError(
 export type FulfillmentError =
   | FulfillmentOrderNotFound
   | FulfillmentInvalidTransition
+  | FulfillmentPickFailed
   | FulfillmentNotImplemented
   | FulfillmentInfrastructureError;

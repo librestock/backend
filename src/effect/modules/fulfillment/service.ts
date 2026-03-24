@@ -5,6 +5,7 @@ import type {
   PickInput,
 } from '@librestock/types/fulfillment';
 import { OrderStatus } from '@librestock/types/orders';
+import { StockMovementReason } from '@librestock/types/stock-movements';
 import type { orders, orderItems } from '../../platform/db/schema';
 import { InventoryRepository } from '../inventory/repository';
 import { OrderItemsRepository, OrdersRepository } from '../orders/repository';
@@ -14,6 +15,7 @@ import {
   FulfillmentInvalidTransition,
   FulfillmentNotImplemented,
   FulfillmentOrderNotFound,
+  FulfillmentPickFailed,
 } from './errors';
 
 type OrderItemRow = typeof orderItems.$inferSelect;
@@ -36,13 +38,12 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
       const inventoryRepository = yield* InventoryRepository;
       const stockMovementsRepository = yield* StockMovementsRepository;
 
-      const wrapInfrastructureError = (action: string) =>
-        (cause: unknown) =>
-          new FulfillmentInfrastructureError({
-            action,
-            cause,
-            message: `Fulfillment failed to ${action}`,
-          });
+      const wrapInfrastructureError = (action: string) => (cause: unknown) =>
+        new FulfillmentInfrastructureError({
+          action,
+          cause,
+          message: `Fulfillment failed to ${action}`,
+        });
 
       const loadOrderOrFail = (
         orderId: string,
@@ -62,6 +63,7 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
                   new FulfillmentOrderNotFound({
                     orderId,
                     message: 'Order not found',
+                    messageKey: 'fulfillment.orderNotFound',
                   }),
                 ),
         );
@@ -92,21 +94,27 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
                 from: order.status,
                 to: OrderStatus.CONFIRMED,
                 message: 'Only draft orders can be confirmed',
+                messageKey: 'fulfillment.onlyDraftCanConfirm',
               }),
             );
           }
 
-          yield* ordersRepository.update(orderId, {
-            status: OrderStatus.CONFIRMED,
-            confirmed_at: new Date(),
-            assigned_to: actorId,
-          }).pipe(
-            Effect.mapError(wrapInfrastructureError('confirm order')),
-          );
+          yield* ordersRepository
+            .update(orderId, {
+              status: OrderStatus.CONFIRMED,
+              confirmed_at: new Date(),
+              assigned_to: actorId,
+            })
+            .pipe(Effect.mapError(wrapInfrastructureError('confirm order')));
 
           const updated = yield* loadOrderOrFail(orderId);
           return toView(updated);
         });
+
+      const PICKABLE_STATUSES: readonly OrderStatus[] = [
+        OrderStatus.CONFIRMED,
+        OrderStatus.PICKING,
+      ];
 
       const pick = (input: {
         readonly orderId: string;
@@ -114,23 +122,111 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
         readonly picks: ReadonlyArray<PickInput>;
       }) =>
         Effect.gen(function* () {
-          yield* loadOrderOrFail(input.orderId);
+          const order = yield* loadOrderOrFail(input.orderId);
 
-          // Keep the collaborators referenced so this module can deepen around them
-          // without changing the public API again.
-          void input.actorId;
-          void input.picks;
-          void orderItemsRepository;
-          void inventoryRepository;
-          void stockMovementsRepository;
+          if (!PICKABLE_STATUSES.includes(order.status)) {
+            return yield* Effect.fail(
+              new FulfillmentInvalidTransition({
+                orderId: input.orderId,
+                from: order.status,
+                to: OrderStatus.PICKING,
+                message: 'Order must be confirmed or already picking',
+                messageKey: 'fulfillment.notPickable',
+              }),
+            );
+          }
 
-          return yield* Effect.fail(
-            new FulfillmentNotImplemented({
-              operation: 'pick',
-              message:
-                'Picking requires a fulfillment store/transaction boundary that updates order items, inventory, and stock movements together',
-            }),
-          );
+          // Transition to PICKING on the first pick
+          if (order.status === OrderStatus.CONFIRMED) {
+            yield* ordersRepository
+              .update(input.orderId, { status: OrderStatus.PICKING })
+              .pipe(
+                Effect.mapError(
+                  wrapInfrastructureError('transition to picking'),
+                ),
+              );
+          }
+
+          // Build a lookup of order items for product_id resolution
+          const itemIds = input.picks.map((p) => p.orderItemId);
+          const items = yield* orderItemsRepository
+            .findByIds(itemIds)
+            .pipe(Effect.mapError(wrapInfrastructureError('load order items')));
+          const itemMap = new Map((items ?? []).map((i) => [i.id, i]));
+
+          for (const p of input.picks) {
+            const item = itemMap.get(p.orderItemId);
+            if (!item) {
+              return yield* Effect.fail(
+                new FulfillmentPickFailed({
+                  orderItemId: p.orderItemId,
+                  message: 'Order item not found',
+                  messageKey: 'fulfillment.orderItemNotFound',
+                }),
+              );
+            }
+
+            // Decrement inventory first — fail fast if stock is unavailable
+            const decremented = yield* inventoryRepository
+              .adjustQuantity(p.inventoryId, -p.quantity)
+              .pipe(
+                Effect.mapError(wrapInfrastructureError('decrement inventory')),
+              );
+
+            if (decremented === 0) {
+              return yield* Effect.fail(
+                new FulfillmentPickFailed({
+                  orderItemId: p.orderItemId,
+                  message: 'Insufficient inventory to fulfil pick',
+                  messageKey: 'fulfillment.insufficientInventory',
+                }),
+              );
+            }
+
+            // Atomic increment — returns 0 rows if it would over-pick
+            const updated = yield* orderItemsRepository
+              .incrementPicked(p.orderItemId, p.quantity)
+              .pipe(
+                Effect.mapError(
+                  wrapInfrastructureError('increment quantity_picked'),
+                ),
+              );
+
+            if (updated === 0) {
+              return yield* Effect.fail(
+                new FulfillmentPickFailed({
+                  orderItemId: p.orderItemId,
+                  message:
+                    'Quantity would exceed ordered amount (already picked or over-pick)',
+                  messageKey: 'fulfillment.overPick',
+                }),
+              );
+            }
+
+            // Look up inventory record for location context
+            const inv = yield* inventoryRepository
+              .findById(p.inventoryId)
+              .pipe(Effect.mapError(wrapInfrastructureError('load inventory')));
+
+            // Record stock movement
+            yield* stockMovementsRepository
+              .create({
+                product_id: item.product_id,
+                from_location_id: inv?.location_id ?? null,
+                quantity: p.quantity,
+                reason: StockMovementReason.SALE,
+                order_id: input.orderId,
+                user_id: input.actorId,
+              })
+              .pipe(
+                Effect.mapError(
+                  wrapInfrastructureError('create stock movement'),
+                ),
+              );
+          }
+
+          const updated = yield* loadOrderOrFail(input.orderId);
+          return toView(updated);
         });
 
       const pack = (input: {
