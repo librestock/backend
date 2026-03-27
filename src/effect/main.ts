@@ -28,6 +28,7 @@ import {
   DrizzleInitializationError,
   drizzleLayer,
 } from './platform/drizzle';
+import { TracingLive } from './platform/tracing';
 
 const VALID_NODE_ENVS = ['development', 'staging', 'production'] as const;
 const nodeEnv = process.env.NODE_ENV ?? 'development';
@@ -42,11 +43,10 @@ const isProduction = nodeEnv === 'production';
 const port = Number(process.env.PORT ?? 8080);
 
 const platformLayer = Layer.mergeAll(drizzleLayer, betterAuthLayer);
+const withPlatform = <A, E, R>(layer: Layer.Layer<A, E, R>) =>
+  layer.pipe(Layer.provide(platformLayer));
 
-// Phase 1 layers
-const rolesApplicationLayer = RolesService.Default.pipe(
-  Layer.provide(platformLayer),
-);
+const rolesApplicationLayer = withPlatform(RolesService.Default);
 const authApplicationLayer = AuthService.Default.pipe(
   Layer.provide(rolesApplicationLayer),
 );
@@ -81,88 +81,74 @@ const betterAuthMigrationLayer = Layer.effectDiscard(
   }),
 ).pipe(Layer.provide(platformLayer));
 
-// Phase 2 layers
-const auditLogsApplicationLayer = AuditLogsService.Default.pipe(
-  Layer.provide(platformLayer),
+const foundationalServicesLayer = Layer.mergeAll(
+  withPlatform(HealthService.Default),
+  withPlatform(AuditLogsService.Default),
+  withPlatform(BrandingService.Default),
+  withPlatform(LocationsService.Default),
+  withPlatform(CategoriesService.Default),
+  withPlatform(ClientsService.Default),
+  withPlatform(SuppliersService.Default),
+  withPlatform(PhotosService.Default),
 );
-const brandingApplicationLayer = BrandingService.Default.pipe(
-  Layer.provide(platformLayer),
-);
-const locationsApplicationLayer = LocationsService.Default.pipe(
-  Layer.provide(platformLayer),
-);
-const categoriesApplicationLayer = CategoriesService.Default.pipe(
-  Layer.provide(platformLayer),
-);
+
+const locationsApplicationLayer = withPlatform(LocationsService.Default);
+const categoriesApplicationLayer = withPlatform(CategoriesService.Default);
 const areasApplicationLayer = AreasService.Default.pipe(
   Layer.provide(Layer.mergeAll(platformLayer, locationsApplicationLayer)),
 );
-
-// Phase 3 layers
-const clientsApplicationLayer = ClientsService.Default.pipe(
-  Layer.provide(platformLayer),
-);
-const suppliersApplicationLayer = SuppliersService.Default.pipe(
-  Layer.provide(platformLayer),
-);
+const clientsApplicationLayer = withPlatform(ClientsService.Default);
 const productsApplicationLayer = ProductsService.Default.pipe(
   Layer.provide(Layer.mergeAll(platformLayer, categoriesApplicationLayer)),
 );
-const photosApplicationLayer = PhotosService.Default.pipe(
-  Layer.provide(platformLayer),
+const workflowServicesLayer = Layer.mergeAll(
+  StockMovementsService.Default.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        platformLayer,
+        productsApplicationLayer,
+        locationsApplicationLayer,
+      ),
+    ),
+  ),
+  InventoryService.Default.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        platformLayer,
+        productsApplicationLayer,
+        locationsApplicationLayer,
+        areasApplicationLayer,
+      ),
+    ),
+  ),
+  OrdersService.Default.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        platformLayer,
+        clientsApplicationLayer,
+        productsApplicationLayer,
+      ),
+    ),
+  ),
 );
 
-// Phase 4 layers
-const stockMovementsApplicationLayer = StockMovementsService.Default.pipe(
-  Layer.provide(
-    Layer.mergeAll(
-      platformLayer,
-      productsApplicationLayer,
-      locationsApplicationLayer,
-    ),
-  ),
-);
-const inventoryApplicationLayer = InventoryService.Default.pipe(
-  Layer.provide(
-    Layer.mergeAll(
-      platformLayer,
-      productsApplicationLayer,
-      locationsApplicationLayer,
-      areasApplicationLayer,
-    ),
-  ),
-);
-const ordersApplicationLayer = OrdersService.Default.pipe(
-  Layer.provide(
-    Layer.mergeAll(
-      platformLayer,
-      clientsApplicationLayer,
-      productsApplicationLayer,
-    ),
-  ),
+const startupLayer = Layer.mergeAll(
+  auditLayer.pipe(Layer.provide(platformLayer)),
+  rolesSeedLayer,
+  betterAuthMigrationLayer,
 );
 
 const applicationLayer = Layer.mergeAll(
   platformLayer,
-  auditLayer.pipe(Layer.provide(platformLayer)),
-  HealthService.Default.pipe(Layer.provide(platformLayer)),
+  TracingLive,
+  startupLayer,
+  foundationalServicesLayer,
   rolesApplicationLayer,
   authApplicationLayer,
   usersApplicationLayer,
-  rolesSeedLayer,
-  betterAuthMigrationLayer,
-  auditLogsApplicationLayer,
-  brandingApplicationLayer,
-  locationsApplicationLayer,
-  categoriesApplicationLayer,
   areasApplicationLayer,
-  clientsApplicationLayer,
-  suppliersApplicationLayer,
   productsApplicationLayer,
-  photosApplicationLayer,
-  stockMovementsApplicationLayer,
-  inventoryApplicationLayer,
-  ordersApplicationLayer,
+  workflowServicesLayer,
 );
 
 const serverLayer = Layer.unwrapEffect(
