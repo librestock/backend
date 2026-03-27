@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect';
-import { BetterAuth } from '../../platform/better-auth';
+import { BetterAuth, BetterAuthHeaders } from '../../platform/better-auth';
 import { RolesService } from '../roles/service';
 import { UsersService } from './service';
 import { UsersRepository } from './repository';
@@ -10,6 +10,7 @@ jest.mock('../../platform/better-auth', () => {
 
   return {
     BetterAuth: Context.GenericTag('@librestock/test/BetterAuth'),
+    BetterAuthHeaders: Context.GenericTag('@librestock/test/BetterAuthHeaders'),
     betterAuthLayer: Layer.empty,
   };
 });
@@ -88,7 +89,11 @@ describe('Effect UsersService', () => {
       rolesService,
     });
 
-    const result = await run(service.listUsers({ page: 1, limit: 20 }, headers));
+    const result = await run(
+      service.listUsers({ page: 1, limit: 20 }).pipe(
+        Effect.provideService(BetterAuthHeaders, headers),
+      ),
+    );
 
     expect(result.data[0]!.roles).toEqual(['Admin']);
     expect(betterAuth.api.listUsers).toHaveBeenCalled();
@@ -123,7 +128,11 @@ describe('Effect UsersService', () => {
       rolesService,
     });
 
-    const result = await run(service.getUser('user-1', headers));
+    const result = await run(
+      service.getUser('user-1').pipe(
+        Effect.provideService(BetterAuthHeaders, headers),
+      ),
+    );
 
     expect(result.id).toBe('user-1');
     expect(result.roles).toEqual(['Admin']);
@@ -159,7 +168,11 @@ describe('Effect UsersService', () => {
       rolesService,
     });
 
-    await run(service.updateRoles('user-1', ['role-1'], headers));
+    await run(
+      service.updateRoles('user-1', ['role-1']).pipe(
+        Effect.provideService(BetterAuthHeaders, headers),
+      ),
+    );
 
     expect(usersRepository.replaceUserRoles).toHaveBeenCalledWith('user-1', [
       'role-1',
@@ -199,16 +212,18 @@ describe('Effect UsersService', () => {
     });
 
     await run(
-      service.banUser(
-        'user-1',
-        {
+      service
+        .banUser('user-1', {
           reason: 'abuse',
           expiresAt: '2026-04-01T00:00:00.000Z',
-        },
-        headers,
+        })
+        .pipe(Effect.provideService(BetterAuthHeaders, headers)),
+    );
+    await run(
+      service.unbanUser('user-1').pipe(
+        Effect.provideService(BetterAuthHeaders, headers),
       ),
     );
-    await run(service.unbanUser('user-1', headers));
 
     expect(betterAuth.api.banUser).toHaveBeenCalled();
     expect(betterAuth.api.unbanUser).toHaveBeenCalledWith({
@@ -241,7 +256,11 @@ describe('Effect UsersService', () => {
       rolesService,
     });
 
-    await run(service.revokeSessions('user-1', headers));
+    await run(
+      service.revokeSessions('user-1').pipe(
+        Effect.provideService(BetterAuthHeaders, headers),
+      ),
+    );
 
     expect(betterAuth.api.revokeUserSessions).toHaveBeenCalledWith({
       headers,

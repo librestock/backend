@@ -9,6 +9,7 @@ import {
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { requirePermission } from '../../platform/authorization';
 import { respondEmpty, respondJson } from '../../platform/errors';
+import { BetterAuthHeaders } from '../../platform/better-auth';
 import { getRequestHeaders } from '../../platform/session';
 import {
   BanUserSchema,
@@ -32,11 +33,14 @@ export const usersRouter = HttpRouter.empty.pipe(
         ...(query.search ? { search: query.search } : {}),
         ...(query.role ? { role: query.role } : {}),
       } satisfies UserQueryDto;
-      const headers = yield* getRequestHeaders;
+      const requestHeaders = yield* getRequestHeaders;
       const usersService = yield* UsersService;
       return yield* respondJson(
-        Effect.map(usersService.listUsers(normalizedQuery, headers), (result) =>
-          toPaginatedResponse(result, (user) => user),
+        Effect.map(
+          usersService.listUsers(normalizedQuery).pipe(
+            Effect.provideService(BetterAuthHeaders, requestHeaders),
+          ),
+          (result) => toPaginatedResponse(result, (user) => user),
         ),
       );
     }),
@@ -46,9 +50,13 @@ export const usersRouter = HttpRouter.empty.pipe(
     Effect.gen(function* () {
       yield* requirePermission(Resource.USERS, Permission.READ);
       const { id } = yield* HttpRouter.schemaPathParams(UserPathParamsSchema);
-      const headers = yield* getRequestHeaders;
+      const requestHeaders = yield* getRequestHeaders;
       const usersService = yield* UsersService;
-      return yield* respondJson(usersService.getUser(id, headers));
+      return yield* respondJson(
+        usersService.getUser(id).pipe(
+          Effect.provideService(BetterAuthHeaders, requestHeaders),
+        ),
+      );
     }),
   ),
   HttpRouter.put(
@@ -57,10 +65,12 @@ export const usersRouter = HttpRouter.empty.pipe(
       yield* requirePermission(Resource.USERS, Permission.WRITE);
       const { id } = yield* HttpRouter.schemaPathParams(UserPathParamsSchema);
       const dto = yield* HttpServerRequest.schemaBodyJson(UpdateUserRolesSchema);
-      const headers = yield* getRequestHeaders;
+      const requestHeaders = yield* getRequestHeaders;
       const usersService = yield* UsersService;
       return yield* respondJson(
-        usersService.updateRoles(id, [...dto.roles], headers),
+        usersService.updateRoles(id, [...dto.roles]).pipe(
+          Effect.provideService(BetterAuthHeaders, requestHeaders),
+        ),
       );
     }),
   ),
@@ -70,7 +80,7 @@ export const usersRouter = HttpRouter.empty.pipe(
       yield* requirePermission(Resource.USERS, Permission.WRITE);
       const { id } = yield* HttpRouter.schemaPathParams(UserPathParamsSchema);
       const dto = yield* HttpServerRequest.schemaBodyJson(BanUserSchema);
-      const headers = yield* getRequestHeaders;
+      const requestHeaders = yield* getRequestHeaders;
       const usersService = yield* UsersService;
       return yield* respondJson(
         usersService.banUser(
@@ -79,8 +89,7 @@ export const usersRouter = HttpRouter.empty.pipe(
             reason: dto.reason,
             expiresAt: dto.expiresAt?.toISOString(),
           },
-          headers,
-        ),
+        ).pipe(Effect.provideService(BetterAuthHeaders, requestHeaders)),
       );
     }),
   ),
@@ -89,9 +98,13 @@ export const usersRouter = HttpRouter.empty.pipe(
     Effect.gen(function* () {
       yield* requirePermission(Resource.USERS, Permission.WRITE);
       const { id } = yield* HttpRouter.schemaPathParams(UserPathParamsSchema);
-      const headers = yield* getRequestHeaders;
+      const requestHeaders = yield* getRequestHeaders;
       const usersService = yield* UsersService;
-      return yield* respondJson(usersService.unbanUser(id, headers));
+      return yield* respondJson(
+        usersService.unbanUser(id).pipe(
+          Effect.provideService(BetterAuthHeaders, requestHeaders),
+        ),
+      );
     }),
   ),
   HttpRouter.del(
@@ -99,11 +112,16 @@ export const usersRouter = HttpRouter.empty.pipe(
     Effect.gen(function* () {
       yield* requirePermission(Resource.USERS, Permission.WRITE);
       const { id } = yield* HttpRouter.schemaPathParams(UserPathParamsSchema);
-      const headers = yield* getRequestHeaders;
+      const requestHeaders = yield* getRequestHeaders;
       const usersService = yield* UsersService;
-      return yield* respondEmpty(usersService.deleteUser(id, headers), {
-        status: 200,
-      });
+      return yield* respondEmpty(
+        usersService.deleteUser(id).pipe(
+          Effect.provideService(BetterAuthHeaders, requestHeaders),
+        ),
+        {
+          status: 200,
+        },
+      );
     }),
   ),
   HttpRouter.post(
@@ -111,11 +129,16 @@ export const usersRouter = HttpRouter.empty.pipe(
     Effect.gen(function* () {
       yield* requirePermission(Resource.USERS, Permission.WRITE);
       const { id } = yield* HttpRouter.schemaPathParams(UserPathParamsSchema);
-      const headers = yield* getRequestHeaders;
+      const requestHeaders = yield* getRequestHeaders;
       const usersService = yield* UsersService;
-      return yield* respondEmpty(usersService.revokeSessions(id, headers), {
-        status: 200,
-      });
+      return yield* respondEmpty(
+        usersService.revokeSessions(id).pipe(
+          Effect.provideService(BetterAuthHeaders, requestHeaders),
+        ),
+        {
+          status: 200,
+        },
+      );
     }),
   ),
   HttpRouter.prefixAll('/users'),

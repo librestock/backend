@@ -1,15 +1,18 @@
 import { Context, Layer } from 'effect';
-import type { Auth } from 'better-auth';
 import { auth } from '../../auth';
 
 export interface BetterAuthService {
-  readonly auth: Auth;
-  readonly handler: (request: Request) => Promise<Response>;
+  readonly auth: typeof auth;
+  readonly handler: typeof auth.handler;
   readonly api: typeof auth.api;
 }
 
 export const BetterAuth = Context.GenericTag<BetterAuthService>(
   '@librestock/effect/BetterAuth',
+);
+
+export const BetterAuthHeaders = Context.GenericTag<globalThis.Headers>(
+  '@librestock/effect/BetterAuthHeaders',
 );
 
 export const betterAuthLayer = Layer.succeed(BetterAuth, {
