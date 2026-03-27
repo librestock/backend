@@ -1,5 +1,8 @@
 import { Context, Effect, Layer } from 'effect';
-import { type AuditAction, type AuditEntityType } from '@librestock/types/audit-logs';
+import {
+  type AuditAction,
+  type AuditEntityType,
+} from '@librestock/types/audit-logs';
 import { DrizzleDatabase } from './drizzle';
 import { auditLogs } from './db/schema';
 import type { LogPayload } from './messages';
@@ -13,7 +16,9 @@ export interface AuditWriteParams {
 }
 
 export interface AuditLogWriter {
-  readonly log: (params: AuditWriteParams) => Effect.Effect<void, never, unknown>;
+  readonly log: (
+    params: AuditWriteParams,
+  ) => Effect.Effect<void, never, unknown>;
 }
 
 export const AuditLogWriter = Context.GenericTag<AuditLogWriter>(
