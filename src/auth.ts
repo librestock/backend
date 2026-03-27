@@ -11,6 +11,13 @@ import {
 const ADMIN_ROLE_NAME = 'Admin';
 const FIRST_ADMIN_LOCK_KEY = 1_640_000_001;
 
+function parseOrigins(value: string | undefined): string[] {
+  return (value ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
+}
+
 if (!process.env.BETTER_AUTH_SECRET) {
   throw new Error('BETTER_AUTH_SECRET environment variable is required');
 }
@@ -38,9 +45,7 @@ const pool =
         idleTimeoutMillis: IDLE_TIMEOUT_MS,
       });
 
-const trustedOrigins = process.env.FRONTEND_URL
-  ? [process.env.FRONTEND_URL]
-  : [];
+const trustedOrigins = parseOrigins(process.env.FRONTEND_URL);
 
 async function assignFirstAdminRole(userId: string): Promise<void> {
   const client = await pool.connect();
