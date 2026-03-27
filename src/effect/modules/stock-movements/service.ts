@@ -53,10 +53,12 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
         Effect.map(
           repository.findAllPaginated(query),
           (result) => toPaginatedResponse(result, toStockMovementResponseDto),
-        );
+        ).pipe(Effect.withSpan('StockMovementsService.findAllPaginated'));
 
       const findOne = (id: string) =>
-        Effect.map(getMovementOrFail(id), toStockMovementResponseDto);
+        Effect.map(getMovementOrFail(id), toStockMovementResponseDto).pipe(
+          Effect.withSpan('StockMovementsService.findOne', { attributes: { id } }),
+        );
 
       const findByProduct = (productId: string) =>
         Effect.gen(function* () {
@@ -72,7 +74,7 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
 
           const stockMovements = yield* repository.findByProductId(productId);
           return stockMovements.map(toStockMovementResponseDto);
-        });
+        }).pipe(Effect.withSpan('StockMovementsService.findByProduct', { attributes: { productId } }));
 
       const findByLocation = (locationId: string) =>
         Effect.gen(function* () {
@@ -88,7 +90,7 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
 
           const stockMovements = yield* repository.findByLocationId(locationId);
           return stockMovements.map(toStockMovementResponseDto);
-        });
+        }).pipe(Effect.withSpan('StockMovementsService.findByLocation', { attributes: { locationId } }));
 
       const create = (dto: CreateStockMovementDto, userId: string) =>
         Effect.gen(function* () {
@@ -141,7 +143,7 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
 
           const stockMovementWithRelations = yield* getMovementOrFail(stockMovement.id);
           return toStockMovementResponseDto(stockMovementWithRelations);
-        });
+        }).pipe(Effect.withSpan('StockMovementsService.create', { attributes: { productId: dto.product_id } }));
 
       return {
         findAllPaginated,

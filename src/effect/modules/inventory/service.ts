@@ -139,16 +139,18 @@ export class InventoryService extends Effect.Service<InventoryService>()(
         Effect.map(
           repository.findAllPaginated(query),
           (result) => toPaginatedResponse(result, toInventoryResponseDto),
-        );
+        ).pipe(Effect.withSpan('InventoryService.findAllPaginated'));
 
       const findAll = () =>
         Effect.map(
           repository.findAll(),
           (inventoryItems) => inventoryItems.map(toInventoryResponseDto),
-        );
+        ).pipe(Effect.withSpan('InventoryService.findAll'));
 
       const findOne = (id: string) =>
-        Effect.map(getInventoryOrFail(id), toInventoryResponseDto);
+        Effect.map(getInventoryOrFail(id), toInventoryResponseDto).pipe(
+          Effect.withSpan('InventoryService.findOne', { attributes: { id } }),
+        );
 
       const findByProduct = (productId: string) =>
         Effect.gen(function* () {
@@ -164,7 +166,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
 
           const inventoryItems = yield* repository.findByProductId(productId);
           return inventoryItems.map(toInventoryResponseDto);
-        });
+        }).pipe(Effect.withSpan('InventoryService.findByProduct', { attributes: { productId } }));
 
       const findByLocation = (locationId: string) =>
         Effect.gen(function* () {
@@ -180,7 +182,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
 
           const inventoryItems = yield* repository.findByLocationId(locationId);
           return inventoryItems.map(toInventoryResponseDto);
-        });
+        }).pipe(Effect.withSpan('InventoryService.findByLocation', { attributes: { locationId } }));
 
       const create = (dto: CreateInventoryDto) =>
         Effect.gen(function* () {
@@ -220,7 +222,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
 
           const inventoryWithRelations = yield* getInventoryOrFail(inventory.id);
           return toInventoryResponseDto(inventoryWithRelations);
-        });
+        }).pipe(Effect.withSpan('InventoryService.create'));
 
       const update = (id: string, dto: UpdateInventoryDto) =>
         Effect.gen(function* () {
@@ -291,7 +293,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
 
           const updatedInventory = yield* getInventoryOrFail(id);
           return toInventoryResponseDto(updatedInventory);
-        });
+        }).pipe(Effect.withSpan('InventoryService.update', { attributes: { id } }));
 
       const adjustQuantity = (id: string, dto: AdjustInventoryDto) =>
         Effect.gen(function* () {
@@ -310,13 +312,13 @@ export class InventoryService extends Effect.Service<InventoryService>()(
 
           const updatedInventory = yield* getInventoryOrFail(id);
           return toInventoryResponseDto(updatedInventory);
-        });
+        }).pipe(Effect.withSpan('InventoryService.adjustQuantity', { attributes: { id } }));
 
       const remove = (id: string) =>
         Effect.gen(function* () {
           yield* getInventoryOrFail(id);
           yield* repository.delete(id);
-        });
+        }).pipe(Effect.withSpan('InventoryService.delete', { attributes: { id } }));
 
       return {
         findAllPaginated,

@@ -43,10 +43,12 @@ export class SuppliersService extends Effect.Service<SuppliersService>()(
         Effect.map(
           repository.findAllPaginated(query),
           (result) => toPaginatedResponse(result, toSupplierResponseDto),
-        );
+        ).pipe(Effect.withSpan('SuppliersService.findAllPaginated'));
 
       const findOne = (id: string) =>
-        Effect.map(getSupplierOrFail(id), toSupplierResponseDto);
+        Effect.map(getSupplierOrFail(id), toSupplierResponseDto).pipe(
+          Effect.withSpan('SuppliersService.findOne', { attributes: { id } }),
+        );
 
       const create = (dto: CreateSupplierDto) =>
         Effect.map(
@@ -61,7 +63,7 @@ export class SuppliersService extends Effect.Service<SuppliersService>()(
             is_active: dto.is_active ?? true,
           }),
           toSupplierResponseDto,
-        );
+        ).pipe(Effect.withSpan('SuppliersService.create'));
 
       const update = (id: string, dto: UpdateSupplierDto) =>
         Effect.gen(function* () {
@@ -75,15 +77,18 @@ export class SuppliersService extends Effect.Service<SuppliersService>()(
 
           const updated = yield* getSupplierOrFail(id);
           return toSupplierResponseDto(updated);
-        });
+        }).pipe(Effect.withSpan('SuppliersService.update', { attributes: { id } }));
 
       const remove = (id: string) =>
         Effect.gen(function* () {
           yield* getSupplierOrFail(id);
           yield* repository.delete(id);
-        });
+        }).pipe(Effect.withSpan('SuppliersService.delete', { attributes: { id } }));
 
-      const existsById = (id: string) => repository.existsById(id);
+      const existsById = (id: string) =>
+        repository.existsById(id).pipe(
+          Effect.withSpan('SuppliersService.existsById', { attributes: { id } }),
+        );
 
       return { findAllPaginated, findOne, create, update, delete: remove, existsById };
     }),

@@ -105,12 +105,12 @@ export class OrdersService extends Effect.Service<OrdersService>()(
             toPaginatedResponse(result, (order) =>
               OrderUtils.toOrderResponseDto(order),
             ),
-        );
+        ).pipe(Effect.withSpan('OrdersService.findAllPaginated'));
 
       const findOne = (id: string) =>
         Effect.map(getOrderOrFail(id), (order) =>
           OrderUtils.toOrderResponseDto(order),
-        );
+        ).pipe(Effect.withSpan('OrdersService.findOne', { attributes: { id } }));
 
       const create = (dto: CreateOrderDto, userId: string) =>
         Effect.gen(function* () {
@@ -169,7 +169,7 @@ export class OrdersService extends Effect.Service<OrdersService>()(
 
           const orderWithRelations = yield* getOrderOrFail(order.id);
           return OrderUtils.toOrderResponseDto(orderWithRelations);
-        });
+        }).pipe(Effect.withSpan('OrdersService.create', { attributes: { clientId: dto.client_id } }));
 
       const update = (id: string, dto: UpdateOrderDto) =>
         Effect.gen(function* () {
@@ -200,7 +200,7 @@ export class OrdersService extends Effect.Service<OrdersService>()(
 
           const updated = yield* getOrderOrFail(id);
           return OrderUtils.toOrderResponseDto(updated);
-        });
+        }).pipe(Effect.withSpan('OrdersService.update', { attributes: { id } }));
 
       const updateStatus = (id: string, dto: UpdateOrderStatusDto) =>
         Effect.gen(function* () {
@@ -218,7 +218,7 @@ export class OrdersService extends Effect.Service<OrdersService>()(
 
           const updated = yield* getOrderOrFail(id);
           return OrderUtils.toOrderResponseDto(updated);
-        });
+        }).pipe(Effect.withSpan('OrdersService.updateStatus', { attributes: { id } }));
 
       const remove = (id: string) =>
         Effect.gen(function* () {
@@ -235,10 +235,12 @@ export class OrdersService extends Effect.Service<OrdersService>()(
 
           yield* orderItemsRepository.deleteByOrderId(id);
           yield* ordersRepository.delete(id);
-        });
+        }).pipe(Effect.withSpan('OrdersService.delete', { attributes: { id } }));
 
       const existsById = (id: string) =>
-        ordersRepository.existsById(id);
+        ordersRepository.existsById(id).pipe(
+          Effect.withSpan('OrdersService.existsById', { attributes: { id } }),
+        );
 
       return {
         findAllPaginated,

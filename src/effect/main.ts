@@ -2,7 +2,7 @@ import { HttpServer } from '@effect/platform';
 import { BunHttpServer, BunRuntime } from '@effect/platform-bun';
 import 'dotenv/config';
 import { Effect, Layer } from 'effect';
-import { httpApp } from './http/app';
+import { buildHttpApp } from './http/app';
 import { AuditLogsService } from './modules/audit-logs/service';
 import { AreasService } from './modules/areas/service';
 import { AuthService } from './modules/auth/service';
@@ -145,7 +145,7 @@ const ordersApplicationLayer = OrdersService.Default.pipe(
 const applicationLayer = Layer.mergeAll(
   platformLayer,
   auditLayer.pipe(Layer.provide(platformLayer)),
-  HealthService.Default,
+  HealthService.Default.pipe(Layer.provide(platformLayer)),
   rolesApplicationLayer,
   authApplicationLayer,
   usersApplicationLayer,
@@ -165,8 +165,12 @@ const applicationLayer = Layer.mergeAll(
   ordersApplicationLayer,
 );
 
-const serverLayer = HttpServer.serve(httpApp).pipe(
-  Layer.provide(BunHttpServer.layer({ port })),
+const serverLayer = Layer.unwrapEffect(
+  buildHttpApp.pipe(
+    Effect.map((app) =>
+      HttpServer.serve(app).pipe(Layer.provide(BunHttpServer.layer({ port }))),
+    ),
+  ),
 );
 
 BunRuntime.runMain(

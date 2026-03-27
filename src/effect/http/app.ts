@@ -1,9 +1,14 @@
-import { HttpApp, HttpRouter, HttpServerResponse } from '@effect/platform';
+import {
+  HttpApp,
+  HttpApiBuilder,
+  HttpRouter,
+  HttpServerResponse,
+} from '@effect/platform';
 import * as HttpServerRequest from '@effect/platform/HttpServerRequest';
-import { Effect, Option } from 'effect';
+import { Effect, Layer, Option } from 'effect';
 import { auth } from '../../auth';
 import { apiRouter } from '../modules';
-import { healthRouter } from '../modules/health/router';
+import { HealthApiLive } from '../modules/health/router';
 import { respondCause } from '../platform/errors';
 import {
   resolveLocale,
@@ -14,6 +19,7 @@ import {
 import { corsMiddleware } from './cors';
 import { securityHeadersMiddleware } from './security-headers';
 import { requestLoggingMiddleware } from './logging';
+import { AppApi } from './api';
 
 const MAX_REQUEST_BODY_BYTES = 10 * 1024 * 1024;
 
@@ -81,22 +87,61 @@ const bodyLimitMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>) =>
     );
   });
 
-const authHandlerRouter = HttpRouter.empty.pipe(
-  HttpRouter.mountApp('/api/auth', HttpApp.fromWebHandler(auth.handler), {
-    includePrefix: true,
-  }),
+// ---------------------------------------------------------------------------
+// HttpApiBuilder layer for the health group
+//
+// The health routes are declared via HttpApiGroup / HttpApiEndpoint in
+// src/effect/http/api.ts and implemented in HealthApiLive. The built
+// HttpApp.Default is mounted below so it coexists with the legacy HttpRouter.
+// ---------------------------------------------------------------------------
+
+const healthApiLayer = Layer.provide(
+  HttpApiBuilder.api(AppApi),
+  HealthApiLive,
 );
 
-const appRouter = HttpRouter.concatAll(
-  healthRouter,
-  authHandlerRouter,
-  apiRouter,
-).pipe(HttpRouter.catchAllCause(respondCause));
-
-const baseHttpApp = Effect.runSync(HttpRouter.toHttpApp(appRouter)).pipe(
-  Effect.catchAllCause(respondCause),
+/**
+ * The built health HttpApp.
+ *
+ * This Effect is run once at startup (inside buildHttpApp below) with
+ * HealthService in scope. The result is an HttpApp whose handlers are
+ * pure Effects with no external requirements (HealthService closes over
+ * DrizzleDatabase and BetterAuth at layer-build time).
+ */
+const healthBuilderApp = HttpApiBuilder.httpApp.pipe(
+  Effect.provide(healthApiLayer),
+  Effect.provide(HttpApiBuilder.Router.Live),
+  Effect.provide(HttpApiBuilder.Middleware.layer),
 );
 
-export const httpApp = requestLoggingMiddleware(
-  securityHeadersMiddleware(corsMiddleware(bodyLimitMiddleware(baseHttpApp))),
-);
+// ---------------------------------------------------------------------------
+// Full HTTP app builder
+//
+// Exported as an Effect so main.ts can build it inside the Layer graph where
+// HealthService (and the platform layers it needs) are already available.
+// ---------------------------------------------------------------------------
+
+export const buildHttpApp = Effect.gen(function* () {
+  // Build the health API HttpApp once. HealthService is in scope from the
+  // applicationLayer provided in main.ts.
+  const healthApp = yield* healthBuilderApp;
+
+  const appRouter = HttpRouter.empty.pipe(
+    // Health routes handled by HttpApiBuilder (typed, schema-validated)
+    HttpRouter.mountApp('/health-check', healthApp, { includePrefix: true }),
+    // Legacy routes remain on HttpRouter until migrated
+    HttpRouter.mountApp('/api/auth', HttpApp.fromWebHandler(auth.handler), {
+      includePrefix: true,
+    }),
+    HttpRouter.concat(apiRouter),
+    HttpRouter.catchAllCause(respondCause),
+  );
+
+  const base = yield* HttpRouter.toHttpApp(appRouter).pipe(
+    Effect.map((app) => app.pipe(Effect.catchAllCause(respondCause))),
+  );
+
+  return requestLoggingMiddleware(
+    securityHeadersMiddleware(corsMiddleware(bodyLimitMiddleware(base))),
+  );
+});

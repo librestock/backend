@@ -58,9 +58,12 @@ export class AuditLogsService extends Effect.Service<AuditLogsService>()(
       > =>
         Effect.map(repository.findPaginated(queryOptions), (result) =>
           toPaginatedResponse(result, toAuditLogResponseDto),
-        );
+        ).pipe(Effect.withSpan('AuditLogsService.query'));
 
-      const findById = getAuditLogOrFail;
+      const findById = (id: string) =>
+        getAuditLogOrFail(id).pipe(
+          Effect.withSpan('AuditLogsService.findById', { attributes: { id } }),
+        );
 
       const getEntityHistory = (
         entityType: AuditEntityType,
@@ -69,14 +72,14 @@ export class AuditLogsService extends Effect.Service<AuditLogsService>()(
         Effect.map(
           repository.findByEntityId(entityType, entityId),
           (auditLogs) => auditLogs.map(toAuditLogResponseDto),
-        );
+        ).pipe(Effect.withSpan('AuditLogsService.getEntityHistory', { attributes: { entityId } }));
 
       const getUserHistory = (
         userId: string,
       ): Effect.Effect<AuditLogResponseDto[], AuditLogsInfrastructureError> =>
         Effect.map(repository.findByUserId(userId), (auditLogs) =>
           auditLogs.map(toAuditLogResponseDto),
-        );
+        ).pipe(Effect.withSpan('AuditLogsService.getUserHistory', { attributes: { userId } }));
 
       return { query, findById, getEntityHistory, getUserHistory };
     }),

@@ -42,17 +42,19 @@ export class LocationsService extends Effect.Service<LocationsService>()(
       ): Effect.Effect<PaginatedLocationsResponseDto, LocationsInfrastructureError> =>
         Effect.map(repository.findAllPaginated(query), (result) =>
           toPaginatedResponse(result, toLocationResponseDto),
-        );
+        ).pipe(Effect.withSpan('LocationsService.findAllPaginated'));
 
       const findAll = (): Effect.Effect<LocationResponseDto[], LocationsInfrastructureError> =>
         Effect.map(repository.findAll(), (locations) =>
           locations.map(toLocationResponseDto),
-        );
+        ).pipe(Effect.withSpan('LocationsService.findAll'));
 
       const findOne = (
         id: string,
       ): Effect.Effect<LocationResponseDto, LocationNotFound | LocationsInfrastructureError> =>
-        Effect.map(getLocationOrFail(id), toLocationResponseDto);
+        Effect.map(getLocationOrFail(id), toLocationResponseDto).pipe(
+          Effect.withSpan('LocationsService.findOne', { attributes: { id } }),
+        );
 
       const create = (
         dto: CreateLocationDto,
@@ -67,7 +69,7 @@ export class LocationsService extends Effect.Service<LocationsService>()(
             is_active: dto.is_active ?? true,
           }),
           toLocationResponseDto,
-        );
+        ).pipe(Effect.withSpan('LocationsService.create'));
 
       const update = (
         id: string,
@@ -84,7 +86,7 @@ export class LocationsService extends Effect.Service<LocationsService>()(
 
           const updated = yield* getLocationOrFail(id);
           return toLocationResponseDto(updated);
-        });
+        }).pipe(Effect.withSpan('LocationsService.update', { attributes: { id } }));
 
       const remove = (
         id: string,
@@ -92,9 +94,12 @@ export class LocationsService extends Effect.Service<LocationsService>()(
         Effect.gen(function* () {
           yield* getLocationOrFail(id);
           yield* repository.delete(id);
-        });
+        }).pipe(Effect.withSpan('LocationsService.delete', { attributes: { id } }));
 
-      const existsById = (id: string) => repository.existsById(id);
+      const existsById = (id: string) =>
+        repository.existsById(id).pipe(
+          Effect.withSpan('LocationsService.existsById', { attributes: { id } }),
+        );
 
       return {
         findAllPaginated,

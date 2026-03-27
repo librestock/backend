@@ -51,7 +51,7 @@ export class BrandingService extends Effect.Service<BrandingService>()(
                   powered_by: POWERED_BY,
                   updated_at: new Date(),
                 },
-        );
+        ).pipe(Effect.withSpan('BrandingService.get'));
 
       const update = (
         dto: UpdateBrandingDto,
@@ -95,7 +95,7 @@ export class BrandingService extends Effect.Service<BrandingService>()(
           }
 
           return toBrandingResponse(rows[0]);
-        });
+        }).pipe(Effect.withSpan('BrandingService.update', { attributes: { userId } }));
 
       return { get, update };
     }),

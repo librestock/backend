@@ -98,7 +98,7 @@ export class AreasService extends Effect.Service<AreasService>()(
 
           const area = yield* repository.create(dto);
           return toAreaResponseDto(area);
-        });
+        }).pipe(Effect.withSpan('AreasService.create'));
 
       const findAll = (
         query: AreaQueryDto,
@@ -109,14 +109,17 @@ export class AreasService extends Effect.Service<AreasService>()(
               ? yield* repository.findHierarchyByLocationId(query.location_id)
               : yield* repository.findAll(query);
           return areas.map(toAreaResponseDto);
-        });
+        }).pipe(Effect.withSpan('AreasService.findAll'));
 
       const findById = (
         id: string,
       ): Effect.Effect<
         AreaResponseDto,
         AreaNotFound | AreasInfrastructureError
-      > => Effect.map(getAreaOrFail(id), toAreaResponseDto);
+      > =>
+        Effect.map(getAreaOrFail(id), toAreaResponseDto).pipe(
+          Effect.withSpan('AreasService.findById', { attributes: { id } }),
+        );
 
       const findByIdWithChildren = (
         id: string,
@@ -133,7 +136,7 @@ export class AreasService extends Effect.Service<AreasService>()(
                   messageKey: 'areas.notFound',
                 }),
               ),
-        );
+        ).pipe(Effect.withSpan('AreasService.findByIdWithChildren', { attributes: { id } }));
 
       const update = (
         id: string,
@@ -204,7 +207,7 @@ export class AreasService extends Effect.Service<AreasService>()(
             );
           }
           return toAreaResponseDto(updated);
-        });
+        }).pipe(Effect.withSpan('AreasService.update', { attributes: { id } }));
 
       const remove = (
         id: string,
@@ -219,7 +222,7 @@ export class AreasService extends Effect.Service<AreasService>()(
               }),
             );
           }
-        });
+        }).pipe(Effect.withSpan('AreasService.delete', { attributes: { id } }));
 
       return {
         create,

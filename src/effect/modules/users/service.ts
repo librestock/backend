@@ -102,7 +102,7 @@ export class UsersService extends Effect.Service<UsersService>()(
             user,
             roleEntities.map((roleEntity) => roleEntity.role.name),
           );
-        });
+        }).pipe(Effect.withSpan('UsersService.getUser', { attributes: { id } }));
 
       const listUsers = (query: UserQueryDto, headers: Headers) =>
         Effect.gen(function* () {
@@ -156,7 +156,7 @@ export class UsersService extends Effect.Service<UsersService>()(
             limit,
             total_pages: Math.ceil(filteredTotal / limit),
           };
-        });
+        }).pipe(Effect.withSpan('UsersService.listUsers'));
 
       const updateRoles = (userId: string, roleIds: string[], headers: Headers) =>
         Effect.gen(function* () {
@@ -173,7 +173,7 @@ export class UsersService extends Effect.Service<UsersService>()(
           yield* rolesService.clearCacheForUser(userId);
 
           return yield* getUser(userId, headers);
-        });
+        }).pipe(Effect.withSpan('UsersService.updateRoles', { attributes: { userId } }));
 
       const banUser = (userId: string, dto: BanUserDto, headers: Headers) =>
         Effect.gen(function* () {
@@ -198,7 +198,7 @@ export class UsersService extends Effect.Service<UsersService>()(
           );
 
           return yield* getUser(userId, headers);
-        });
+        }).pipe(Effect.withSpan('UsersService.banUser', { attributes: { userId } }));
 
       const unbanUser = (userId: string, headers: Headers) =>
         Effect.gen(function* () {
@@ -211,7 +211,7 @@ export class UsersService extends Effect.Service<UsersService>()(
           );
 
           return yield* getUser(userId, headers);
-        });
+        }).pipe(Effect.withSpan('UsersService.unbanUser', { attributes: { userId } }));
 
       const deleteUser = (userId: string, headers: Headers) =>
         Effect.gen(function* () {
@@ -223,7 +223,7 @@ export class UsersService extends Effect.Service<UsersService>()(
               body: { userId } satisfies BetterAuthUserActionBody,
             }),
           );
-        });
+        }).pipe(Effect.withSpan('UsersService.deleteUser', { attributes: { userId } }));
 
       const revokeSessions = (userId: string, headers: Headers) =>
         Effect.gen(function* () {
@@ -234,7 +234,7 @@ export class UsersService extends Effect.Service<UsersService>()(
               body: { userId } satisfies BetterAuthUserActionBody,
             }),
           );
-        });
+        }).pipe(Effect.withSpan('UsersService.revokeSessions', { attributes: { userId } }));
 
       return {
         listUsers,

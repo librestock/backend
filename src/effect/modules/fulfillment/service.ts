@@ -107,7 +107,7 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
 
           const updated = yield* loadOrderOrFail(orderId);
           return toView(updated);
-        });
+        }).pipe(Effect.withSpan('FulfillmentService.confirm', { attributes: { orderId } }));
 
       const PICKABLE_STATUSES: readonly OrderStatus[] = [
         OrderStatus.CONFIRMED,
@@ -220,7 +220,7 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
 
           const updated = yield* loadOrderOrFail(input.orderId);
           return toView(updated);
-        });
+        }).pipe(Effect.withSpan('FulfillmentService.pick', { attributes: { orderId: input.orderId } }));
 
       const pack = (input: {
         readonly orderId: string;
@@ -240,7 +240,7 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
               messageKey: 'fulfillment.packNotImplemented',
             }),
           );
-        });
+        }).pipe(Effect.withSpan('FulfillmentService.pack', { attributes: { orderId: input.orderId } }));
 
       const ship = (orderId: string, actorId: string) =>
         Effect.gen(function* () {
@@ -256,7 +256,7 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
               messageKey: 'fulfillment.shipNotImplemented',
             }),
           );
-        });
+        }).pipe(Effect.withSpan('FulfillmentService.ship', { attributes: { orderId } }));
 
       return {
         confirm,

@@ -20,19 +20,19 @@ export class AuthService extends Effect.Service<AuthService>()(
             session.user.id,
           );
           return toCurrentUserResponse(session, userPermissions);
-        });
+        }).pipe(Effect.withSpan('AuthService.me'));
 
       const profile = () =>
         Effect.gen(function* () {
           const session = yield* requireSession;
           return toProfileResponse(session);
-        });
+        }).pipe(Effect.withSpan('AuthService.profile'));
 
       const sessionClaims = () =>
         Effect.gen(function* () {
           const session = yield* requireSession;
           return toSessionClaimsResponse(session);
-        });
+        }).pipe(Effect.withSpan('AuthService.sessionClaims'));
 
       return {
         me,

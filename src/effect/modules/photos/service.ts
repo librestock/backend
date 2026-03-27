@@ -145,7 +145,7 @@ export class PhotosService extends Effect.Service<PhotosService>()(
           );
 
           return toPhotoResponseDto(photo);
-        });
+        }).pipe(Effect.withSpan('PhotosService.uploadPhoto', { attributes: { productId } }));
       };
 
       const findByProductId = (
@@ -153,7 +153,7 @@ export class PhotosService extends Effect.Service<PhotosService>()(
       ): Effect.Effect<PhotoResponseDto[], PhotosInfrastructureError> =>
         Effect.map(repository.findByProductId(productId), (photos) =>
           photos.map(toPhotoResponseDto),
-        );
+        ).pipe(Effect.withSpan('PhotosService.findByProductId', { attributes: { productId } }));
 
       const getFilePath = (
         id: string,
@@ -193,7 +193,7 @@ export class PhotosService extends Effect.Service<PhotosService>()(
             mimetype: photo.mimetype,
             filename: photo.filename,
           };
-        });
+        }).pipe(Effect.withSpan('PhotosService.getFilePath', { attributes: { id } }));
 
       const deletePhoto = (
         id: string,
@@ -212,7 +212,7 @@ export class PhotosService extends Effect.Service<PhotosService>()(
             ),
           );
           yield* repository.delete(id);
-        });
+        }).pipe(Effect.withSpan('PhotosService.deletePhoto', { attributes: { id } }));
 
       return { uploadPhoto, findByProductId, getFilePath, deletePhoto };
     }),

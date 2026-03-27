@@ -187,9 +187,11 @@ export class RolesService extends Effect.Service<RolesService>()(
         findAll: () =>
           Effect.map(repository.findAll(), (roles) =>
             roles.map(toRoleResponseDto),
-          ),
+          ).pipe(Effect.withSpan('RolesService.findAll')),
         findById: (id: string) =>
-          Effect.map(getRoleOrFail(id), toRoleResponseDto),
+          Effect.map(getRoleOrFail(id), toRoleResponseDto).pipe(
+            Effect.withSpan('RolesService.findById', { attributes: { id } }),
+          ),
         create: (dto: CreateRoleDto) =>
           Effect.gen(function* () {
             const existing = yield* repository.findByName(dto.name);
@@ -212,7 +214,7 @@ export class RolesService extends Effect.Service<RolesService>()(
 
             const created = yield* getRoleOrFail(role.id);
             return toRoleResponseDto(created);
-          }),
+          }).pipe(Effect.withSpan('RolesService.create')),
         update: (id: string, dto: UpdateRoleDto) =>
           Effect.gen(function* () {
             const role = yield* getRoleOrFail(id);
@@ -248,7 +250,7 @@ export class RolesService extends Effect.Service<RolesService>()(
 
             const updated = yield* getRoleOrFail(id);
             return toRoleResponseDto(updated);
-          }),
+          }).pipe(Effect.withSpan('RolesService.update', { attributes: { id } })),
         delete: (id: string) =>
           Effect.gen(function* () {
             const role = yield* getRoleOrFail(id);
@@ -263,10 +265,17 @@ export class RolesService extends Effect.Service<RolesService>()(
 
             yield* repository.delete(id);
             yield* clearAllCache();
-          }),
-        getPermissionsForUser,
-        clearCacheForUser,
-        clearAllCache,
+          }).pipe(Effect.withSpan('RolesService.delete', { attributes: { id } })),
+        getPermissionsForUser: (userId: string) =>
+          getPermissionsForUser(userId).pipe(
+            Effect.withSpan('RolesService.getPermissionsForUser', { attributes: { userId } }),
+          ),
+        clearCacheForUser: (userId: string) =>
+          clearCacheForUser(userId).pipe(
+            Effect.withSpan('RolesService.clearCacheForUser', { attributes: { userId } }),
+          ),
+        clearAllCache: () =>
+          clearAllCache().pipe(Effect.withSpan('RolesService.clearAllCache')),
         seed: () =>
           Effect.forEach(seedDefinitions, (seed) =>
             Effect.gen(function* () {
@@ -283,7 +292,7 @@ export class RolesService extends Effect.Service<RolesService>()(
 
               yield* repository.replacePermissions(role.id, seed.permissions);
             }),
-          ).pipe(Effect.asVoid),
+          ).pipe(Effect.asVoid, Effect.withSpan('RolesService.seed')),
       };
     }),
     dependencies: [RolesRepository.Default],

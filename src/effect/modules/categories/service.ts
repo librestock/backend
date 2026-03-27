@@ -89,7 +89,7 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
         Effect.map(
           repository.findAll(),
           (categories) => buildTree(categories),
-        );
+        ).pipe(Effect.withSpan('CategoriesService.findAll'));
 
       const create = (
         dto: CreateCategoryDto,
@@ -126,7 +126,7 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
             parent_id: dto.parent_id ?? null,
             description: dto.description ?? null,
           });
-        });
+        }).pipe(Effect.withSpan('CategoriesService.create'));
 
       const update = (
         id: string,
@@ -210,7 +210,7 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
           yield* repository.update(id, updateData);
 
           return yield* getCategoryOrFail(id);
-        });
+        }).pipe(Effect.withSpan('CategoriesService.update', { attributes: { id } }));
 
       const remove = (
         id: string,
@@ -218,12 +218,17 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
         Effect.gen(function* () {
           yield* getCategoryOrFail(id);
           yield* repository.delete(id);
-        });
+        }).pipe(Effect.withSpan('CategoriesService.delete', { attributes: { id } }));
 
-      const existsById = (id: string) => repository.existsById(id);
+      const existsById = (id: string) =>
+        repository.existsById(id).pipe(
+          Effect.withSpan('CategoriesService.existsById', { attributes: { id } }),
+        );
 
       const findAllDescendantIds = (parentId: string) =>
-        repository.findAllDescendantIds(parentId);
+        repository.findAllDescendantIds(parentId).pipe(
+          Effect.withSpan('CategoriesService.findAllDescendantIds', { attributes: { parentId } }),
+        );
 
       return {
         findAll,
