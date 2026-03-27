@@ -1,4 +1,4 @@
-import { Effect } from 'effect';
+import { Effect, Ref } from 'effect';
 import { eq } from 'drizzle-orm';
 import { Permission, Resource } from '@librestock/types/auth';
 import type { CreateRoleDto, UpdateRoleDto } from '@librestock/types/roles';
@@ -101,7 +101,7 @@ export class RolesService extends Effect.Service<RolesService>()(
     effect: Effect.gen(function* () {
       const repository = yield* RolesRepository;
       const db = yield* DrizzleDatabase;
-      const cache = new Map<string, CacheEntry>();
+      const cache = yield* Ref.make(new Map<string, CacheEntry>());
       const cacheTtlMs = 60_000;
 
       const getRoleOrFail = (
@@ -158,26 +158,31 @@ export class RolesService extends Effect.Service<RolesService>()(
         });
 
       const clearCacheForUser = (userId: string) =>
-        Effect.sync(() => {
-          cache.delete(userId);
+        Ref.update(cache, (current) => {
+          const next = new Map(current);
+          next.delete(userId);
+          return next;
         });
 
       const clearAllCache = () =>
-        Effect.sync(() => {
-          cache.clear();
-        });
+        Ref.set(cache, new Map());
 
       const getPermissionsForUser = (userId: string) =>
         Effect.gen(function* () {
-          const cached = cache.get(userId);
+          const currentCache = yield* Ref.get(cache);
+          const cached = currentCache.get(userId);
           if (cached && cached.expiresAt > Date.now()) {
             return cached.permissions;
           }
 
           const permissions = yield* fetchPermissionsFromDb(userId);
-          cache.set(userId, {
-            permissions,
-            expiresAt: Date.now() + cacheTtlMs,
+          yield* Ref.update(cache, (entries) => {
+            const next = new Map(entries);
+            next.set(userId, {
+              permissions,
+              expiresAt: Date.now() + cacheTtlMs,
+            });
+            return next;
           });
 
           return permissions;
