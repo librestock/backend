@@ -183,7 +183,7 @@ export class ProductsService extends Effect.Service<ProductsService>()(
 
       const bulkCreate = (bulkDto: BulkCreateProductsDto, userId?: string) =>
         Effect.gen(function* () {
-          const result = createEmptyBulkResult();
+          let result = createEmptyBulkResult();
 
           const categoryIds = [
             ...new Set(bulkDto.products.map((p) => p.category_id)),
@@ -193,7 +193,7 @@ export class ProductsService extends Effect.Service<ProductsService>()(
             if (!exists) {
               for (const product of bulkDto.products) {
                 if (product.category_id === categoryId) {
-                  addBulkFailure(result, `Category ${categoryId} not found`, {
+                  result = addBulkFailure(result, `Category ${categoryId} not found`, {
                     sku: product.sku,
                   });
                 }
@@ -208,7 +208,7 @@ export class ProductsService extends Effect.Service<ProductsService>()(
           if (duplicateSkus.length > 0) {
             for (const product of bulkDto.products) {
               if (duplicateSkus.includes(product.sku)) {
-                addBulkFailure(result, 'Duplicate SKU in request', {
+                result = addBulkFailure(result, 'Duplicate SKU in request', {
                   sku: product.sku,
                 });
               }
@@ -220,7 +220,7 @@ export class ProductsService extends Effect.Service<ProductsService>()(
 
             const existingSku = yield* repository.findBySku(productDto.sku);
             if (existingSku) {
-              addBulkFailure(result, 'A product with this SKU already exists', {
+              result = addBulkFailure(result, 'A product with this SKU already exists', {
                 sku: productDto.sku,
               });
               continue;
@@ -228,7 +228,7 @@ export class ProductsService extends Effect.Service<ProductsService>()(
 
             const entityData = toCreateProductEntity(productDto, userId);
             const product = yield* repository.create(entityData);
-            addBulkSuccess(result, product.id);
+            result = addBulkSuccess(result, product.id);
           }
 
           return result;
@@ -263,7 +263,7 @@ export class ProductsService extends Effect.Service<ProductsService>()(
 
       const bulkUpdateStatus = (bulkDto: BulkUpdateStatusDto, userId?: string) =>
         Effect.gen(function* () {
-          const result = createEmptyBulkResult();
+          let result = createEmptyBulkResult();
 
           const ids = [...bulkDto.ids];
           const existingProducts = yield* repository.findByIds(ids);
@@ -273,15 +273,18 @@ export class ProductsService extends Effect.Service<ProductsService>()(
             existingIds,
           );
 
-          addNotFoundFailures(result, notFound, 'Product');
+          result = addNotFoundFailures(result, notFound, 'Product');
 
           if (idsToUpdate.length > 0) {
             const affectedCount = yield* repository.updateMany(idsToUpdate, {
               is_active: bulkDto.is_active,
               updated_by: userId ?? null,
             });
-            result.success_count = affectedCount;
-            result.succeeded = idsToUpdate.slice(0, affectedCount);
+            result = {
+              ...result,
+              success_count: affectedCount,
+              succeeded: idsToUpdate.slice(0, affectedCount),
+            };
           }
 
           return result;
@@ -299,7 +302,7 @@ export class ProductsService extends Effect.Service<ProductsService>()(
 
       const bulkDelete = (bulkDto: BulkDeleteDto, userId?: string) =>
         Effect.gen(function* () {
-          const result = createEmptyBulkResult();
+          let result = createEmptyBulkResult();
 
           const ids = [...bulkDto.ids];
           const existingProducts = yield* repository.findByIds(ids);
@@ -309,14 +312,17 @@ export class ProductsService extends Effect.Service<ProductsService>()(
             existingIds,
           );
 
-          addNotFoundFailures(result, notFound, 'Product');
+          result = addNotFoundFailures(result, notFound, 'Product');
 
           if (idsToDelete.length > 0) {
             const affectedCount = bulkDto.permanent
               ? yield* repository.hardDeleteMany(idsToDelete)
               : yield* repository.softDeleteMany(idsToDelete, userId);
-            result.success_count = affectedCount;
-            result.succeeded = idsToDelete.slice(0, affectedCount);
+            result = {
+              ...result,
+              success_count: affectedCount,
+              succeeded: idsToDelete.slice(0, affectedCount),
+            };
           }
 
           return result;
@@ -342,7 +348,7 @@ export class ProductsService extends Effect.Service<ProductsService>()(
 
       const bulkRestore = (bulkDto: BulkRestoreDto) =>
         Effect.gen(function* () {
-          const result = createEmptyBulkResult();
+          let result = createEmptyBulkResult();
 
           const ids = [...bulkDto.ids];
           const deletedProducts = yield* repository.findDeletedByIds(ids);
@@ -353,13 +359,16 @@ export class ProductsService extends Effect.Service<ProductsService>()(
           );
 
           for (const id of notFound) {
-            addBulkFailure(result, 'Product not found or not deleted', { id });
+            result = addBulkFailure(result, 'Product not found or not deleted', { id });
           }
 
           if (idsToRestore.length > 0) {
             const affectedCount = yield* repository.restoreMany(idsToRestore);
-            result.success_count = affectedCount;
-            result.succeeded = idsToRestore.slice(0, affectedCount);
+            result = {
+              ...result,
+              success_count: affectedCount,
+              succeeded: idsToRestore.slice(0, affectedCount),
+            };
           }
 
           return result;

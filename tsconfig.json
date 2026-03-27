@@ -11,5 +11,5 @@
     },
     "strictPropertyInitialization": false
   },
-  "exclude": ["node_modules", "dist", "build", "src/scripts"]
+  "exclude": ["node_modules", "dist", "build", "src/scripts", "effect-code"]
 }

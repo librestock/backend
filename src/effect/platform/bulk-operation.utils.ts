@@ -27,9 +27,12 @@ export function createEmptyBulkResult<T = string>(): BulkOperationResult<T> {
 export function addBulkSuccess<T = string>(
   result: BulkOperationResult<T>,
   id: T,
-): void {
-  result.success_count++;
-  result.succeeded.push(id);
+): BulkOperationResult<T> {
+  return {
+    ...result,
+    success_count: result.success_count + 1,
+    succeeded: [...result.succeeded, id],
+  };
 }
 
 /**
@@ -39,13 +42,19 @@ export function addBulkFailure(
   result: BulkOperationResult,
   error: string,
   identifier?: { id?: string; sku?: string },
-): void {
-  result.failure_count++;
-  result.failures.push({
-    ...(identifier?.id && { id: identifier.id }),
-    ...(identifier?.sku && { sku: identifier.sku }),
-    error,
-  });
+): BulkOperationResult {
+  return {
+    ...result,
+    failure_count: result.failure_count + 1,
+    failures: [
+      ...result.failures,
+      {
+        ...(identifier?.id && { id: identifier.id }),
+        ...(identifier?.sku && { sku: identifier.sku }),
+        error,
+      },
+    ],
+  };
 }
 
 /**
@@ -95,8 +104,9 @@ export function addNotFoundFailures(
   result: BulkOperationResult,
   notFoundIds: string[],
   entityName = 'Entity',
-): void {
-  for (const id of notFoundIds) {
-    addBulkFailure(result, `${entityName} not found`, { id });
-  }
+): BulkOperationResult {
+  return notFoundIds.reduce(
+    (current, id) => addBulkFailure(current, `${entityName} not found`, { id }),
+    result,
+  );
 }

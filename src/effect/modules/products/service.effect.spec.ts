@@ -53,7 +53,14 @@ const makeProductEntity = (overrides: Record<string, any> = {}) => ({
   created_by: null,
   updated_by: null,
   deleted_by: null,
-  category: { id: 'cat-1', name: 'Electronics', parent_id: null },
+  category: {
+    id: 'cat-1',
+    name: 'Electronics',
+    description: null,
+    parent_id: null,
+    created_at: new Date('2026-01-01'),
+    updated_at: new Date('2026-01-01'),
+  },
   primary_supplier: null,
   ...overrides,
 });
