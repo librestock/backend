@@ -17,6 +17,7 @@ import { PhotosService } from './modules/photos/service';
 import { ProductsService } from './modules/products/service';
 import type { RolesInfrastructureError } from './modules/roles/roles.errors';
 import { RolesService } from './modules/roles/service';
+import { PermissionProvider } from './platform/permission-provider';
 import { StockMovementsService } from './modules/stock-movements/service';
 import { SuppliersService } from './modules/suppliers/service';
 import { UsersService } from './modules/users/service';
@@ -47,6 +48,10 @@ const withPlatform = <A, E, R>(layer: Layer.Layer<A, E, R>) =>
   layer.pipe(Layer.provide(platformLayer));
 
 const rolesApplicationLayer = withPlatform(RolesService.Default);
+const permissionProviderLayer = Layer.effect(
+  PermissionProvider,
+  Effect.map(RolesService, ({ getPermissionsForUser }) => ({ getPermissionsForUser })),
+).pipe(Layer.provide(rolesApplicationLayer));
 const authApplicationLayer = AuthService.Default.pipe(
   Layer.provide(rolesApplicationLayer),
 );
@@ -144,6 +149,7 @@ const applicationLayer = Layer.mergeAll(
   startupLayer,
   foundationalServicesLayer,
   rolesApplicationLayer,
+  permissionProviderLayer,
   authApplicationLayer,
   usersApplicationLayer,
   areasApplicationLayer,

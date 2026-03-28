@@ -1,7 +1,6 @@
 import { Effect, Layer } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
-import { RolesService } from '../modules/roles/service';
-import { RolesInfrastructureError } from '../modules/roles/roles.errors';
+import { PermissionProvider } from './permission-provider';
 import { requirePermission, PermissionDenied } from './authorization';
 
 const mockRequireSession = jest.fn();
@@ -20,7 +19,7 @@ describe('requirePermission', () => {
   const fail = <A, E>(effect: Effect.Effect<A, E, any>) =>
     Effect.runPromise(Effect.flip(effect as Effect.Effect<A, E, never>));
 
-  const rolesService = {
+  const permissionProvider = {
     getPermissionsForUser: jest.fn(),
   };
 
@@ -34,7 +33,7 @@ describe('requirePermission', () => {
         user: { id: 'user-1' },
       }),
     );
-    rolesService.getPermissionsForUser.mockReturnValue(
+    permissionProvider.getPermissionsForUser.mockReturnValue(
       Effect.succeed({
         roleNames: ['Admin'],
         permissions: {
@@ -47,7 +46,7 @@ describe('requirePermission', () => {
       run(
         requirePermission(Resource.ROLES, Permission.READ).pipe(
           Effect.provide(
-            Layer.succeed(RolesService, rolesService as any),
+            Layer.succeed(PermissionProvider, permissionProvider),
           ),
         ),
       ),
@@ -60,7 +59,7 @@ describe('requirePermission', () => {
         user: { id: 'user-1' },
       }),
     );
-    rolesService.getPermissionsForUser.mockReturnValue(
+    permissionProvider.getPermissionsForUser.mockReturnValue(
       Effect.succeed({
         roleNames: ['Viewer'],
         permissions: {
@@ -73,7 +72,7 @@ describe('requirePermission', () => {
       fail(
         requirePermission(Resource.ROLES, Permission.WRITE).pipe(
           Effect.provide(
-            Layer.succeed(RolesService, rolesService as any),
+            Layer.succeed(PermissionProvider, permissionProvider),
           ),
         ),
       ),
@@ -94,7 +93,7 @@ describe('requirePermission', () => {
       fail(
         requirePermission(Resource.ROLES, Permission.READ).pipe(
           Effect.provide(
-            Layer.succeed(RolesService, rolesService as any),
+            Layer.succeed(PermissionProvider, permissionProvider),
           ),
         ),
       ),
@@ -104,26 +103,26 @@ describe('requirePermission', () => {
     });
   });
 
-  it('propagates roles infrastructure errors', async () => {
+  it('propagates provider failures', async () => {
     mockRequireSession.mockReturnValue(
       Effect.succeed({
         user: { id: 'user-1' },
       }),
     );
-    rolesService.getPermissionsForUser.mockReturnValue(
-      Effect.fail(
-        new RolesInfrastructureError({
-          action: 'load permissions',
-          messageKey: 'roles.loadPermissionsFailed',
-        }),
-      ),
+    permissionProvider.getPermissionsForUser.mockReturnValue(
+      Effect.fail({
+        _tag: 'RolesInfrastructureError',
+        statusCode: 500,
+        message: 'error',
+        messageKey: 'roles.loadPermissionsFailed',
+      }),
     );
 
     await expect(
       fail(
         requirePermission(Resource.ROLES, Permission.READ).pipe(
           Effect.provide(
-            Layer.succeed(RolesService, rolesService as any),
+            Layer.succeed(PermissionProvider, permissionProvider),
           ),
         ),
       ),

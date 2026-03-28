@@ -12,11 +12,9 @@ import {
   SystemRoleDeletionForbidden,
 } from './roles.errors';
 import { RolesRepository } from './repository';
+import type { UserPermissions } from '../../platform/permission-provider';
 
-export interface UserPermissions {
-  readonly roleNames: string[];
-  readonly permissions: Partial<Record<Resource, Permission[]>>;
-}
+export type { UserPermissions };
 
 interface CacheEntry {
   readonly permissions: UserPermissions;
