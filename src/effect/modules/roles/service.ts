@@ -4,6 +4,7 @@ import { Permission, Resource } from '@librestock/types/auth';
 import type { CreateRoleDto, UpdateRoleDto } from '@librestock/types/roles';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { userRoles, roles, rolePermissions } from '../../platform/db/schema';
+import type { UserPermissions } from '../../platform/permission-provider';
 import { toRoleResponseDto, type RoleWithPermissions } from './roles.utils';
 import {
   RoleNameAlreadyExists,
@@ -13,10 +14,7 @@ import {
 } from './roles.errors';
 import { RolesRepository } from './repository';
 
-export interface UserPermissions {
-  readonly roleNames: string[];
-  readonly permissions: Partial<Record<Resource, Permission[]>>;
-}
+export type { UserPermissions };
 
 interface CacheEntry {
   readonly permissions: UserPermissions;
