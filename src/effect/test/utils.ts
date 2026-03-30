@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from 'effect';
+import { type Context, Effect, Layer } from 'effect';
 
 /**
  * Creates a test layer for an Effect service tag.
@@ -27,4 +27,4 @@ const makeUnimplementedProxy = <S extends object>(key: string, service: Partial<
 export const makeTestLayer =
   <I, S extends object>(tag: Context.Tag<I, S>) =>
   (service: Partial<S>): Layer.Layer<I> =>
-    Layer.succeed(tag, makeUnimplementedProxy(tag.key as string, service));
+    Layer.succeed(tag, makeUnimplementedProxy(tag.key, service));

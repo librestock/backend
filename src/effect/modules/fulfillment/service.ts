@@ -117,7 +117,7 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
       const pick = (input: {
         readonly orderId: string;
         readonly actorId: string;
-        readonly picks: ReadonlyArray<PickInput>;
+        readonly picks: readonly PickInput[];
       }) =>
         Effect.gen(function* () {
           const order = yield* loadOrderOrFail(input.orderId);
@@ -225,7 +225,7 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
       const pack = (input: {
         readonly orderId: string;
         readonly actorId: string;
-        readonly packs: ReadonlyArray<PackInput>;
+        readonly packs: readonly PackInput[];
       }) =>
         Effect.gen(function* () {
           yield* loadOrderOrFail(input.orderId);

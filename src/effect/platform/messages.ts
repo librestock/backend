@@ -6,7 +6,7 @@ import {
   enCatalog,
   frCatalog,
 } from './catalogs/index';
-import { LogProperties } from './catalogs/log-properties';
+import { type LogProperties } from './catalogs/log-properties';
 
 export const SUPPORTED_LOCALES = ['en', 'fr', 'de'] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
@@ -57,7 +57,7 @@ const formatMessageTemplate = (template: string, messageArgs?: MessageArgs) => {
   }
 
   const args = messageArgs as Record<string, string | number | undefined>;
-  return template.replace(/\{([A-Za-z0-9_]+)\}/g, (_match, key: string) => {
+  return template.replace(/{(\w+)}/g, (_match, key: string) => {
     const value = args[key];
     if (value === undefined) {
       return `{${key}}`;

@@ -4,9 +4,7 @@ import type { UserSession } from './auth/user-session';
 import { BetterAuth } from './better-auth';
 import { InternalError, UnauthorizedError } from './domain-errors';
 
-export class SessionUnauthorized extends UnauthorizedError(
-  'SessionUnauthorized',
-)<{}> {}
+export class SessionUnauthorized extends UnauthorizedError('SessionUnauthorized')<{}> {}
 
 export class SessionInfrastructureError extends InternalError(
   'SessionInfrastructureError',
