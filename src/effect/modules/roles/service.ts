@@ -4,6 +4,7 @@ import { Permission, Resource } from '@librestock/types/auth';
 import type { CreateRoleDto, UpdateRoleDto } from '@librestock/types/roles';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { userRoles, roles, rolePermissions } from '../../platform/db/schema';
+import type { UserPermissions } from '../../platform/permission-provider';
 import { toRoleResponseDto, type RoleWithPermissions } from './roles.utils';
 import {
   RoleNameAlreadyExists,
@@ -12,7 +13,6 @@ import {
   SystemRoleDeletionForbidden,
 } from './roles.errors';
 import { RolesRepository } from './repository';
-import type { UserPermissions } from '../../platform/permission-provider';
 
 export type { UserPermissions };
 

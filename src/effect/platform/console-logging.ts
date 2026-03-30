@@ -103,7 +103,7 @@ const detectPlatform = (userAgent: string) => {
 };
 
 const detectBrowser = (userAgent: string) => {
-  const candidates: Array<[string, RegExp]> = [
+  const candidates: [string, RegExp][] = [
     ['edge', /Edg\/([\d.]+)/],
     ['chrome', /Chrome\/([\d.]+)/],
     ['firefox', /Firefox\/([\d.]+)/],
@@ -206,7 +206,7 @@ const formatDbQuery = (record: LogRecord) => {
   }
 
   if (record.sql !== undefined) {
-    parts.push(`sql=${JSON.stringify(String(record.sql))}`);
+    parts.push(`sql=${JSON.stringify(stringifyValue(record.sql))}`);
   }
 
   return parts.join(' ');
@@ -333,10 +333,10 @@ const extractSqlOperation = (query: string) => {
 const extractSqlTable = (query: string) => {
   const normalized = normalizeSql(query);
   const patterns = [
-    /\bfrom\s+"?([a-zA-Z0-9_.-]+)"?/i,
-    /\binto\s+"?([a-zA-Z0-9_.-]+)"?/i,
-    /\bupdate\s+"?([a-zA-Z0-9_.-]+)"?/i,
-    /\bdelete\s+from\s+"?([a-zA-Z0-9_.-]+)"?/i,
+    /\bfrom\s+"?([\w.-]+)"?/i,
+    /\binto\s+"?([\w.-]+)"?/i,
+    /\bupdate\s+"?([\w.-]+)"?/i,
+    /\bdelete\s+from\s+"?([\w.-]+)"?/i,
   ];
 
   for (const pattern of patterns) {
@@ -381,7 +381,7 @@ export const makeDrizzleLogger = (): DrizzleLogger | undefined => {
 
   return {
     logQuery(query, params) {
-      console.debug(
+      console.info(
         formatStructuredLogLine({
           date: new Date(),
           level: 'DEBUG',

@@ -10,7 +10,7 @@ import { stockMovements } from '../../platform/db/schema';
 import { StockMovementsInfrastructureError } from './stock-movements.errors';
 import type { StockMovementWithRelations } from './stock-movements.utils';
 
-type RawRow = Record<string, any>;
+type RawRow = Record<string, unknown>;
 
 /** Extract rows array from a raw `db.execute()` result (handles both pg and test shapes). */
 function extractRows(result: unknown): RawRow[] {

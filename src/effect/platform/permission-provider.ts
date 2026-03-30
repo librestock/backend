@@ -1,4 +1,4 @@
-import { Context, Effect } from 'effect';
+import { Context, type Effect } from 'effect';
 import type { Permission, Resource } from '@librestock/types/auth';
 
 export interface UserPermissions {
