@@ -1,3 +1,4 @@
+import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
 import { DrizzleDatabase } from '../../platform/drizzle';
@@ -10,7 +11,7 @@ const createChainableMock = (resolveValue: any) => {
   const chain: any = {};
   const methods = ['select', 'from', 'innerJoin', 'where', 'limit', 'orderBy', 'offset'];
   for (const method of methods) {
-    chain[method] = jest.fn().mockReturnValue(chain);
+    chain[method] = vi.fn().mockReturnValue(chain);
   }
   chain.then = (resolve: any) => resolve(resolveValue);
   return chain;
@@ -18,7 +19,7 @@ const createChainableMock = (resolveValue: any) => {
 
 describe('Effect RolesService', () => {
   const makeService = async (
-    repository: Record<string, jest.Mock>,
+    repository: Record<string, Mock>,
     mockDb: any,
   ) =>
     Effect.runPromise(
@@ -58,8 +59,8 @@ describe('Effect RolesService', () => {
 
   it('creates a role', async () => {
     const repository = {
-      findAll: jest.fn(),
-      findById: jest.fn().mockReturnValue(
+      findAll: vi.fn(),
+      findById: vi.fn().mockReturnValue(
         Effect.succeed({
           ...roleEntity,
           id: 'role-2',
@@ -68,8 +69,8 @@ describe('Effect RolesService', () => {
           is_system: false,
         }),
       ),
-      findByName: jest.fn().mockReturnValue(Effect.succeed(null)),
-      create: jest.fn().mockReturnValue(
+      findByName: vi.fn().mockReturnValue(Effect.succeed(null)),
+      create: vi.fn().mockReturnValue(
         Effect.succeed({
           ...roleEntity,
           id: 'role-2',
@@ -78,9 +79,9 @@ describe('Effect RolesService', () => {
           is_system: false,
         }),
       ),
-      update: jest.fn(),
-      delete: jest.fn(),
-      replacePermissions: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+      update: vi.fn(),
+      delete: vi.fn(),
+      replacePermissions: vi.fn().mockReturnValue(Effect.succeed(undefined)),
     };
     const mockDb = createChainableMock([]);
     const service = await makeService(repository, mockDb);
@@ -105,13 +106,13 @@ describe('Effect RolesService', () => {
 
   it('rejects duplicate role names', async () => {
     const repository = {
-      findAll: jest.fn(),
-      findById: jest.fn(),
-      findByName: jest.fn().mockReturnValue(Effect.succeed(roleEntity)),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      replacePermissions: jest.fn(),
+      findAll: vi.fn(),
+      findById: vi.fn(),
+      findByName: vi.fn().mockReturnValue(Effect.succeed(roleEntity)),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      replacePermissions: vi.fn(),
     };
     const service = await makeService(repository, createChainableMock([]));
 
@@ -130,8 +131,8 @@ describe('Effect RolesService', () => {
 
   it('updates a role', async () => {
     const repository = {
-      findAll: jest.fn(),
-      findById: jest
+      findAll: vi.fn(),
+      findById: vi
         .fn()
         .mockReturnValueOnce(
           Effect.succeed({
@@ -151,11 +152,11 @@ describe('Effect RolesService', () => {
             is_system: false,
           }),
         ),
-      findByName: jest.fn().mockReturnValue(Effect.succeed(null)),
-      create: jest.fn(),
-      update: jest.fn().mockReturnValue(Effect.succeed(undefined)),
-      delete: jest.fn(),
-      replacePermissions: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+      findByName: vi.fn().mockReturnValue(Effect.succeed(null)),
+      create: vi.fn(),
+      update: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+      delete: vi.fn(),
+      replacePermissions: vi.fn().mockReturnValue(Effect.succeed(undefined)),
     };
     const service = await makeService(repository, createChainableMock([]));
 
@@ -179,13 +180,13 @@ describe('Effect RolesService', () => {
 
   it('prevents deleting a system role', async () => {
     const repository = {
-      findAll: jest.fn(),
-      findById: jest.fn().mockReturnValue(Effect.succeed(roleEntity)),
-      findByName: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      replacePermissions: jest.fn(),
+      findAll: vi.fn(),
+      findById: vi.fn().mockReturnValue(Effect.succeed(roleEntity)),
+      findByName: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      replacePermissions: vi.fn(),
     };
     const service = await makeService(repository, createChainableMock([]));
 
@@ -197,13 +198,13 @@ describe('Effect RolesService', () => {
 
   it('caches permissions and refreshes after ttl expiry', async () => {
     const repository = {
-      findAll: jest.fn(),
-      findById: jest.fn(),
-      findByName: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      replacePermissions: jest.fn(),
+      findAll: vi.fn(),
+      findById: vi.fn(),
+      findByName: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      replacePermissions: vi.fn(),
     };
     const mockDb = createChainableMock([
       {
@@ -214,7 +215,7 @@ describe('Effect RolesService', () => {
     ]);
     const service = await makeService(repository, mockDb);
     let now = 1_000;
-    const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => now);
+    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now);
 
     await run(service.getPermissionsForUser('user-1'));
     await run(service.getPermissionsForUser('user-1'));

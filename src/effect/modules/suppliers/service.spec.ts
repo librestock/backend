@@ -1,3 +1,4 @@
+import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
 import { SuppliersService } from './service';
 import { SuppliersRepository } from './repository';
@@ -18,9 +19,9 @@ const makeSupplierEntity = (overrides: Record<string, any> = {}) => ({
 });
 
 const makeMockRepository = (
-  overrides: Partial<Record<string, jest.Mock>> = {},
+  overrides: Partial<Record<string, Mock>> = {},
 ) => ({
-  findAllPaginated: jest.fn().mockReturnValue(
+  findAllPaginated: vi.fn().mockReturnValue(
     Effect.succeed({
       data: [makeSupplierEntity()],
       total: 1,
@@ -29,11 +30,11 @@ const makeMockRepository = (
       total_pages: 1,
     }),
   ),
-  findById: jest.fn().mockReturnValue(Effect.succeed(makeSupplierEntity())),
-  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
-  create: jest.fn().mockReturnValue(Effect.succeed(makeSupplierEntity())),
-  update: jest.fn().mockReturnValue(Effect.succeed(1)),
-  delete: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+  findById: vi.fn().mockReturnValue(Effect.succeed(makeSupplierEntity())),
+  existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
+  create: vi.fn().mockReturnValue(Effect.succeed(makeSupplierEntity())),
+  update: vi.fn().mockReturnValue(Effect.succeed(1)),
+  delete: vi.fn().mockReturnValue(Effect.succeed(undefined)),
   ...overrides,
 });
 
@@ -70,7 +71,7 @@ describe('Effect SuppliersService', () => {
     });
 
     it('fails with SupplierNotFound', async () => {
-      const repo = makeMockRepository({ findById: jest.fn().mockReturnValue(Effect.succeed(null)) });
+      const repo = makeMockRepository({ findById: vi.fn().mockReturnValue(Effect.succeed(null)) });
       const service = await buildService(repo);
       const error = await fail(service.findOne('missing'));
       expect(error).toMatchObject({ _tag: 'SupplierNotFound' });
@@ -111,7 +112,7 @@ describe('Effect SuppliersService', () => {
     });
 
     it('fails with SupplierNotFound', async () => {
-      const repo = makeMockRepository({ findById: jest.fn().mockReturnValue(Effect.succeed(null)) });
+      const repo = makeMockRepository({ findById: vi.fn().mockReturnValue(Effect.succeed(null)) });
       const service = await buildService(repo);
       const error = await fail(service.delete('missing'));
       expect(error).toMatchObject({ _tag: 'SupplierNotFound' });

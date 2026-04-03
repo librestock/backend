@@ -1,5 +1,5 @@
 /**
- * Shared database connection utilities for TypeORM and Better Auth pg Pool.
+ * Shared database connection utilities for Drizzle and Better Auth pg Pool.
  */
 
 export function getSSLConfig(): { rejectUnauthorized: boolean } | false {

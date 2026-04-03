@@ -1,3 +1,4 @@
+import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
 import { LocationsService } from '../locations/service';
 import { AreasService } from './service';
@@ -19,26 +20,26 @@ const makeAreaEntity = (overrides: Record<string, any> = {}) => ({
 });
 
 const makeMockAreasRepository = (
-  overrides: Record<string, jest.Mock> = {},
+  overrides: Record<string, Mock> = {},
 ) => ({
-  create: jest.fn().mockReturnValue(Effect.succeed(makeAreaEntity())),
-  findAll: jest.fn().mockReturnValue(Effect.succeed([makeAreaEntity()])),
-  findById: jest.fn().mockReturnValue(Effect.succeed(makeAreaEntity())),
-  findByIdWithChildren: jest
+  create: vi.fn().mockReturnValue(Effect.succeed(makeAreaEntity())),
+  findAll: vi.fn().mockReturnValue(Effect.succeed([makeAreaEntity()])),
+  findById: vi.fn().mockReturnValue(Effect.succeed(makeAreaEntity())),
+  findByIdWithChildren: vi
     .fn()
     .mockReturnValue(Effect.succeed(makeAreaEntity({ children: [] }))),
-  findHierarchyByLocationId: jest
+  findHierarchyByLocationId: vi
     .fn()
     .mockReturnValue(Effect.succeed([makeAreaEntity()])),
-  update: jest.fn().mockReturnValue(Effect.succeed(makeAreaEntity())),
-  delete: jest.fn().mockReturnValue(Effect.succeed(true)),
-  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
+  update: vi.fn().mockReturnValue(Effect.succeed(makeAreaEntity())),
+  delete: vi.fn().mockReturnValue(Effect.succeed(true)),
+  existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
   ...overrides,
 });
 
 const makeMockLocationsService = () =>
   ({
-    existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
+    existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
   }) as any;
 
 const buildService = (
@@ -80,7 +81,7 @@ describe('Effect AreasService', () => {
 
     it('fails when location does not exist', async () => {
       const locationsService = {
-        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
+        existsById: vi.fn().mockReturnValue(Effect.succeed(false)),
       } as any;
       const service = await buildService(undefined, locationsService);
 
@@ -93,7 +94,7 @@ describe('Effect AreasService', () => {
 
     it('fails when parent area does not exist', async () => {
       const repo = makeMockAreasRepository({
-        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
+        findById: vi.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(repo);
 
@@ -110,7 +111,7 @@ describe('Effect AreasService', () => {
 
     it('fails when parent is in a different location', async () => {
       const repo = makeMockAreasRepository({
-        findById: jest
+        findById: vi
           .fn()
           .mockReturnValue(
             Effect.succeed(makeAreaEntity({ location_id: 'loc-other' })),
@@ -164,7 +165,7 @@ describe('Effect AreasService', () => {
 
     it('fails with AreaNotFound', async () => {
       const repo = makeMockAreasRepository({
-        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
+        findById: vi.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(repo);
 
@@ -195,7 +196,7 @@ describe('Effect AreasService', () => {
 
     it('rejects parent-location mismatch', async () => {
       const repo = makeMockAreasRepository({
-        findById: jest
+        findById: vi
           .fn()
           .mockReturnValueOnce(
             Effect.succeed(makeAreaEntity({ location_id: 'loc-1' })),
@@ -217,7 +218,7 @@ describe('Effect AreasService', () => {
 
     it('detects circular references', async () => {
       const repo = makeMockAreasRepository({
-        findById: jest
+        findById: vi
           .fn()
           .mockReturnValueOnce(
             Effect.succeed(
@@ -271,7 +272,7 @@ describe('Effect AreasService', () => {
 
     it('fails with AreaNotFound when area does not exist', async () => {
       const repo = makeMockAreasRepository({
-        delete: jest.fn().mockReturnValue(Effect.succeed(false)),
+        delete: vi.fn().mockReturnValue(Effect.succeed(false)),
       });
       const service = await buildService(repo);
 

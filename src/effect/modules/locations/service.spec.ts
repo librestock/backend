@@ -1,3 +1,4 @@
+import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
 import { LocationsService } from './service';
 import { LocationsRepository } from './repository';
@@ -16,9 +17,9 @@ const makeLocationEntity = (overrides: Record<string, any> = {}) => ({
 });
 
 const makeMockRepository = (
-  overrides: Record<string, jest.Mock> = {},
+  overrides: Record<string, Mock> = {},
 ) => ({
-  findAllPaginated: jest.fn().mockReturnValue(
+  findAllPaginated: vi.fn().mockReturnValue(
     Effect.succeed({
       data: [makeLocationEntity()],
       total: 1,
@@ -27,12 +28,12 @@ const makeMockRepository = (
       total_pages: 1,
     }),
   ),
-  findAll: jest.fn().mockReturnValue(Effect.succeed([makeLocationEntity()])),
-  findById: jest.fn().mockReturnValue(Effect.succeed(makeLocationEntity())),
-  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
-  create: jest.fn().mockReturnValue(Effect.succeed(makeLocationEntity())),
-  update: jest.fn().mockReturnValue(Effect.succeed(1)),
-  delete: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+  findAll: vi.fn().mockReturnValue(Effect.succeed([makeLocationEntity()])),
+  findById: vi.fn().mockReturnValue(Effect.succeed(makeLocationEntity())),
+  existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
+  create: vi.fn().mockReturnValue(Effect.succeed(makeLocationEntity())),
+  update: vi.fn().mockReturnValue(Effect.succeed(1)),
+  delete: vi.fn().mockReturnValue(Effect.succeed(undefined)),
   ...overrides,
 });
 
@@ -80,7 +81,7 @@ describe('Effect LocationsService', () => {
 
   it('fails with LocationNotFound when location does not exist', async () => {
     const repo = makeMockRepository({
-      findById: jest.fn().mockReturnValue(Effect.succeed(null)),
+      findById: vi.fn().mockReturnValue(Effect.succeed(null)),
     });
     const service = await buildService(repo);
 
@@ -120,7 +121,7 @@ describe('Effect LocationsService', () => {
 
   it('updates and reloads', async () => {
     const repo = makeMockRepository({
-      findById: jest
+      findById: vi
         .fn()
         .mockReturnValueOnce(Effect.succeed(makeLocationEntity()))
         .mockReturnValueOnce(
@@ -148,7 +149,7 @@ describe('Effect LocationsService', () => {
 
   it('fails with LocationNotFound when deleting nonexistent location', async () => {
     const repo = makeMockRepository({
-      findById: jest.fn().mockReturnValue(Effect.succeed(null)),
+      findById: vi.fn().mockReturnValue(Effect.succeed(null)),
     });
     const service = await buildService(repo);
 

@@ -1,3 +1,4 @@
+import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import { AuditLogsService } from './service';
@@ -17,9 +18,9 @@ const makeAuditLogEntity = (overrides: Record<string, any> = {}) => ({
 });
 
 const makeMockRepository = (
-  overrides: Record<string, jest.Mock> = {},
+  overrides: Record<string, Mock> = {},
 ) => ({
-  findPaginated: jest.fn().mockReturnValue(
+  findPaginated: vi.fn().mockReturnValue(
     Effect.succeed({
       data: [makeAuditLogEntity()],
       total: 1,
@@ -28,11 +29,11 @@ const makeMockRepository = (
       total_pages: 1,
     }),
   ),
-  findById: jest.fn().mockReturnValue(Effect.succeed(makeAuditLogEntity())),
-  findByEntityId: jest
+  findById: vi.fn().mockReturnValue(Effect.succeed(makeAuditLogEntity())),
+  findByEntityId: vi
     .fn()
     .mockReturnValue(Effect.succeed([makeAuditLogEntity()])),
-  findByUserId: jest
+  findByUserId: vi
     .fn()
     .mockReturnValue(Effect.succeed([makeAuditLogEntity()])),
   ...overrides,
@@ -98,7 +99,7 @@ describe('Effect AuditLogsService', () => {
 
   it('fails with AuditLogNotFound when ID does not exist', async () => {
     const repo = makeMockRepository({
-      findById: jest.fn().mockReturnValue(Effect.succeed(null)),
+      findById: vi.fn().mockReturnValue(Effect.succeed(null)),
     });
     const service = await buildService(repo);
 

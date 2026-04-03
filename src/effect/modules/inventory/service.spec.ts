@@ -1,3 +1,4 @@
+import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
 import { ProductsService } from '../products/service';
 import { LocationsService } from '../locations/service';
@@ -48,9 +49,9 @@ const makeAreaDto = (overrides: Record<string, any> = {}) => ({
 });
 
 const makeMockRepository = (
-  overrides: Partial<Record<keyof import('./repository').InventoryRepository, jest.Mock>> = {},
+  overrides: Partial<Record<keyof import('./repository').InventoryRepository, Mock>> = {},
 ) => ({
-  findAllPaginated: jest.fn().mockReturnValue(
+  findAllPaginated: vi.fn().mockReturnValue(
     Effect.succeed({
       data: [makeInventoryEntity()],
       total: 1,
@@ -59,36 +60,36 @@ const makeMockRepository = (
       total_pages: 1,
     }),
   ),
-  findAll: jest.fn().mockReturnValue(Effect.succeed([makeInventoryEntity()])),
-  findById: jest.fn().mockReturnValue(Effect.succeed(makeInventoryEntity())),
-  findByProductId: jest.fn().mockReturnValue(Effect.succeed([makeInventoryEntity()])),
-  findByLocationId: jest.fn().mockReturnValue(Effect.succeed([makeInventoryEntity()])),
-  findByProductAndLocation: jest.fn().mockReturnValue(Effect.succeed(null)),
-  create: jest.fn().mockReturnValue(Effect.succeed(makeInventoryEntity({ id: 'inventory-created' }))),
-  update: jest.fn().mockReturnValue(Effect.succeed(1)),
-  adjustQuantity: jest.fn().mockReturnValue(Effect.succeed(1)),
-  delete: jest.fn().mockReturnValue(Effect.succeed(undefined)),
+  findAll: vi.fn().mockReturnValue(Effect.succeed([makeInventoryEntity()])),
+  findById: vi.fn().mockReturnValue(Effect.succeed(makeInventoryEntity())),
+  findByProductId: vi.fn().mockReturnValue(Effect.succeed([makeInventoryEntity()])),
+  findByLocationId: vi.fn().mockReturnValue(Effect.succeed([makeInventoryEntity()])),
+  findByProductAndLocation: vi.fn().mockReturnValue(Effect.succeed(null)),
+  create: vi.fn().mockReturnValue(Effect.succeed(makeInventoryEntity({ id: 'inventory-created' }))),
+  update: vi.fn().mockReturnValue(Effect.succeed(1)),
+  adjustQuantity: vi.fn().mockReturnValue(Effect.succeed(1)),
+  delete: vi.fn().mockReturnValue(Effect.succeed(undefined)),
   ...overrides,
 });
 
 const makeMockProductsService = (
-  overrides: Partial<Record<keyof import('../products/service').ProductsService, jest.Mock>> = {},
+  overrides: Partial<Record<keyof import('../products/service').ProductsService, Mock>> = {},
 ) => ({
-  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
+  existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
   ...overrides,
 } as any);
 
 const makeMockLocationsService = (
-  overrides: Partial<Record<keyof import('../locations/service').LocationsService, jest.Mock>> = {},
+  overrides: Partial<Record<keyof import('../locations/service').LocationsService, Mock>> = {},
 ) => ({
-  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
+  existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
   ...overrides,
 } as any);
 
 const makeMockAreasService = (
-  overrides: Partial<Record<keyof import('../areas/service').AreasService, jest.Mock>> = {},
+  overrides: Partial<Record<keyof import('../areas/service').AreasService, Mock>> = {},
 ) => ({
-  findById: jest.fn().mockReturnValue(Effect.succeed(makeAreaDto())),
+  findById: vi.fn().mockReturnValue(Effect.succeed(makeAreaDto())),
   ...overrides,
 } as any);
 
@@ -152,7 +153,7 @@ describe('Effect InventoryService', () => {
 
     it('fails with InventoryNotFound', async () => {
       const repository = makeMockRepository({
-        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
+        findById: vi.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(repository);
 
@@ -174,7 +175,7 @@ describe('Effect InventoryService', () => {
 
     it('fails when product does not exist', async () => {
       const productsService = makeMockProductsService({
-        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
+        existsById: vi.fn().mockReturnValue(Effect.succeed(false)),
       });
       const service = await buildService(undefined, productsService);
 
@@ -196,7 +197,7 @@ describe('Effect InventoryService', () => {
 
     it('fails when location does not exist', async () => {
       const locationsService = makeMockLocationsService({
-        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
+        existsById: vi.fn().mockReturnValue(Effect.succeed(false)),
       });
       const service = await buildService(undefined, undefined, locationsService);
 
@@ -219,7 +220,7 @@ describe('Effect InventoryService', () => {
 
     it('creates inventory after validating related entities', async () => {
       const repository = makeMockRepository({
-        findById: jest
+        findById: vi
           .fn()
           .mockReturnValueOnce(
             Effect.succeed(
@@ -251,7 +252,7 @@ describe('Effect InventoryService', () => {
 
     it('fails when product does not exist', async () => {
       const productsService = makeMockProductsService({
-        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
+        existsById: vi.fn().mockReturnValue(Effect.succeed(false)),
       });
       const service = await buildService(undefined, productsService);
 
@@ -261,7 +262,7 @@ describe('Effect InventoryService', () => {
 
     it('fails when location does not exist', async () => {
       const locationsService = makeMockLocationsService({
-        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
+        existsById: vi.fn().mockReturnValue(Effect.succeed(false)),
       });
       const service = await buildService(undefined, undefined, locationsService);
 
@@ -271,7 +272,7 @@ describe('Effect InventoryService', () => {
 
     it('fails when area does not exist', async () => {
       const areasService = makeMockAreasService({
-        findById: jest.fn().mockReturnValue(
+        findById: vi.fn().mockReturnValue(
           Effect.fail(
             new AreaNotFound({
               id: 'area-1',
@@ -288,7 +289,7 @@ describe('Effect InventoryService', () => {
 
     it('fails when area belongs to another location', async () => {
       const areasService = makeMockAreasService({
-        findById: jest.fn().mockReturnValue(
+        findById: vi.fn().mockReturnValue(
           Effect.succeed(makeAreaDto({ location_id: 'location-2' })),
         ),
       });
@@ -300,7 +301,7 @@ describe('Effect InventoryService', () => {
 
     it('fails when matching inventory already exists', async () => {
       const repository = makeMockRepository({
-        findByProductAndLocation: jest.fn().mockReturnValue(Effect.succeed(makeInventoryEntity())),
+        findByProductAndLocation: vi.fn().mockReturnValue(Effect.succeed(makeInventoryEntity())),
       });
       const service = await buildService(repository);
 
@@ -322,7 +323,7 @@ describe('Effect InventoryService', () => {
 
     it('updates location and area after revalidating uniqueness', async () => {
       const repository = makeMockRepository({
-        findById: jest
+        findById: vi
           .fn()
           .mockReturnValueOnce(Effect.succeed(makeInventoryEntity()))
           .mockReturnValueOnce(
@@ -337,10 +338,10 @@ describe('Effect InventoryService', () => {
           ),
       });
       const locationsService = makeMockLocationsService({
-        existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
+        existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
       });
       const areasService = makeMockAreasService({
-        findById: jest.fn().mockReturnValue(
+        findById: vi.fn().mockReturnValue(
           Effect.succeed(makeAreaDto({ id: 'area-2', location_id: 'location-2' })),
         ),
       });
@@ -372,12 +373,12 @@ describe('Effect InventoryService', () => {
 
     it('fails when the updated combination already exists', async () => {
       const repository = makeMockRepository({
-        findByProductAndLocation: jest.fn().mockReturnValue(
+        findByProductAndLocation: vi.fn().mockReturnValue(
           Effect.succeed(makeInventoryEntity({ id: 'inventory-2' })),
         ),
       });
       const locationsService = makeMockLocationsService({
-        existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
+        existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
       });
       const service = await buildService(repository, undefined, locationsService);
 
@@ -391,7 +392,7 @@ describe('Effect InventoryService', () => {
   describe('adjustQuantity', () => {
     it('adjusts quantity and reloads the item', async () => {
       const repository = makeMockRepository({
-        findById: jest
+        findById: vi
           .fn()
           .mockReturnValueOnce(Effect.succeed(makeInventoryEntity({ quantity: 10 })))
           .mockReturnValueOnce(Effect.succeed(makeInventoryEntity({ quantity: 7 }))),
@@ -408,7 +409,7 @@ describe('Effect InventoryService', () => {
 
     it('fails when the adjustment would go negative', async () => {
       const repository = makeMockRepository({
-        adjustQuantity: jest.fn().mockReturnValue(Effect.succeed(0)),
+        adjustQuantity: vi.fn().mockReturnValue(Effect.succeed(0)),
       });
       const service = await buildService(repository);
 
@@ -431,7 +432,7 @@ describe('Effect InventoryService', () => {
 
     it('fails with InventoryNotFound when deleting nonexistent inventory', async () => {
       const repository = makeMockRepository({
-        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
+        findById: vi.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(repository);
 

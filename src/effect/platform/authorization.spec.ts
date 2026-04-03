@@ -3,10 +3,10 @@ import { Permission, Resource } from '@librestock/types/auth';
 import { PermissionProvider } from './permission-provider';
 import { requirePermission, PermissionDenied } from './authorization';
 
-const mockRequireSession = jest.fn();
+const mockRequireSession = vi.fn();
 
-jest.mock('./session', () => {
-  const { Effect } = jest.requireActual<typeof import('effect')>('effect');
+vi.mock('./session', async () => {
+  const { Effect } = await vi.importActual<typeof import('effect')>('effect');
 
   return {
     requireSession: Effect.suspend(() => mockRequireSession()),
@@ -20,11 +20,11 @@ describe('requirePermission', () => {
     Effect.runPromise(Effect.flip(effect as Effect.Effect<A, E, never>));
 
   const permissionProvider = {
-    getPermissionsForUser: jest.fn(),
+    getPermissionsForUser: vi.fn(),
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('passes when the user has the required permission', async () => {

@@ -1,3 +1,4 @@
+import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
 import { StockMovementReason } from '@librestock/types/stock-movements';
 import { ProductsService } from '../products/service';
@@ -36,9 +37,9 @@ const makeStockMovementEntity = (overrides: Record<string, any> = {}) => ({
 });
 
 const makeMockRepository = (
-  overrides: Partial<Record<keyof import('./repository').StockMovementsRepository, jest.Mock>> = {},
+  overrides: Partial<Record<keyof import('./repository').StockMovementsRepository, Mock>> = {},
 ) => ({
-  findAllPaginated: jest.fn().mockReturnValue(
+  findAllPaginated: vi.fn().mockReturnValue(
     Effect.succeed({
       data: [makeStockMovementEntity()],
       total: 1,
@@ -47,24 +48,24 @@ const makeMockRepository = (
       total_pages: 1,
     }),
   ),
-  findById: jest.fn().mockReturnValue(Effect.succeed(makeStockMovementEntity())),
-  findByProductId: jest.fn().mockReturnValue(Effect.succeed([makeStockMovementEntity()])),
-  findByLocationId: jest.fn().mockReturnValue(Effect.succeed([makeStockMovementEntity()])),
-  create: jest.fn().mockReturnValue(Effect.succeed(makeStockMovementEntity({ id: 'stock-movement-created' }))),
+  findById: vi.fn().mockReturnValue(Effect.succeed(makeStockMovementEntity())),
+  findByProductId: vi.fn().mockReturnValue(Effect.succeed([makeStockMovementEntity()])),
+  findByLocationId: vi.fn().mockReturnValue(Effect.succeed([makeStockMovementEntity()])),
+  create: vi.fn().mockReturnValue(Effect.succeed(makeStockMovementEntity({ id: 'stock-movement-created' }))),
   ...overrides,
 });
 
 const makeMockProductsService = (
-  overrides: Partial<Record<keyof import('../products/service').ProductsService, jest.Mock>> = {},
+  overrides: Partial<Record<keyof import('../products/service').ProductsService, Mock>> = {},
 ) => ({
-  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
+  existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
   ...overrides,
 } as any);
 
 const makeMockLocationsService = (
-  overrides: Partial<Record<keyof import('../locations/service').LocationsService, jest.Mock>> = {},
+  overrides: Partial<Record<keyof import('../locations/service').LocationsService, Mock>> = {},
 ) => ({
-  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
+  existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
   ...overrides,
 } as any);
 
@@ -119,7 +120,7 @@ describe('Effect StockMovementsService', () => {
 
     it('fails with StockMovementNotFound', async () => {
       const repository = makeMockRepository({
-        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
+        findById: vi.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(repository);
 
@@ -141,7 +142,7 @@ describe('Effect StockMovementsService', () => {
 
     it('fails when product does not exist', async () => {
       const productsService = makeMockProductsService({
-        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
+        existsById: vi.fn().mockReturnValue(Effect.succeed(false)),
       });
       const service = await buildService(undefined, productsService);
 
@@ -163,7 +164,7 @@ describe('Effect StockMovementsService', () => {
 
     it('fails when location does not exist', async () => {
       const locationsService = makeMockLocationsService({
-        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
+        existsById: vi.fn().mockReturnValue(Effect.succeed(false)),
       });
       const service = await buildService(undefined, undefined, locationsService);
 
@@ -187,7 +188,7 @@ describe('Effect StockMovementsService', () => {
 
     it('validates and creates a stock movement', async () => {
       const repository = makeMockRepository({
-        findById: jest
+        findById: vi
           .fn()
           .mockReturnValueOnce(
             Effect.succeed(makeStockMovementEntity({ id: 'stock-movement-created' })),
@@ -214,7 +215,7 @@ describe('Effect StockMovementsService', () => {
 
     it('fails when product does not exist', async () => {
       const productsService = makeMockProductsService({
-        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
+        existsById: vi.fn().mockReturnValue(Effect.succeed(false)),
       });
       const service = await buildService(undefined, productsService);
 
@@ -224,7 +225,7 @@ describe('Effect StockMovementsService', () => {
 
     it('fails when source location does not exist', async () => {
       const locationsService = makeMockLocationsService({
-        existsById: jest.fn().mockReturnValueOnce(Effect.succeed(false)),
+        existsById: vi.fn().mockReturnValueOnce(Effect.succeed(false)),
       });
       const service = await buildService(undefined, undefined, locationsService);
 
@@ -234,7 +235,7 @@ describe('Effect StockMovementsService', () => {
 
     it('fails when destination location does not exist', async () => {
       const locationsService = makeMockLocationsService({
-        existsById: jest
+        existsById: vi
           .fn()
           .mockReturnValueOnce(Effect.succeed(true))
           .mockReturnValueOnce(Effect.succeed(false)),

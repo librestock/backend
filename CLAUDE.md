@@ -2,9 +2,9 @@
 
 ## Tooling
 
-- `backend/` uses **Bun** as its package manager/runtime. Use `bun install` and `bun run ...` here.
-- The shared `packages/` repo is separate and uses `pnpm`. Do not assume the same package manager across repos.
-- This backend currently depends on published `@librestock/types` versions, so shared type changes must be released before this repo consumes them.
+- Dependencies are managed by **pnpm** via the root workspace (`pnpm install` from repo root). Do not use `bun install`.
+- **Bun** is the runtime — `bun run src/effect/main.ts` starts the server.
+- All `@librestock/*` packages use `workspace:*` — changes to `packages/types` are available immediately after building (`pnpm --filter @librestock/types build`).
 
 ## Architecture
 
@@ -42,22 +42,19 @@
 - `README.md` and older notes may still mention NestJS/TypeORM-era concepts. Prefer the `src/effect/` code over stale docs.
 - Better Auth migrations are run from [`src/effect/main.ts`](src/effect/main.ts) outside production unless explicitly disabled/enabled by env.
 - This repo still has some legacy TypeORM migration scripts/config, but the runtime data layer is Drizzle.
-- `bun.lock` is the lockfile that matters for this repo.
+- `pnpm-lock.yaml` at the workspace root is the lockfile.
 
 ## Shared Types Workflow
 
 When request/response shapes change:
 
-1. update `packages/types`
-2. publish the new `@librestock/types` version
-3. bump the dependency here
-4. then switch imports in `backend/`
-
-If a new `@librestock/types` version is not published yet, pointing `backend/package.json` at it will break installs.
+1. Update `packages/types`
+2. Run `pnpm --filter @librestock/types barrels && pnpm --filter @librestock/types build`
+3. Changes are available immediately to backend (workspace link)
 
 ## Testing
 
-- Unit tests are Jest-based and mostly service-level today.
+- Unit tests are Vitest-based and mostly service-level today. Run with `pnpm test`.
 - For cross-module workflows, prefer a deeper boundary over adding more mocks around neighboring services.
 - If type-check fails, confirm whether the failure is from your change or from existing repo-wide issues before chasing unrelated errors.
 

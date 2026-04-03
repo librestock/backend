@@ -1,3 +1,4 @@
+import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
 import { PhotosService } from './service';
 import { PhotosRepository } from './repository';
@@ -16,13 +17,13 @@ const makePhotoEntity = (overrides: Record<string, any> = {}) => ({
 });
 
 const makeMockRepository = (
-  overrides: Record<string, jest.Mock> = {},
+  overrides: Record<string, Mock> = {},
 ) => ({
-  findByProductId: jest.fn().mockReturnValue(Effect.succeed([makePhotoEntity()])),
-  findById: jest.fn().mockReturnValue(Effect.succeed(makePhotoEntity())),
-  create: jest.fn().mockReturnValue(Effect.succeed(makePhotoEntity())),
-  delete: jest.fn().mockReturnValue(Effect.succeed(undefined)),
-  countByProductId: jest.fn().mockReturnValue(Effect.succeed(0)),
+  findByProductId: vi.fn().mockReturnValue(Effect.succeed([makePhotoEntity()])),
+  findById: vi.fn().mockReturnValue(Effect.succeed(makePhotoEntity())),
+  create: vi.fn().mockReturnValue(Effect.succeed(makePhotoEntity())),
+  delete: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+  countByProductId: vi.fn().mockReturnValue(Effect.succeed(0)),
   ...overrides,
 });
 
@@ -82,7 +83,7 @@ describe('Effect PhotosService', () => {
   describe('getFilePath', () => {
     it('fails with PhotoNotFound', async () => {
       const repo = makeMockRepository({
-        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
+        findById: vi.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(repo);
       const error = await fail(service.getFilePath('missing'));
@@ -93,7 +94,7 @@ describe('Effect PhotosService', () => {
   describe('deletePhoto', () => {
     it('fails with PhotoNotFound', async () => {
       const repo = makeMockRepository({
-        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
+        findById: vi.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(repo);
       const error = await fail(service.deletePhoto('missing'));

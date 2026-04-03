@@ -3,9 +3,9 @@ import { HttpApp, HttpRouter } from '@effect/platform';
 import { authRouter } from './router';
 import { AuthService } from './service';
 
-jest.mock('./service', () => {
+vi.mock('./service', async () => {
   const { Context, Layer } =
-    jest.requireActual<typeof import('effect')>('effect');
+    await vi.importActual<typeof import('effect')>('effect');
 
   return {
     AuthService: Context.GenericTag('@librestock/test/AuthService'),
@@ -13,7 +13,7 @@ jest.mock('./service', () => {
   };
 });
 
-jest.mock('uuid', () => ({
+vi.mock('uuid', () => ({
   v4: () => '00000000-0000-4000-8000-000000000000',
   validate: () => true,
 }));

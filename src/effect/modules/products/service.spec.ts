@@ -1,3 +1,4 @@
+import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
 import { CategoriesService } from '../categories/service';
 import { ProductsService } from './service';
@@ -36,10 +37,10 @@ const makeProductEntity = (overrides: Record<string, any> = {}) => ({
 
 const makeMockRepository = (
   overrides: Partial<
-    Record<keyof import('./repository').ProductsRepository, jest.Mock>
+    Record<keyof import('./repository').ProductsRepository, Mock>
   > = {},
 ) => ({
-  findAllPaginated: jest.fn().mockReturnValue(
+  findAllPaginated: vi.fn().mockReturnValue(
     Effect.succeed({
       data: [makeProductEntity()],
       total: 1,
@@ -48,32 +49,32 @@ const makeMockRepository = (
       total_pages: 1,
     }),
   ),
-  findAll: jest.fn().mockReturnValue(Effect.succeed([makeProductEntity()])),
-  findById: jest.fn().mockReturnValue(Effect.succeed(makeProductEntity())),
-  findBySku: jest.fn().mockReturnValue(Effect.succeed(null)),
-  findByCategoryId: jest.fn().mockReturnValue(Effect.succeed([makeProductEntity()])),
-  findByCategoryIds: jest.fn().mockReturnValue(Effect.succeed([makeProductEntity()])),
-  findByIds: jest.fn().mockReturnValue(Effect.succeed([makeProductEntity()])),
-  findDeletedByIds: jest
+  findAll: vi.fn().mockReturnValue(Effect.succeed([makeProductEntity()])),
+  findById: vi.fn().mockReturnValue(Effect.succeed(makeProductEntity())),
+  findBySku: vi.fn().mockReturnValue(Effect.succeed(null)),
+  findByCategoryId: vi.fn().mockReturnValue(Effect.succeed([makeProductEntity()])),
+  findByCategoryIds: vi.fn().mockReturnValue(Effect.succeed([makeProductEntity()])),
+  findByIds: vi.fn().mockReturnValue(Effect.succeed([makeProductEntity()])),
+  findDeletedByIds: vi
     .fn()
     .mockReturnValue(Effect.succeed([makeProductEntity({ deleted_at: new Date() })])),
-  existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
-  create: jest.fn().mockReturnValue(Effect.succeed(makeProductEntity())),
-  update: jest.fn().mockReturnValue(Effect.succeed(1)),
-  updateMany: jest.fn().mockReturnValue(Effect.succeed(1)),
-  softDelete: jest.fn().mockReturnValue(Effect.succeed(undefined)),
-  softDeleteMany: jest.fn().mockReturnValue(Effect.succeed(1)),
-  restore: jest.fn().mockReturnValue(Effect.succeed(undefined)),
-  restoreMany: jest.fn().mockReturnValue(Effect.succeed(1)),
-  hardDelete: jest.fn().mockReturnValue(Effect.succeed(undefined)),
-  hardDeleteMany: jest.fn().mockReturnValue(Effect.succeed(1)),
+  existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
+  create: vi.fn().mockReturnValue(Effect.succeed(makeProductEntity())),
+  update: vi.fn().mockReturnValue(Effect.succeed(1)),
+  updateMany: vi.fn().mockReturnValue(Effect.succeed(1)),
+  softDelete: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+  softDeleteMany: vi.fn().mockReturnValue(Effect.succeed(1)),
+  restore: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+  restoreMany: vi.fn().mockReturnValue(Effect.succeed(1)),
+  hardDelete: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+  hardDeleteMany: vi.fn().mockReturnValue(Effect.succeed(1)),
   ...overrides,
 });
 
 const makeMockCategoriesService = () =>
   ({
-    existsById: jest.fn().mockReturnValue(Effect.succeed(true)),
-    findAllDescendantIds: jest.fn().mockReturnValue(Effect.succeed(['child-1'])),
+    existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
+    findAllDescendantIds: vi.fn().mockReturnValue(Effect.succeed(['child-1'])),
   }) as any;
 
 const buildService = (
@@ -128,7 +129,7 @@ describe('Effect ProductsService', () => {
 
     it('fails with ProductNotFound', async () => {
       const repo = makeMockRepository({
-        findById: jest.fn().mockReturnValue(Effect.succeed(null)),
+        findById: vi.fn().mockReturnValue(Effect.succeed(null)),
       });
       const service = await buildService(repo);
       const error = await fail(service.findOne('missing', false));
@@ -145,8 +146,8 @@ describe('Effect ProductsService', () => {
 
     it('fails when category not found', async () => {
       const catService = {
-        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
-        findAllDescendantIds: jest.fn(),
+        existsById: vi.fn().mockReturnValue(Effect.succeed(false)),
+        findAllDescendantIds: vi.fn(),
       } as any;
       const service = await buildService(undefined, catService);
       const error = await fail(service.findByCategory('missing'));
@@ -183,8 +184,8 @@ describe('Effect ProductsService', () => {
 
     it('fails when category does not exist', async () => {
       const catService = {
-        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
-        findAllDescendantIds: jest.fn(),
+        existsById: vi.fn().mockReturnValue(Effect.succeed(false)),
+        findAllDescendantIds: vi.fn(),
       } as any;
       const service = await buildService(undefined, catService);
       const error = await fail(
@@ -205,7 +206,7 @@ describe('Effect ProductsService', () => {
 
     it('fails when SKU already exists', async () => {
       const repo = makeMockRepository({
-        findBySku: jest.fn().mockReturnValue(Effect.succeed(makeProductEntity())),
+        findBySku: vi.fn().mockReturnValue(Effect.succeed(makeProductEntity())),
       });
       const service = await buildService(repo);
       const error = await fail(
@@ -281,7 +282,7 @@ describe('Effect ProductsService', () => {
   describe('restore', () => {
     it('restores a deleted product', async () => {
       const repo = makeMockRepository({
-        findById: jest
+        findById: vi
           .fn()
           .mockReturnValue(Effect.succeed(makeProductEntity({ deleted_at: new Date() }))),
       });
@@ -320,8 +321,8 @@ describe('Effect ProductsService', () => {
 
     it('fails all when category missing', async () => {
       const catService = {
-        existsById: jest.fn().mockReturnValue(Effect.succeed(false)),
-        findAllDescendantIds: jest.fn(),
+        existsById: vi.fn().mockReturnValue(Effect.succeed(false)),
+        findAllDescendantIds: vi.fn(),
       } as any;
       const service = await buildService(undefined, catService);
       const result = await run(service.bulkCreate(
@@ -383,7 +384,7 @@ describe('Effect ProductsService', () => {
 
     it('reports not found products', async () => {
       const repo = makeMockRepository({
-        findByIds: jest.fn().mockReturnValue(Effect.succeed([])),
+        findByIds: vi.fn().mockReturnValue(Effect.succeed([])),
       });
       const service = await buildService(repo);
       const result = await run(service.bulkUpdateStatus(
@@ -427,7 +428,7 @@ describe('Effect ProductsService', () => {
 
     it('reports not deleted products', async () => {
       const repo = makeMockRepository({
-        findDeletedByIds: jest.fn().mockReturnValue(Effect.succeed([])),
+        findDeletedByIds: vi.fn().mockReturnValue(Effect.succeed([])),
       });
       const service = await buildService(repo);
       const result = await run(service.bulkRestore({ ids: ['prod-1'] }));

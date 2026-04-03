@@ -23,7 +23,7 @@ const createChainableMock = (resolveValue: any) => {
   const chain: any = {};
   const methods = ['select', 'from', 'where', 'limit', 'insert', 'values', 'onConflictDoUpdate', 'orderBy', 'offset'];
   for (const method of methods) {
-    chain[method] = jest.fn().mockReturnValue(chain);
+    chain[method] = vi.fn().mockReturnValue(chain);
   }
   chain.then = (resolve: any) => resolve(resolveValue);
   return chain;
@@ -78,10 +78,10 @@ describe('Effect BrandingService', () => {
     const insertChain = createChainableMock(undefined);
 
     const mockDb: any = {
-      select: jest.fn().mockImplementation(() => {
+      select: vi.fn().mockImplementation(() => {
         return selectChain;
       }),
-      insert: jest.fn().mockReturnValue(insertChain),
+      insert: vi.fn().mockReturnValue(insertChain),
     };
 
     const service = await buildService(mockDb);

@@ -3,13 +3,11 @@
   "compilerOptions": {
     "outDir": "./dist",
     "baseUrl": "./",
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
+    "types": ["vitest/globals"],
     "paths": {
       "effect": ["./node_modules/effect"],
       "effect/*": ["./node_modules/effect/*"]
-    },
-    "strictPropertyInitialization": false
+    }
   },
   "exclude": ["node_modules", "dist", "build", "src/scripts", "effect-code"]
 }
