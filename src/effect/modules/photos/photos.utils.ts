@@ -10,7 +10,6 @@ export function toPhotoResponseDto(photo: Photo): PhotoResponseDto {
     filename: photo.filename,
     mimetype: photo.mimetype,
     size: photo.size,
-    storage_path: photo.storage_path,
     uploaded_by: photo.uploaded_by,
     display_order: photo.display_order,
     created_at: photo.created_at,

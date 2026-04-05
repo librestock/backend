@@ -1,4 +1,5 @@
 import * as path from 'node:path';
+import * as crypto from 'node:crypto';
 import { access, mkdir, unlink, writeFile } from 'node:fs/promises';
 import { Effect } from 'effect';
 import type { PhotoResponseDto } from '@librestock/types/photos';
@@ -30,6 +31,25 @@ const MIME_EXT_MAP: Record<string, string> = {
   'image/webp': '.webp',
   'image/gif': '.gif',
 };
+
+const MAGIC_SIGNATURES: Record<string, { bytes: number[]; offset: number }[]> = {
+  'image/jpeg': [{ bytes: [0xff, 0xd8, 0xff], offset: 0 }],
+  'image/png': [{ bytes: [0x89, 0x50, 0x4e, 0x47], offset: 0 }],
+  'image/gif': [{ bytes: [0x47, 0x49, 0x46, 0x38], offset: 0 }],
+  'image/webp': [
+    { bytes: [0x52, 0x49, 0x46, 0x46], offset: 0 },
+    { bytes: [0x57, 0x45, 0x42, 0x50], offset: 8 },
+  ],
+};
+
+function matchesMagicBytes(buffer: Buffer, declaredMime: string): boolean {
+  const signatures = MAGIC_SIGNATURES[declaredMime];
+  if (!signatures) return false;
+
+  return signatures.every(({ bytes, offset }) =>
+    bytes.every((byte, i) => buffer[offset + i] === byte),
+  );
+}
 
 export interface UploadedFile {
   readonly originalname: string;
@@ -96,6 +116,16 @@ export class PhotosService extends Effect.Service<PhotosService>()(
           );
         }
 
+        if (!matchesMagicBytes(file.buffer, file.mimetype)) {
+          return Effect.fail(
+            new InvalidPhotoMimeType({
+              mimetype: file.mimetype,
+              messageKey: 'photos.invalidMimeType',
+              messageArgs: { allowedTypes: ALLOWED_MIMETYPES.join(', ') },
+            }),
+          );
+        }
+
         if (file.size > MAX_FILE_SIZE) {
           return Effect.fail(
             new PhotoTooLarge({
@@ -109,7 +139,7 @@ export class PhotosService extends Effect.Service<PhotosService>()(
 
         const ext =
           path.extname(file.originalname) || getExtFromMime(file.mimetype);
-        const uniqueName = `${productId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+        const uniqueName = `${productId}_${crypto.randomUUID()}${ext}`;
         const storagePath = path.join(uploadsDir, uniqueName);
 
         return Effect.gen(function* () {
@@ -139,13 +169,19 @@ export class PhotosService extends Effect.Service<PhotosService>()(
             }),
             (error) =>
               Effect.flatMap(
-                safeUnlink(storagePath).pipe(Effect.catchAll(() => Effect.void)),
+                safeUnlink(storagePath).pipe(
+                  Effect.catchAll(() => Effect.void),
+                ),
                 () => Effect.fail(error),
               ),
           );
 
           return toPhotoResponseDto(photo);
-        }).pipe(Effect.withSpan('PhotosService.uploadPhoto', { attributes: { productId } }));
+        }).pipe(
+          Effect.withSpan('PhotosService.uploadPhoto', {
+            attributes: { productId },
+          }),
+        );
       };
 
       const findByProductId = (
@@ -153,7 +189,11 @@ export class PhotosService extends Effect.Service<PhotosService>()(
       ): Effect.Effect<PhotoResponseDto[], PhotosInfrastructureError> =>
         Effect.map(repository.findByProductId(productId), (photos) =>
           photos.map(toPhotoResponseDto),
-        ).pipe(Effect.withSpan('PhotosService.findByProductId', { attributes: { productId } }));
+        ).pipe(
+          Effect.withSpan('PhotosService.findByProductId', {
+            attributes: { productId },
+          }),
+        );
 
       const getFilePath = (
         id: string,
@@ -193,7 +233,9 @@ export class PhotosService extends Effect.Service<PhotosService>()(
             mimetype: photo.mimetype,
             filename: photo.filename,
           };
-        }).pipe(Effect.withSpan('PhotosService.getFilePath', { attributes: { id } }));
+        }).pipe(
+          Effect.withSpan('PhotosService.getFilePath', { attributes: { id } }),
+        );
 
       const deletePhoto = (
         id: string,
@@ -212,7 +254,9 @@ export class PhotosService extends Effect.Service<PhotosService>()(
             ),
           );
           yield* repository.delete(id);
-        }).pipe(Effect.withSpan('PhotosService.deletePhoto', { attributes: { id } }));
+        }).pipe(
+          Effect.withSpan('PhotosService.deletePhoto', { attributes: { id } }),
+        );
 
       return { uploadPhoto, findByProductId, getFilePath, deletePhoto };
     }),

@@ -3,6 +3,8 @@ import { Effect, Layer } from 'effect';
 import { PhotosService } from './service';
 import { PhotosRepository } from './repository';
 
+const JPEG_HEADER = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
+
 const makePhotoEntity = (overrides: Record<string, any> = {}) => ({
   id: 'photo-1',
   product_id: 'prod-1',
@@ -64,7 +66,7 @@ describe('Effect PhotosService', () => {
         originalname: 'large.jpg',
         mimetype: 'image/jpeg',
         size: 11 * 1024 * 1024,
-        buffer: Buffer.alloc(0),
+        buffer: JPEG_HEADER,
       }, undefined) as Effect.Effect<any, any>;
       const error = await Effect.runPromise(Effect.flip(effect));
       expect(error).toMatchObject({ _tag: 'PhotoTooLarge' });
