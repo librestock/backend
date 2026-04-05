@@ -1,4 +1,4 @@
-import { Effect, Ref } from 'effect';
+import { Cache, Duration, Effect } from 'effect';
 import { eq } from 'drizzle-orm';
 import { Permission, Resource } from '@librestock/types/auth';
 import type { CreateRoleDto, UpdateRoleDto } from '@librestock/types/roles';
@@ -15,11 +15,6 @@ import {
 import { RolesRepository } from './repository';
 
 export type { UserPermissions };
-
-interface CacheEntry {
-  readonly permissions: UserPermissions;
-  readonly expiresAt: number;
-}
 
 const seedDefinitions: {
   readonly name: string;
@@ -99,8 +94,6 @@ export class RolesService extends Effect.Service<RolesService>()(
     effect: Effect.gen(function* () {
       const repository = yield* RolesRepository;
       const db = yield* DrizzleDatabase;
-      const cache = yield* Ref.make(new Map<string, CacheEntry>());
-      const cacheTtlMs = 60_000;
 
       const getRoleOrFail = (
         id: string,
@@ -155,36 +148,19 @@ export class RolesService extends Effect.Service<RolesService>()(
             }),
         });
 
-      const clearCacheForUser = (userId: string) =>
-        Ref.update(cache, (current) => {
-          const next = new Map(current);
-          next.delete(userId);
-          return next;
-        });
+      const permissionCache = yield* Cache.make({
+        capacity: 1000,
+        timeToLive: Duration.minutes(1),
+        lookup: (userId: string) => fetchPermissionsFromDb(userId),
+      });
 
-      const clearAllCache = () =>
-        Ref.set(cache, new Map());
+      const clearCacheForUser = (userId: string) =>
+        permissionCache.invalidate(userId);
+
+      const clearAllCache = () => permissionCache.invalidateAll;
 
       const getPermissionsForUser = (userId: string) =>
-        Effect.gen(function* () {
-          const currentCache = yield* Ref.get(cache);
-          const cached = currentCache.get(userId);
-          if (cached && cached.expiresAt > Date.now()) {
-            return cached.permissions;
-          }
-
-          const permissions = yield* fetchPermissionsFromDb(userId);
-          yield* Ref.update(cache, (entries) => {
-            const next = new Map(entries);
-            next.set(userId, {
-              permissions,
-              expiresAt: Date.now() + cacheTtlMs,
-            });
-            return next;
-          });
-
-          return permissions;
-        });
+        permissionCache.get(userId);
 
       return {
         findAll: () =>
