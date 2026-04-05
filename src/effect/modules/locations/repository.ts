@@ -1,7 +1,9 @@
 import { Effect } from 'effect';
 import { eq, ilike, sql, and, type SQL } from 'drizzle-orm';
-import type { LocationQueryDto, LocationSortField } from '@librestock/types/locations';
+import type { LocationQueryDto } from '@librestock/types/locations';
+import { LocationSortField } from '@librestock/types/locations';
 import type { SortOrder } from '@librestock/types/common';
+import { buildOrderBy } from '../../platform/drizzle-sort.utils';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
@@ -35,10 +37,19 @@ function buildLocationFilters(query: LocationQueryDto): SQL[] {
   return conditions;
 }
 
+const locationSortColumns = {
+  [LocationSortField.NAME]: locations.name,
+  [LocationSortField.TYPE]: locations.type,
+  [LocationSortField.CREATED_AT]: locations.created_at,
+  [LocationSortField.UPDATED_AT]: locations.updated_at,
+} as const;
+
 function getLocationOrderBy(sortBy?: LocationSortField, sortOrder?: SortOrder) {
-  const col = sortBy ?? 'name';
-  const dir = sortOrder ?? 'ASC';
-  return sql.raw(`"${col}" ${dir}`);
+  return buildOrderBy(
+    locationSortColumns,
+    sortBy ?? LocationSortField.NAME,
+    (sortOrder ?? 'ASC') as 'ASC' | 'DESC',
+  );
 }
 
 export class LocationsRepository extends Effect.Service<LocationsRepository>()(

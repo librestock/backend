@@ -1,13 +1,25 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
 import { eq, and, ilike, or, gte, lte, isNull, isNotNull, inArray, sql, type SQL } from 'drizzle-orm';
+import { ProductSortField } from '@librestock/types/products';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
 } from '../../platform/drizzle-query.utils';
+import { buildOrderBy } from '../../platform/drizzle-sort.utils';
 import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
 import { products, categories, suppliers } from '../../platform/db/schema';
 import type { ProductQuerySchema } from './products.schema';
+
+const productSortColumns = {
+  [ProductSortField.NAME]: products.name,
+  [ProductSortField.SKU]: products.sku,
+  [ProductSortField.CREATED_AT]: products.created_at,
+  [ProductSortField.UPDATED_AT]: products.updated_at,
+  [ProductSortField.STANDARD_PRICE]: products.standard_price,
+  [ProductSortField.STANDARD_COST]: products.standard_cost,
+  [ProductSortField.REORDER_POINT]: products.reorder_point,
+} as const;
 import { ProductsInfrastructureError } from './products.errors';
 
 type ProductQueryDto = Schema.Schema.Type<typeof ProductQuerySchema>;
@@ -98,7 +110,7 @@ export class ProductsRepository extends Effect.Service<ProductsRepository>()(
           }
 
           const where = conditions.length > 0 ? and(...conditions) : undefined;
-          const orderBy = sql.raw(`products."${query.sort_by}" ${query.sort_order}`);
+          const orderBy = buildOrderBy(productSortColumns, query.sort_by, query.sort_order);
 
           const [countResult] = await db
             .select({ count: sql<number>`count(*)::int` })

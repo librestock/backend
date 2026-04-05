@@ -2,6 +2,7 @@ import { Effect } from 'effect';
 import { eq, and, ilike, or, gte, lte, desc, sql, isNull, type SQL } from 'drizzle-orm';
 import type { InventoryQueryDto } from '@librestock/types/inventory';
 import { InventorySortField } from '@librestock/types/inventory';
+import { buildOrderBy } from '../../platform/drizzle-sort.utils';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
@@ -60,10 +61,20 @@ function buildInventoryFilters(query: InventoryQueryDto): SQL[] {
   return conditions;
 }
 
-function getInventoryOrderBy(sortBy?: string, sortOrder?: string) {
-  const col = sortBy ?? InventorySortField.UPDATED_AT;
-  const dir = sortOrder ?? 'DESC';
-  return sql.raw(`inventory."${col}" ${dir}`);
+const inventorySortColumns = {
+  [InventorySortField.QUANTITY]: inventory.quantity,
+  [InventorySortField.EXPIRY_DATE]: inventory.expiry_date,
+  [InventorySortField.RECEIVED_DATE]: inventory.received_date,
+  [InventorySortField.CREATED_AT]: inventory.created_at,
+  [InventorySortField.UPDATED_AT]: inventory.updated_at,
+} as const;
+
+function getInventoryOrderBy(sortBy?: InventorySortField, sortOrder?: 'ASC' | 'DESC') {
+  return buildOrderBy(
+    inventorySortColumns,
+    sortBy ?? InventorySortField.UPDATED_AT,
+    sortOrder ?? 'DESC',
+  );
 }
 
 interface InventoryJoinRow {
