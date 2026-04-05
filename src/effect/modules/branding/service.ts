@@ -91,7 +91,12 @@ export class BrandingService extends Effect.Service<BrandingService>()(
           );
 
           if (!rows[0]) {
-            throw new Error('Branding settings not found after upsert');
+            return yield* Effect.fail(
+              new BrandingInfrastructureError({
+                action: 'load persisted branding settings',
+                messageKey: 'branding.repositoryFailed',
+              }),
+            );
           }
 
           return toBrandingResponse(rows[0]);
