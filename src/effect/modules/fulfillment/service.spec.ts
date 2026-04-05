@@ -153,12 +153,10 @@ describe('Effect FulfillmentService', () => {
 
       const error = await fail(service.confirm('order-1', 'user-2'));
 
-      expect(error).toMatchObject({
-        _tag: 'FulfillmentInvalidTransition',
-        orderId: 'order-1',
-        from: OrderStatus.CONFIRMED,
-        to: OrderStatus.CONFIRMED,
-      });
+      expect(error._tag).toBe('FulfillmentInvalidTransition');
+      expect(error.orderId).toBe('order-1');
+      expect(error.from).toBe(OrderStatus.CONFIRMED);
+      expect(error.to).toBe(OrderStatus.CONFIRMED);
       expect(ordersRepository.update).not.toHaveBeenCalled();
     });
 
@@ -170,10 +168,8 @@ describe('Effect FulfillmentService', () => {
 
       const error = await fail(service.confirm('missing-order', 'user-2'));
 
-      expect(error).toMatchObject({
-        _tag: 'FulfillmentOrderNotFound',
-        orderId: 'missing-order',
-      });
+      expect(error._tag).toBe('FulfillmentOrderNotFound');
+      expect(error.orderId).toBe('missing-order');
     });
 
     it('wraps repository failures as infrastructure errors', async () => {
@@ -185,16 +181,15 @@ describe('Effect FulfillmentService', () => {
 
       const error = await fail(service.confirm('order-1', 'user-2'));
 
-      expect(error).toMatchObject({
-        _tag: 'FulfillmentInfrastructureError',
-        action: 'confirm order',
-        cause,
-      });
+      expect(error._tag).toBe('FulfillmentInfrastructureError');
+      expect(error.action).toBe('confirm order');
+      expect(error.cause).toBeInstanceOf(Error);
+      expect((error.cause as Error).message).toBe('write failed');
     });
   });
 
   describe('pick', () => {
-    it('fails with not implemented for a known order', async () => {
+    it('rejects pick for non-pickable order status', async () => {
       const service = await buildService();
 
       const error = await fail(
@@ -205,10 +200,10 @@ describe('Effect FulfillmentService', () => {
         }),
       );
 
-      expect(error).toMatchObject({
-        _tag: 'FulfillmentNotImplemented',
-        operation: 'pick',
-      });
+      expect(error._tag).toBe('FulfillmentInvalidTransition');
+      expect(error.orderId).toBe('order-1');
+      expect(error.from).toBe(OrderStatus.DRAFT);
+      expect(error.to).toBe(OrderStatus.PICKING);
     });
   });
 
@@ -224,10 +219,8 @@ describe('Effect FulfillmentService', () => {
         }),
       );
 
-      expect(error).toMatchObject({
-        _tag: 'FulfillmentNotImplemented',
-        operation: 'pack',
-      });
+      expect(error._tag).toBe('FulfillmentNotImplemented');
+      expect(error.operation).toBe('pack');
     });
   });
 
@@ -237,10 +230,8 @@ describe('Effect FulfillmentService', () => {
 
       const error = await fail(service.ship('order-1', 'user-2'));
 
-      expect(error).toMatchObject({
-        _tag: 'FulfillmentNotImplemented',
-        operation: 'ship',
-      });
+      expect(error._tag).toBe('FulfillmentNotImplemented');
+      expect(error.operation).toBe('ship');
     });
   });
 });
