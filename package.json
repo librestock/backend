@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "import:sortly": "bun run src/scripts/import-sortly.ts",
     "seed": "bun run src/scripts/seed-database.ts",
     "type-check": "tsc --noEmit"

@@ -8,9 +8,13 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['src/**/*.spec.ts', 'src/**/*.effect.spec.ts'],
-    exclude: ['**/node_modules/**', 'src/**/*.integration.spec.ts'],
+    include: ['src/**/*.integration.spec.ts'],
     globals: true,
     environment: 'node',
+    testTimeout: 15_000,
+    hookTimeout: 30_000,
+    globalSetup: './src/effect/test/integration-global-setup.ts',
+    fileParallelism: false,
+    sequence: { concurrent: false },
   },
 });
