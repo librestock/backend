@@ -12,7 +12,6 @@ import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { ProductNotFound } from '../products/products.errors';
 import { ClientsService } from '../clients/service';
 import { ProductsService } from '../products/service';
-import type { orders, orderItems } from '../../platform/db/schema';
 import {
   CannotDeleteNonDraftOrder,
   ClientNotFound,
@@ -20,20 +19,9 @@ import {
   OrderNotFound,
   type OrdersInfrastructureError,
 } from './orders.errors';
-import { OrderUtils } from './orders.utils';
+import { OrderUtils, type Order } from './orders.utils';
 import { getOrderState } from './state/order-state';
 import { OrderItemsRepository, OrdersRepository } from './repository';
-
-type OrderItemRow = typeof orderItems.$inferSelect;
-type OrderItem = OrderItemRow & {
-  product?: { name: string; sku: string } | null;
-};
-
-type OrderRow = typeof orders.$inferSelect;
-type Order = OrderRow & {
-  client?: { company_name: string } | null;
-  items?: OrderItem[];
-};
 
 type OrderQueryDto = Schema.Schema.Type<typeof OrderQuerySchema>;
 type CreateOrderDto = Schema.Schema.Type<typeof CreateOrderSchema>;

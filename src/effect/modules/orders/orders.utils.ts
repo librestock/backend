@@ -3,12 +3,12 @@ import type { OrderResponseDto, OrderItemResponseDto } from '@librestock/types/o
 import type { orders, orderItems } from '../../platform/db/schema';
 
 type OrderItemRow = typeof orderItems.$inferSelect;
-type OrderItem = OrderItemRow & {
+export type OrderItem = OrderItemRow & {
   product?: { name: string; sku: string } | null;
 };
 
 type OrderRow = typeof orders.$inferSelect;
-type Order = OrderRow & {
+export type Order = OrderRow & {
   client?: { company_name: string } | null;
   items?: OrderItem[];
 };
