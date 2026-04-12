@@ -29,16 +29,6 @@ const productSortColumns = {
 
 type ProductQueryDto = Schema.Schema.Type<typeof ProductQuerySchema>;
 
-const tryAsync = <A>(action: string, run: () => Promise<A>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new ProductsInfrastructureError({
-        action,
-        cause,
-        messageKey: 'products.repositoryFailed',
-      }),
-  });
 
 interface ProductJoinRow {
   product: typeof products.$inferSelect;

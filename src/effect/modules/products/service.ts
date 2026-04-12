@@ -1,5 +1,6 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
+import { fromNullOr } from '../../platform/from-null-or';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import {
   addBulkFailure,
@@ -58,21 +59,9 @@ export class ProductsService extends Effect.Service<ProductsService>()(
       const repository = yield* ProductsRepository;
       const categoriesService = yield* CategoriesService;
 
-      const getProductOrFail = (
-        id: string,
-        includeDeleted = false,
-      ): Effect.Effect<Product, ProductNotFound | ProductsInfrastructureError> =>
-        Effect.flatMap(
-          repository.findById(id, includeDeleted),
-          (product) =>
-            product
-              ? Effect.succeed(product)
-              : Effect.fail(
-                  new ProductNotFound({
-                    productId: id,
-                    messageKey: 'products.notFound',
-                  }),
-                ),
+      const getProductOrFail = (id: string, includeDeleted = false) =>
+        fromNullOr(repository.findById(id, includeDeleted), () =>
+          new ProductNotFound({ productId: id, messageKey: 'products.notFound' }),
         );
 
       const checkCategoryExists = (categoryId: string) =>
