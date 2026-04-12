@@ -1,19 +1,12 @@
-import { Effect } from 'effect';
 import { eq, and, inArray, sql } from 'drizzle-orm';
+import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { userRoles, roles } from '../../platform/db/schema';
 import { UsersInfrastructureError } from './users.errors';
 
-const tryAsync = <A>(action: string, run: () => Promise<A>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new UsersInfrastructureError({
-        action,
-        cause,
-        messageKey: 'users.repositoryFailed',
-      }),
-  });
+const tryAsync = makeTryAsync((action, cause) =>
+  new UsersInfrastructureError({ action, cause, messageKey: 'users.repositoryFailed' }),
+);
 
 export class UsersRepository extends Effect.Service<UsersRepository>()(
   '@librestock/effect/UsersRepository',
