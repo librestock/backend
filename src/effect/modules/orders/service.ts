@@ -7,6 +7,7 @@ import {
   type UpdateOrderSchema,
   type UpdateOrderStatusSchema,
 } from '@librestock/types/orders';
+import { fromNullOr } from '../../platform/from-null-or';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { ProductNotFound } from '../products/products.errors';
 import { ClientsService } from '../clients/service';
@@ -48,20 +49,9 @@ export class OrdersService extends Effect.Service<OrdersService>()(
       const clientsService = yield* ClientsService;
       const productsService = yield* ProductsService;
 
-      const getOrderOrFail = (
-        id: string,
-      ): Effect.Effect<Order, OrderNotFound | OrdersInfrastructureError> =>
-        Effect.flatMap(
-          ordersRepository.findById(id),
-          (order) =>
-            order
-              ? Effect.succeed(order)
-              : Effect.fail(
-                  new OrderNotFound({
-                    id,
-                    messageKey: 'orders.notFound',
-                  }),
-                ),
+      const getOrderOrFail = (id: string) =>
+        fromNullOr(ordersRepository.findById(id), () =>
+          new OrderNotFound({ id, messageKey: 'orders.notFound' }),
         );
 
       const validateStatusTransition = (
