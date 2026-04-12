@@ -6,6 +6,7 @@ import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
 } from '../../platform/drizzle-query.utils';
+import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import {
   orders,
@@ -17,16 +18,9 @@ import { OrdersInfrastructureError } from './orders.errors';
 
 type OrderQueryDto = Schema.Schema.Type<typeof OrderQuerySchema>;
 
-const tryAsync = <A>(action: string, run: () => Promise<A>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new OrdersInfrastructureError({
-        action,
-        cause,
-        messageKey: 'orders.infrastructureFailed',
-      }),
-  });
+const tryAsync = makeTryAsync((action, cause) =>
+  new OrdersInfrastructureError({ action, cause, messageKey: 'orders.infrastructureFailed' }),
+);
 
 export class OrdersRepository extends Effect.Service<OrdersRepository>()(
   '@librestock/effect/OrdersRepository',
