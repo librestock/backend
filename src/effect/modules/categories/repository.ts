@@ -1,19 +1,12 @@
-import { Effect } from 'effect';
 import { eq, and, asc, sql } from 'drizzle-orm';
+import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { categories } from '../../platform/db/schema';
 import { CategoriesInfrastructureError } from './categories.errors';
 
-const tryAsync = <A>(action: string, run: () => Promise<A>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new CategoriesInfrastructureError({
-        action,
-        cause,
-        messageKey: 'categories.repositoryFailed',
-      }),
-  });
+const tryAsync = makeTryAsync((action, cause) =>
+  new CategoriesInfrastructureError({ action, cause, messageKey: 'categories.repositoryFailed' }),
+);
 
 export class CategoriesRepository extends Effect.Service<CategoriesRepository>()(
   '@librestock/effect/CategoriesRepository',
