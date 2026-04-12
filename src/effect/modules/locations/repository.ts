@@ -1,4 +1,3 @@
-import { Effect } from 'effect';
 import { eq, ilike, sql, and, type SQL } from 'drizzle-orm';
 import type { LocationQueryDto } from '@librestock/types/locations';
 import { LocationSortField } from '@librestock/types/locations';
@@ -8,20 +7,14 @@ import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
 } from '../../platform/drizzle-query.utils';
+import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { locations } from '../../platform/db/schema';
 import { LocationsInfrastructureError } from './locations.errors';
 
-const tryAsync = <A>(action: string, run: () => Promise<A>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new LocationsInfrastructureError({
-        action,
-        cause,
-        messageKey: 'locations.repositoryFailed',
-      }),
-  });
+const tryAsync = makeTryAsync((action, cause) =>
+  new LocationsInfrastructureError({ action, cause, messageKey: 'locations.repositoryFailed' }),
+);
 
 function buildLocationFilters(query: LocationQueryDto): SQL[] {
   const conditions: SQL[] = [];
