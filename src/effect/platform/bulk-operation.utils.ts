@@ -1,7 +1,3 @@
-/**
- * Utility functions for bulk operations across services
- */
-
 export interface BulkOperationResult<T = string> {
   success_count: number;
   failure_count: number;
@@ -9,57 +5,57 @@ export interface BulkOperationResult<T = string> {
   failures: { id?: string; sku?: string; error: string }[];
 }
 
-/**
- * Creates an empty bulk operation result object
- */
-export function createEmptyBulkResult<T = string>(): BulkOperationResult<T> {
-  return {
-    success_count: 0,
-    failure_count: 0,
-    succeeded: [],
-    failures: [],
-  };
+export interface BulkResultBuilder<T = string> {
+  addSuccess(id: T): void;
+  addFailure(error: string, identifier?: { id?: string; sku?: string }): void;
+  addNotFoundFailures(ids: string[], entityName?: string): void;
+  build(): BulkOperationResult<T>;
+  /** Build with overrides for cases where counts/succeeded come from an external source (e.g. batch UPDATE returning affected rows). */
+  buildWith(overrides: Partial<BulkOperationResult<T>>): BulkOperationResult<T>;
 }
 
-/**
- * Adds a success entry to the bulk operation result
- */
-export function addBulkSuccess<T = string>(
-  result: BulkOperationResult<T>,
-  id: T,
-): BulkOperationResult<T> {
-  return {
-    ...result,
-    success_count: result.success_count + 1,
-    succeeded: [...result.succeeded, id],
-  };
-}
+export function createBulkResultBuilder<T = string>(): BulkResultBuilder<T> {
+  const succeeded: T[] = [];
+  const failures: { id?: string; sku?: string; error: string }[] = [];
 
-/**
- * Adds a failure entry to the bulk operation result
- */
-export function addBulkFailure(
-  result: BulkOperationResult,
-  error: string,
-  identifier?: { id?: string; sku?: string },
-): BulkOperationResult {
   return {
-    ...result,
-    failure_count: result.failure_count + 1,
-    failures: [
-      ...result.failures,
-      {
+    addSuccess(id: T) {
+      succeeded.push(id);
+    },
+    addFailure(error: string, identifier?: { id?: string; sku?: string }) {
+      failures.push({
         ...(identifier?.id && { id: identifier.id }),
         ...(identifier?.sku && { sku: identifier.sku }),
         error,
-      },
-    ],
+      });
+    },
+    addNotFoundFailures(ids: string[], entityName = 'Entity') {
+      for (const id of ids) {
+        failures.push({ id, error: `${entityName} not found` });
+      }
+    },
+    build(): BulkOperationResult<T> {
+      return {
+        success_count: succeeded.length,
+        failure_count: failures.length,
+        succeeded,
+        failures,
+      };
+    },
+    buildWith(overrides: Partial<BulkOperationResult<T>>): BulkOperationResult<T> {
+      return {
+        success_count: succeeded.length,
+        failure_count: failures.length,
+        succeeded,
+        failures,
+        ...overrides,
+      };
+    },
   };
 }
 
 /**
  * Finds duplicate values in an array
- * @returns Array of values that appear more than once
  */
 export function findDuplicates<T>(arr: T[]): T[] {
   const seen = new Set<T>();
@@ -95,18 +91,4 @@ export function partitionByExistence<T>(
   }
 
   return { existing, notFound };
-}
-
-/**
- * Updates bulk result with not found failures
- */
-export function addNotFoundFailures(
-  result: BulkOperationResult,
-  notFoundIds: string[],
-  entityName = 'Entity',
-): BulkOperationResult {
-  return notFoundIds.reduce(
-    (current, id) => addBulkFailure(current, `${entityName} not found`, { id }),
-    result,
-  );
 }
