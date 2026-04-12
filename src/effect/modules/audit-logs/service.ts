@@ -4,6 +4,7 @@ import {
   type PaginatedAuditLogsResponseDto,
   type AuditEntityType,
 } from '@librestock/types/audit-logs';
+import { fromNullOr } from '../../platform/from-null-or';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import type { auditLogs } from '../../platform/db/schema';
 import type { AuditLogQueryOptions } from './repository';
@@ -33,21 +34,12 @@ export class AuditLogsService extends Effect.Service<AuditLogsService>()(
     effect: Effect.gen(function* () {
       const repository = yield* AuditLogsRepository;
 
-      const getAuditLogOrFail = (
-        id: string,
-      ): Effect.Effect<
-        AuditLogResponseDto,
-        AuditLogNotFound | AuditLogsInfrastructureError
-      > =>
-        Effect.flatMap(repository.findById(id), (auditLog) =>
-          auditLog
-            ? Effect.succeed(toAuditLogResponseDto(auditLog))
-            : Effect.fail(
-                new AuditLogNotFound({
-                  id,
-                  messageKey: 'auditLogs.notFound',
-                }),
-              ),
+      const getAuditLogOrFail = (id: string) =>
+        Effect.map(
+          fromNullOr(repository.findById(id), () =>
+            new AuditLogNotFound({ id, messageKey: 'auditLogs.notFound' }),
+          ),
+          toAuditLogResponseDto,
         );
 
       const query = (
