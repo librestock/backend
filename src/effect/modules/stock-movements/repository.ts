@@ -5,6 +5,7 @@ import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
 } from '../../platform/drizzle-query.utils';
+import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { stockMovements } from '../../platform/db/schema';
 import { StockMovementsInfrastructureError } from './stock-movements.errors';
@@ -18,16 +19,9 @@ function extractRows(result: unknown): RawRow[] {
   return res.rows ?? (result as RawRow[]);
 }
 
-const tryAsync = <A>(action: string, run: () => Promise<A>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new StockMovementsInfrastructureError({
-        action,
-        cause,
-        messageKey: 'stockMovements.repositoryFailed',
-      }),
-  });
+const tryAsync = makeTryAsync((action, cause) =>
+  new StockMovementsInfrastructureError({ action, cause, messageKey: 'stockMovements.repositoryFailed' }),
+);
 
 function buildStockMovementFilters(query: StockMovementQueryDto): SQL[] {
   const conditions: SQL[] = [];
