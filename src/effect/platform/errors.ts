@@ -178,6 +178,11 @@ export const respondJson = <A, E, R>(
     return yield* HttpServerResponse.json(localizeMessageTree(body, locale), options);
   }).pipe(Effect.catchAllCause(respondCause), Effect.flatMap(withRequestIdHeader));
 
+export const respondJsonOk = <A>(
+  body: A,
+  options?: HttpServerResponse.Options.WithContentType,
+) => respondJson(Effect.succeed(body), options);
+
 export const respondEmpty = <E, R>(
   effect: Effect.Effect<unknown, E, R>,
   options?: HttpServerResponse.Options.WithContent,

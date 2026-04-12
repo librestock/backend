@@ -3,7 +3,7 @@ import { Effect, Schema } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import { requirePermission } from '../../platform/authorization';
-import { respondJson } from '../../platform/errors';
+import { respondJson, respondJsonOk } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
 import { makeMessageResponse } from '../../platform/messages';
 import {
@@ -37,7 +37,7 @@ export const categoriesRouter = HttpRouter.empty.pipe(
         entityType: AuditEntityType.CATEGORY,
         entityId: result.id,
       });
-      return yield* respondJson(Effect.succeed(result), { status: 201 });
+      return yield* respondJsonOk(result, { status: 201 });
     }),
   ),
   HttpRouter.put(
@@ -54,7 +54,7 @@ export const categoriesRouter = HttpRouter.empty.pipe(
         entityType: AuditEntityType.CATEGORY,
         entityId: id,
       });
-      return yield* respondJson(Effect.succeed(result));
+      return yield* respondJsonOk(result);
     }),
   ),
   HttpRouter.del(

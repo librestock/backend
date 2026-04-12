@@ -4,7 +4,7 @@ import { Permission, Resource } from '@librestock/types/auth';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import { AreaIdSchema, AreaQuerySchema } from '@librestock/types/areas';
 import { requirePermission } from '../../platform/authorization';
-import { respondJson } from '../../platform/errors';
+import { respondJson, respondJsonOk } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
 import { makeMessageResponse } from '../../platform/messages';
 import {
@@ -29,7 +29,7 @@ export const areasRouter = HttpRouter.empty.pipe(
         entityType: AuditEntityType.AREA,
         entityId: result.id,
       });
-      return yield* respondJson(Effect.succeed(result), { status: 201 });
+      return yield* respondJsonOk(result, { status: 201 });
     }),
   ),
   HttpRouter.get(
@@ -73,7 +73,7 @@ export const areasRouter = HttpRouter.empty.pipe(
         entityType: AuditEntityType.AREA,
         entityId: id,
       });
-      return yield* respondJson(Effect.succeed(result));
+      return yield* respondJsonOk(result);
     }),
   ),
   HttpRouter.del(

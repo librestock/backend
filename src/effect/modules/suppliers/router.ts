@@ -7,7 +7,7 @@ import {
   SupplierQuerySchema,
 } from '@librestock/types/suppliers';
 import { requirePermission } from '../../platform/authorization';
-import { respondJson } from '../../platform/errors';
+import { respondJson, respondJsonOk } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
 import { makeMessageResponse } from '../../platform/messages';
 import {
@@ -50,7 +50,7 @@ export const suppliersRouter = HttpRouter.empty.pipe(
         entityType: AuditEntityType.SUPPLIER,
         entityId: result.id,
       });
-      return yield* respondJson(Effect.succeed(result), { status: 201 });
+      return yield* respondJsonOk(result, { status: 201 });
     }),
   ),
   HttpRouter.put(
@@ -67,7 +67,7 @@ export const suppliersRouter = HttpRouter.empty.pipe(
         entityType: AuditEntityType.SUPPLIER,
         entityId: id,
       });
-      return yield* respondJson(Effect.succeed(result));
+      return yield* respondJsonOk(result);
     }),
   ),
   HttpRouter.del(

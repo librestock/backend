@@ -3,7 +3,7 @@ import { Effect, Schema } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import { requirePermission } from '../../platform/authorization';
-import { respondJson } from '../../platform/errors';
+import { respondJson, respondJsonOk } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
 import { getOptionalSession } from '../../platform/session';
 import { makeMessageResponse } from '../../platform/messages';
@@ -80,7 +80,7 @@ export const productsRouter = HttpRouter.empty.pipe(
           entityId: result.succeeded[0]!,
         });
       }
-      return yield* respondJson(Effect.succeed(result), { status: 201 });
+      return yield* respondJsonOk(result, { status: 201 });
     }),
   ),
   HttpRouter.get(
@@ -120,7 +120,7 @@ export const productsRouter = HttpRouter.empty.pipe(
         entityType: AuditEntityType.PRODUCT,
         entityId: result.id,
       });
-      return yield* respondJson(Effect.succeed(result), { status: 201 });
+      return yield* respondJsonOk(result, { status: 201 });
     }),
   ),
   HttpRouter.patch(
@@ -141,7 +141,7 @@ export const productsRouter = HttpRouter.empty.pipe(
           entityId: result.succeeded[0]!,
         });
       }
-      return yield* respondJson(Effect.succeed(result));
+      return yield* respondJsonOk(result);
     }),
   ),
   HttpRouter.patch(
@@ -159,7 +159,7 @@ export const productsRouter = HttpRouter.empty.pipe(
           entityId: result.succeeded[0]!,
         });
       }
-      return yield* respondJson(Effect.succeed(result));
+      return yield* respondJsonOk(result);
     }),
   ),
   HttpRouter.del(
@@ -179,7 +179,7 @@ export const productsRouter = HttpRouter.empty.pipe(
           entityId: result.succeeded[0]!,
         });
       }
-      return yield* respondJson(Effect.succeed(result));
+      return yield* respondJsonOk(result);
     }),
   ),
   HttpRouter.get(
@@ -215,7 +215,7 @@ export const productsRouter = HttpRouter.empty.pipe(
         entityType: AuditEntityType.PRODUCT,
         entityId: id,
       });
-      return yield* respondJson(Effect.succeed(result));
+      return yield* respondJsonOk(result);
     }),
   ),
   HttpRouter.patch(
@@ -231,7 +231,7 @@ export const productsRouter = HttpRouter.empty.pipe(
         entityType: AuditEntityType.PRODUCT,
         entityId: id,
       });
-      return yield* respondJson(Effect.succeed(result));
+      return yield* respondJsonOk(result);
     }),
   ),
   HttpRouter.del(

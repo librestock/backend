@@ -10,7 +10,7 @@ import {
 import { Permission, Resource } from '@librestock/types/auth';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import { requirePermission } from '../../platform/authorization';
-import { respondJson } from '../../platform/errors';
+import { respondJson, respondJsonOk } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
 import { getOptionalSession } from '../../platform/session';
 import { makeMessageResponse } from '../../platform/messages';
@@ -51,7 +51,7 @@ export const ordersRouter = HttpRouter.empty.pipe(
         entityType: AuditEntityType.ORDER,
         entityId: result.id,
       });
-      return yield* respondJson(Effect.succeed(result), { status: 201 });
+      return yield* respondJsonOk(result, { status: 201 });
     }),
   ),
   HttpRouter.put(
@@ -68,7 +68,7 @@ export const ordersRouter = HttpRouter.empty.pipe(
         entityType: AuditEntityType.ORDER,
         entityId: id,
       });
-      return yield* respondJson(Effect.succeed(result));
+      return yield* respondJsonOk(result);
     }),
   ),
   HttpRouter.patch(
@@ -87,7 +87,7 @@ export const ordersRouter = HttpRouter.empty.pipe(
         entityType: AuditEntityType.ORDER,
         entityId: id,
       });
-      return yield* respondJson(Effect.succeed(result));
+      return yield* respondJsonOk(result);
     }),
   ),
   HttpRouter.del(

@@ -8,7 +8,7 @@ import {
 } from '@librestock/types/stock-movements';
 import { requirePermission } from '../../platform/authorization';
 import { AuditLogWriter } from '../../platform/audit';
-import { respondJson } from '../../platform/errors';
+import { respondJson, respondJsonOk } from '../../platform/errors';
 import { requireSession } from '../../platform/session';
 import { CreateStockMovementSchema } from './stock-movements.schema';
 import { StockMovementsService } from './service';
@@ -78,7 +78,7 @@ export const stockMovementsRouter = HttpRouter.empty.pipe(
         entityType: AuditEntityType.STOCK_MOVEMENT,
         entityId: result.id,
       });
-      return yield* respondJson(Effect.succeed(result), { status: 201 });
+      return yield* respondJsonOk(result, { status: 201 });
     }),
   ),
   HttpRouter.prefixAll('/stock-movements'),

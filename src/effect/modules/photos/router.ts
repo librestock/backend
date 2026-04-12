@@ -8,7 +8,7 @@ import {
 import { Effect, Schema } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
 import { requirePermission } from '../../platform/authorization';
-import { respondJson, respondCause } from '../../platform/errors';
+import { respondJson, respondJsonOk, respondCause } from '../../platform/errors';
 import { makeMessageResponse } from '../../platform/messages';
 import { getOptionalSession } from '../../platform/session';
 import {
@@ -69,7 +69,7 @@ export const productPhotosRouter = HttpRouter.empty.pipe(
         userId,
       );
 
-      return yield* respondJson(Effect.succeed(result), { status: 201 });
+      return yield* respondJsonOk(result, { status: 201 });
     }),
   ),
   HttpRouter.get(
