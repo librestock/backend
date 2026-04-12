@@ -1,5 +1,4 @@
 import { Effect, Layer } from 'effect';
-import { AreasService } from './service';
 import {
   getTestDb,
   closeTestDb,
@@ -8,6 +7,7 @@ import {
 } from '../../test/integration-layer';
 import { seedLocation, seedArea } from '../../test/seed';
 import type { DrizzleDb } from '../../platform/drizzle';
+import { AreasService } from './service';
 
 let db: DrizzleDb;
 let TestLayer: Layer.Layer<AreasService>;

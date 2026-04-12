@@ -1,5 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { Effect, Layer } from 'effect';
-import { AuditLogsService } from './service';
+import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import {
   getTestDb,
   closeTestDb,
@@ -8,8 +9,7 @@ import {
 } from '../../test/integration-layer';
 import { seedAuditLog, TEST_USER_ID, TEST_USER_ID_2 } from '../../test/seed';
 import type { DrizzleDb } from '../../platform/drizzle';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
-import { randomUUID } from 'crypto';
+import { AuditLogsService } from './service';
 
 let db: DrizzleDb;
 let TestLayer: Layer.Layer<AuditLogsService>;

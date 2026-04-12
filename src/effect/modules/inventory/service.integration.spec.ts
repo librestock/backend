@@ -1,5 +1,4 @@
 import { Effect, Layer } from 'effect';
-import { InventoryService } from './service';
 import {
   getTestDb,
   closeTestDb,
@@ -14,6 +13,7 @@ import {
   seedInventory,
 } from '../../test/seed';
 import type { DrizzleDb } from '../../platform/drizzle';
+import { InventoryService } from './service';
 
 let db: DrizzleDb;
 let TestLayer: Layer.Layer<InventoryService>;

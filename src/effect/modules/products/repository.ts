@@ -10,6 +10,7 @@ import { buildOrderBy } from '../../platform/drizzle-sort.utils';
 import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
 import { products, categories, suppliers } from '../../platform/db/schema';
 import type { ProductQuerySchema } from './products.schema';
+import { ProductsInfrastructureError } from './products.errors';
 
 const productSortColumns = {
   [ProductSortField.NAME]: products.name,
@@ -20,7 +21,6 @@ const productSortColumns = {
   [ProductSortField.STANDARD_COST]: products.standard_cost,
   [ProductSortField.REORDER_POINT]: products.reorder_point,
 } as const;
-import { ProductsInfrastructureError } from './products.errors';
 
 type ProductQueryDto = Schema.Schema.Type<typeof ProductQuerySchema>;
 

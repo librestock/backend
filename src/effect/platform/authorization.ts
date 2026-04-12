@@ -4,7 +4,7 @@ import { PermissionProvider } from './permission-provider';
 import { ForbiddenError } from './domain-errors';
 import { requireSession } from './session';
 
-export class PermissionDenied extends ForbiddenError('PermissionDenied')<{}> {}
+export class PermissionDenied extends ForbiddenError('PermissionDenied') {}
 
 export const requirePermission = (resource: Resource, permission: Permission) =>
   Effect.gen(function* () {

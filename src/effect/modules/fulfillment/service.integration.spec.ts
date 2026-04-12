@@ -1,7 +1,6 @@
 import { Effect, Layer } from 'effect';
 import { OrderStatus } from '@librestock/types/orders';
 import { sql } from 'drizzle-orm';
-import { FulfillmentService } from './service';
 import {
   getTestDb,
   closeTestDb,
@@ -21,6 +20,7 @@ import {
 } from '../../test/seed';
 import { stockMovements } from '../../platform/db/schema';
 import type { DrizzleDb } from '../../platform/drizzle';
+import { FulfillmentService } from './service';
 
 let db: DrizzleDb;
 let TestLayer: Layer.Layer<FulfillmentService>;
@@ -268,7 +268,7 @@ describe('FulfillmentService Integration', () => {
     it('completes the happy path end-to-end', async () => {
       const { order, orderItem, inv } = await seedFulfillmentScenario();
 
-      const result = await run(
+      await run(
         Effect.flatMap(FulfillmentService, (svc) =>
           Effect.gen(function* () {
             // Confirm

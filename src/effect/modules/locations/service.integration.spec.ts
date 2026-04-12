@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect';
-import { LocationsService } from './service';
+import { LocationType } from '@librestock/types/locations';
 import {
   getTestDb,
   closeTestDb,
@@ -8,7 +8,7 @@ import {
 } from '../../test/integration-layer';
 import { seedLocation } from '../../test/seed';
 import type { DrizzleDb } from '../../platform/drizzle';
-import { LocationType } from '@librestock/types/locations';
+import { LocationsService } from './service';
 
 let db: DrizzleDb;
 let TestLayer: Layer.Layer<LocationsService>;

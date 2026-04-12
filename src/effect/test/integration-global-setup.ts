@@ -1,5 +1,5 @@
-import { execFileSync } from 'child_process';
-import path from 'path';
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
 import pg from 'pg';
 
 const TEST_DB_NAME = 'librestock_inventory_test';

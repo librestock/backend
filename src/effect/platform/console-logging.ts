@@ -69,7 +69,23 @@ const stringifyValue = (value: unknown): string => {
   try {
     return truncate(JSON.stringify(value), MAX_FIELD_LENGTH);
   } catch {
-    return truncate(String(value), MAX_FIELD_LENGTH);
+    if (typeof value === 'object') {
+      return truncate(Object.prototype.toString.call(value), MAX_FIELD_LENGTH);
+    }
+
+    if (typeof value === 'symbol') {
+      return truncate(value.toString(), MAX_FIELD_LENGTH);
+    }
+
+    if (typeof value === 'function') {
+      return truncate(`[function ${value.name || 'anonymous'}]`, MAX_FIELD_LENGTH);
+    }
+
+    if (typeof value === 'bigint') {
+      return `${value}n`;
+    }
+
+    return '-';
   }
 };
 

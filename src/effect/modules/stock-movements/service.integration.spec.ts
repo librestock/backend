@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect';
-import { StockMovementsService } from './service';
+import { StockMovementReason } from '@librestock/types/stock-movements';
 import {
   getTestDb,
   closeTestDb,
@@ -14,7 +14,7 @@ import {
   TEST_USER_ID,
 } from '../../test/seed';
 import type { DrizzleDb } from '../../platform/drizzle';
-import { StockMovementReason } from '@librestock/types/stock-movements';
+import { StockMovementsService } from './service';
 
 let db: DrizzleDb;
 let TestLayer: Layer.Layer<StockMovementsService>;

@@ -1,6 +1,5 @@
 import { Effect, Layer } from 'effect';
 import { OrderStatus } from '@librestock/types/orders';
-import { OrdersService } from './service';
 import {
   getTestDb,
   closeTestDb,
@@ -9,6 +8,7 @@ import {
 } from '../../test/integration-layer';
 import { seedCategory, seedProduct, seedClient, TEST_USER_ID } from '../../test/seed';
 import type { DrizzleDb } from '../../platform/drizzle';
+import { OrdersService } from './service';
 
 let db: DrizzleDb;
 let TestLayer: Layer.Layer<OrdersService>;
@@ -55,7 +55,7 @@ describe('OrdersService Integration', () => {
       expect(result.client_id).toBe(client.id);
       expect(result.total_amount).toBe(75);
       expect(result.status).toBe(OrderStatus.DRAFT);
-      expect(result.order_number).toMatch(/^ORD-\d{8}-00001$/);
+      expect(result.order_number).toMatch(/^ORD-\d{8}-0{4}1$/);
       expect(result.items).toHaveLength(1);
       expect(result.items[0]).toMatchObject({
         product_id: product.id,
@@ -235,7 +235,7 @@ describe('OrdersService Integration', () => {
     it('deletes a draft order and its items', async () => {
       const { product, client } = await seedOrderPrereqs();
 
-      await run(
+      const error = await run(
         Effect.flatMap(OrdersService, (svc) =>
           Effect.flatMap(
             svc.create(
@@ -251,12 +251,12 @@ describe('OrdersService Integration', () => {
             (order) =>
               Effect.flatMap(svc.delete(order.id), () =>
                 Effect.flip(svc.findOne(order.id)),
-              ),
+            ),
           ),
         ),
-      ).then((error) => {
-        expect(error._tag).toBe('OrderNotFound');
-      });
+      );
+
+      expect(error._tag).toBe('OrderNotFound');
     });
 
     it('rejects deleting a confirmed order', async () => {

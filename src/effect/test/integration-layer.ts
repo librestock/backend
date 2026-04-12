@@ -47,5 +47,5 @@ export async function truncateAll(): Promise<void> {
 }
 
 export function makeTestDrizzleLayer(): Layer.Layer<DrizzleDb> {
-  return Layer.succeed(DrizzleDatabase, getTestDb()) as Layer.Layer<DrizzleDb>;
+  return Layer.succeed(DrizzleDatabase, getTestDb());
 }

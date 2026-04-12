@@ -1,5 +1,4 @@
 import { Effect, Layer } from 'effect';
-import { ProductsService } from './service';
 import {
   getTestDb,
   closeTestDb,
@@ -13,6 +12,7 @@ import {
   TEST_USER_ID,
 } from '../../test/seed';
 import type { DrizzleDb } from '../../platform/drizzle';
+import { ProductsService } from './service';
 
 let db: DrizzleDb;
 let TestLayer: Layer.Layer<ProductsService>;
