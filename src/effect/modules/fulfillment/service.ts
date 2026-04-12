@@ -4,6 +4,7 @@ import type {
   PackInput,
   PickInput,
 } from '@librestock/types/fulfillment';
+import { fromNullOr } from '../../platform/from-null-or';
 import { OrderStatus } from '@librestock/types/orders';
 import { StockMovementReason } from '@librestock/types/stock-movements';
 import type { orders, orderItems } from '../../platform/db/schema';
@@ -45,26 +46,13 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
           messageKey: 'fulfillment.infrastructureFailed',
         });
 
-      const loadOrderOrFail = (
-        orderId: string,
-      ): Effect.Effect<
-        Order,
-        FulfillmentOrderNotFound | FulfillmentInfrastructureError
-      > =>
-        Effect.flatMap(
+      const loadOrderOrFail = (orderId: string) =>
+        fromNullOr(
           Effect.mapError(
             ordersRepository.findById(orderId),
             wrapInfrastructureError('load order'),
           ),
-          (order) =>
-            order
-              ? Effect.succeed(order)
-              : Effect.fail(
-                  new FulfillmentOrderNotFound({
-                    orderId,
-                    messageKey: 'fulfillment.orderNotFound',
-                  }),
-                ),
+          () => new FulfillmentOrderNotFound({ orderId, messageKey: 'fulfillment.orderNotFound' }),
         );
 
       const toView = (order: Order): OrderFulfillmentView => ({
