@@ -1,19 +1,12 @@
-import { Effect } from 'effect';
 import { eq, asc, sql } from 'drizzle-orm';
+import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { photos } from '../../platform/db/schema';
 import { PhotosInfrastructureError } from './photos.errors';
 
-const tryAsync = <A>(action: string, run: () => Promise<A>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new PhotosInfrastructureError({
-        action,
-        cause,
-        messageKey: 'photos.repositoryFailed',
-      }),
-  });
+const tryAsync = makeTryAsync((action, cause) =>
+  new PhotosInfrastructureError({ action, cause, messageKey: 'photos.repositoryFailed' }),
+);
 
 export class PhotosRepository extends Effect.Service<PhotosRepository>()(
   '@librestock/effect/PhotosRepository',
