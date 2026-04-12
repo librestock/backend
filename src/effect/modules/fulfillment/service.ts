@@ -7,9 +7,9 @@ import type {
 import { fromNullOr } from '../../platform/from-null-or';
 import { OrderStatus } from '@librestock/types/orders';
 import { StockMovementReason } from '@librestock/types/stock-movements';
-import type { orders, orderItems } from '../../platform/db/schema';
 import { InventoryRepository } from '../inventory/repository';
 import { OrderItemsRepository, OrdersRepository } from '../orders/repository';
+import type { Order } from '../orders/orders.utils';
 import { StockMovementsRepository } from '../stock-movements/repository';
 import {
   FulfillmentInfrastructureError,
@@ -18,17 +18,6 @@ import {
   FulfillmentOrderNotFound,
   FulfillmentPickFailed,
 } from './errors';
-
-type OrderItemRow = typeof orderItems.$inferSelect;
-type OrderItem = OrderItemRow & {
-  product?: { id: string; name: string; sku: string } | null;
-};
-
-type OrderRow = typeof orders.$inferSelect;
-type Order = OrderRow & {
-  client?: { company_name: string } | null;
-  items?: OrderItem[];
-};
 
 export class FulfillmentService extends Effect.Service<FulfillmentService>()(
   '@librestock/effect/FulfillmentService',
