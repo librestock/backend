@@ -1,7 +1,5 @@
-import { Effect } from 'effect';
 import type { StockMovementResponseDto } from '@librestock/types/stock-movements';
 import type { stockMovements } from '../../platform/db/schema';
-import { StockMovementsInfrastructureError } from './stock-movements.errors';
 
 type StockMovementRow = typeof stockMovements.$inferSelect;
 export type StockMovementWithRelations = StockMovementRow & {
@@ -9,20 +7,6 @@ export type StockMovementWithRelations = StockMovementRow & {
   fromLocation?: { id: string; name: string } | null;
   toLocation?: { id: string; name: string } | null;
 };
-
-export const stockMovementTryAsync = <A>(
-  action: string,
-  run: () => Promise<A>,
-) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new StockMovementsInfrastructureError({
-        action,
-        cause,
-        messageKey: 'stockMovements.infrastructureFailed',
-      }),
-  });
 
 export function toStockMovementResponseDto(
   sm: StockMovementWithRelations,
