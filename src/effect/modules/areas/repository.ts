@@ -1,10 +1,10 @@
-import { Effect } from 'effect';
 import { eq, and, asc, isNull, sql } from 'drizzle-orm';
 import type {
   CreateAreaDto,
   UpdateAreaDto,
   AreaQueryDto,
 } from '@librestock/types/areas';
+import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { areas, locations } from '../../platform/db/schema';
 import { AreasInfrastructureError } from './areas.errors';
@@ -12,16 +12,9 @@ import { AreasInfrastructureError } from './areas.errors';
 type AreaRow = typeof areas.$inferSelect;
 type AreaWithChildren = AreaRow & { children?: AreaWithChildren[] };
 
-const tryAsync = <A>(action: string, run: () => Promise<A>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new AreasInfrastructureError({
-        action,
-        cause,
-        messageKey: 'areas.repositoryFailed',
-      }),
-  });
+const tryAsync = makeTryAsync((action, cause) =>
+  new AreasInfrastructureError({ action, cause, messageKey: 'areas.repositoryFailed' }),
+);
 
 export class AreasRepository extends Effect.Service<AreasRepository>()(
   '@librestock/effect/AreasRepository',
