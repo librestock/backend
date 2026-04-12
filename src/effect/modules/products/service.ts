@@ -350,7 +350,7 @@ export class ProductsService extends Effect.Service<ProductsService>()(
         }).pipe(Effect.withSpan('ProductsService.bulkRestore'));
 
       const existsById = (id: string) =>
-        Effect.map(repository.findById(id), (product) => product !== null).pipe(
+        repository.existsById(id).pipe(
           Effect.withSpan('ProductsService.existsById', { attributes: { id } }),
         );
 
