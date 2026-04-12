@@ -1,4 +1,3 @@
-import { Effect } from 'effect';
 import { eq, and, desc, gte, lte, sql, type SQL } from 'drizzle-orm';
 import type {
   AuditAction,
@@ -8,6 +7,7 @@ import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
 } from '../../platform/drizzle-query.utils';
+import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { auditLogs } from '../../platform/db/schema';
 import { AuditLogsInfrastructureError } from './audit-logs.errors';
@@ -23,16 +23,9 @@ export interface AuditLogQueryOptions {
   readonly limit?: number;
 }
 
-const tryAsync = <A>(action: string, run: () => Promise<A>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new AuditLogsInfrastructureError({
-        action,
-        cause,
-        messageKey: 'auditLogs.repositoryFailed',
-      }),
-  });
+const tryAsync = makeTryAsync((action, cause) =>
+  new AuditLogsInfrastructureError({ action, cause, messageKey: 'auditLogs.repositoryFailed' }),
+);
 
 function buildAuditFilters(options: AuditLogQueryOptions): SQL[] {
   const conditions: SQL[] = [];
