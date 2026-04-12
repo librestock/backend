@@ -4,6 +4,7 @@ import type {
   BrandingResponseDto,
   UpdateBrandingDto,
 } from '@librestock/types/branding';
+import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { brandingSettings } from '../../platform/db/schema';
 import {
@@ -16,16 +17,9 @@ import {
   BrandingInfrastructureError,
 } from './branding.errors';
 
-const brandingTryAsync = <A>(action: string, run: () => Promise<A>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new BrandingInfrastructureError({
-        action,
-        cause,
-        messageKey: 'branding.repositoryFailed',
-      }),
-  });
+const tryAsync = makeTryAsync((action, cause) =>
+  new BrandingInfrastructureError({ action, cause, messageKey: 'branding.repositoryFailed' }),
+);
 
 export class BrandingService extends Effect.Service<BrandingService>()(
   '@librestock/effect/BrandingService',
@@ -35,7 +29,7 @@ export class BrandingService extends Effect.Service<BrandingService>()(
 
       const get = (): Effect.Effect<BrandingResponseDto, BrandingInfrastructureError> =>
         Effect.map(
-          brandingTryAsync('load branding settings', async () => {
+          tryAsync('load branding settings', async () => {
             const rows = await db
               .select()
               .from(brandingSettings)
@@ -58,7 +52,7 @@ export class BrandingService extends Effect.Service<BrandingService>()(
         userId: string,
       ): Effect.Effect<BrandingResponseDto, BrandingInfrastructureError> =>
         Effect.gen(function* () {
-          yield* brandingTryAsync('upsert branding settings', () =>
+          yield* tryAsync('upsert branding settings', () =>
             db
               .insert(brandingSettings)
               .values({
@@ -80,7 +74,7 @@ export class BrandingService extends Effect.Service<BrandingService>()(
               }),
           );
 
-          const rows = yield* brandingTryAsync(
+          const rows = yield* tryAsync(
             'load persisted branding settings',
             () =>
               db
