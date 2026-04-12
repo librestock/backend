@@ -1,5 +1,6 @@
 import { Effect } from 'effect';
 import type { CategoryWithChildrenResponseDto, CreateCategoryDto, UpdateCategoryDto } from '@librestock/types/categories';
+import { fromNullOr } from '../../platform/from-null-or';
 import type { categories } from '../../platform/db/schema';
 import {
   type CategoriesInfrastructureError,
@@ -49,18 +50,9 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
     effect: Effect.gen(function* () {
       const repository = yield* CategoriesRepository;
 
-      const getCategoryOrFail = (
-        id: string,
-      ): Effect.Effect<Category, CategoriesInfrastructureError | CategoryNotFound> =>
-        Effect.flatMap(repository.findById(id), (category) =>
-          category
-            ? Effect.succeed(category)
-            : Effect.fail(
-                new CategoryNotFound({
-                  id,
-                  messageKey: 'categories.notFound',
-                }),
-              ),
+      const getCategoryOrFail = (id: string) =>
+        fromNullOr(repository.findById(id), () =>
+          new CategoryNotFound({ id, messageKey: 'categories.notFound' }),
         );
 
       const checkForCycle = (
