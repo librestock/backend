@@ -20,9 +20,13 @@ import {
 } from './products.schema';
 import { ProductsService } from './service';
 
-type SearchParamsInput = Readonly<
-  Record<string, string | readonly string[] | undefined>
->;
+/**
+ * `HttpServerRequest.schemaSearchParams` requires `Encoded extends Record<string, string | ...>`
+ * with an index signature. Locally-defined `Schema.Struct` types don't carry one, so TS rejects
+ * them even though every field encodes to a string at runtime. This helper hides the cast.
+ */
+const searchParams = <A, I, R>(schema: Schema.Schema<A, I, R>) =>
+  HttpServerRequest.schemaSearchParams(schema as unknown as Schema.Schema<A, Record<string, string | ReadonlyArray<string> | undefined>, R>);
 
 const ProductPathParams = Schema.Struct({ id: ProductIdSchema });
 const CategoryPathParams = Schema.Struct({ categoryId: Schema.UUID });
@@ -52,12 +56,7 @@ export const productsRouter = HttpRouter.empty.pipe(
     '/',
     Effect.gen(function* () {
       yield* requirePermission(Resource.PRODUCTS, Permission.READ);
-      const query = yield* HttpServerRequest.schemaSearchParams(
-        ProductQuerySchema as unknown as Schema.Schema<
-          Schema.Schema.Type<typeof ProductQuerySchema>,
-          SearchParamsInput
-        >,
-      );
+      const query = yield* searchParams(ProductQuerySchema);
       const productsService = yield* ProductsService;
       return yield* respondJson(productsService.findAllPaginated(query));
     }),
@@ -187,12 +186,7 @@ export const productsRouter = HttpRouter.empty.pipe(
     Effect.gen(function* () {
       yield* requirePermission(Resource.PRODUCTS, Permission.READ);
       const { id } = yield* HttpRouter.schemaPathParams(ProductPathParams);
-      const query = yield* HttpServerRequest.schemaSearchParams(
-        IncludeDeletedQuery as unknown as Schema.Schema<
-          Schema.Schema.Type<typeof IncludeDeletedQuery>,
-          SearchParamsInput
-        >,
-      );
+      const query = yield* searchParams(IncludeDeletedQuery);
       const productsService = yield* ProductsService;
       return yield* respondJson(
         productsService.findOne(id, query.include_deleted),
@@ -239,12 +233,7 @@ export const productsRouter = HttpRouter.empty.pipe(
     Effect.gen(function* () {
       yield* requirePermission(Resource.PRODUCTS, Permission.WRITE);
       const { id } = yield* HttpRouter.schemaPathParams(ProductPathParams);
-      const query = yield* HttpServerRequest.schemaSearchParams(
-        PermanentQuery as unknown as Schema.Schema<
-          Schema.Schema.Type<typeof PermanentQuery>,
-          SearchParamsInput
-        >,
-      );
+      const query = yield* searchParams(PermanentQuery);
       const session = yield* getOptionalSession;
       const userId = session?.user.id;
       const productsService = yield* ProductsService;
