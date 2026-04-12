@@ -1,9 +1,14 @@
 import { Effect } from 'effect';
 import type { UserQueryDto, UserResponseDto, BanUserDto } from '@librestock/types/users';
+import { makeTryAsync } from '../../platform/try-async';
 import { BetterAuth, BetterAuthHeaders } from '../../platform/better-auth';
 import { RolesService } from '../roles/service';
 import { UserNotFound, UsersInfrastructureError } from './users.errors';
 import { UsersRepository } from './repository';
+
+const tryAsync = makeTryAsync((action, cause) =>
+  new UsersInfrastructureError({ action, cause, messageKey: 'users.infrastructureFailed' }),
+);
 
 interface BetterAuthUser {
   readonly id: string;
@@ -49,17 +54,6 @@ export class UsersService extends Effect.Service<UsersService>()(
       const usersRepository = yield* UsersRepository;
       const rolesService = yield* RolesService;
 
-      const userTryAsync = <A>(action: string, run: () => Promise<A>) =>
-        Effect.tryPromise({
-          try: run,
-          catch: (cause) =>
-            new UsersInfrastructureError({
-              action,
-              cause,
-              messageKey: 'users.infrastructureFailed',
-            }),
-        });
-
       const getBetterAuthUserOrFail = (
         api: typeof import('../../../auth').auth.api,
         id: string,
@@ -70,7 +64,7 @@ export class UsersService extends Effect.Service<UsersService>()(
       > =>
         Effect.gen(function* () {
           const headers = yield* BetterAuthHeaders;
-          const result = yield* userTryAsync('load user from auth provider', () =>
+          const result = yield* tryAsync('load user from auth provider', () =>
             api.listUsers({
               headers,
               query: {
@@ -124,7 +118,7 @@ export class UsersService extends Effect.Service<UsersService>()(
             searchQuery.searchOperator = 'contains';
           }
 
-          const result = yield* userTryAsync('list users from auth provider', () =>
+          const result = yield* tryAsync('list users from auth provider', () =>
             betterAuth.api.listUsers({
               headers,
               query: {
@@ -198,7 +192,7 @@ export class UsersService extends Effect.Service<UsersService>()(
             );
           }
 
-          yield* userTryAsync('ban user in auth provider', () =>
+          yield* tryAsync('ban user in auth provider', () =>
             betterAuth.api.banUser({
               headers,
               body,
@@ -212,7 +206,7 @@ export class UsersService extends Effect.Service<UsersService>()(
         Effect.gen(function* () {
           const headers = yield* BetterAuthHeaders;
           yield* getBetterAuthUserOrFail(betterAuth.api, userId);
-          yield* userTryAsync('unban user in auth provider', () =>
+          yield* tryAsync('unban user in auth provider', () =>
             betterAuth.api.unbanUser({
               headers,
               body: { userId } satisfies BetterAuthUserActionBody,
@@ -227,7 +221,7 @@ export class UsersService extends Effect.Service<UsersService>()(
           const headers = yield* BetterAuthHeaders;
           yield* getBetterAuthUserOrFail(betterAuth.api, userId);
           yield* usersRepository.deleteUserRoles(userId);
-          yield* userTryAsync('remove user from auth provider', () =>
+          yield* tryAsync('remove user from auth provider', () =>
             betterAuth.api.removeUser({
               headers,
               body: { userId } satisfies BetterAuthUserActionBody,
@@ -239,7 +233,7 @@ export class UsersService extends Effect.Service<UsersService>()(
         Effect.gen(function* () {
           const headers = yield* BetterAuthHeaders;
           yield* getBetterAuthUserOrFail(betterAuth.api, userId);
-          yield* userTryAsync('revoke user sessions', () =>
+          yield* tryAsync('revoke user sessions', () =>
             betterAuth.api.revokeUserSessions({
               headers,
               body: { userId } satisfies BetterAuthUserActionBody,
