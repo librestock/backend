@@ -3,7 +3,7 @@ import * as crypto from 'node:crypto';
 import { access, mkdir, unlink, writeFile } from 'node:fs/promises';
 import { Effect } from 'effect';
 import type { PhotoResponseDto } from '@librestock/types/photos';
-import type { photos } from '../../platform/db/schema';
+import { fromNullOr } from '../../platform/from-null-or';
 import { toPhotoResponseDto } from './photos.utils';
 import {
   InvalidPhotoMimeType,
@@ -13,8 +13,6 @@ import {
   PhotosInfrastructureError,
 } from './photos.errors';
 import { PhotosRepository } from './repository';
-
-type Photo = typeof photos.$inferSelect;
 
 const ALLOWED_MIMETYPES = [
   'image/jpeg',
@@ -84,18 +82,9 @@ export class PhotosService extends Effect.Service<PhotosService>()(
       const getExtFromMime = (mimetype: string): string =>
         MIME_EXT_MAP[mimetype] ?? '.bin';
 
-      const findPhotoOrFail = (
-        id: string,
-      ): Effect.Effect<Photo, PhotoNotFound | PhotosInfrastructureError> =>
-        Effect.flatMap(repository.findById(id), (photo) =>
-          photo
-            ? Effect.succeed(photo)
-            : Effect.fail(
-                new PhotoNotFound({
-                  id,
-                  messageKey: 'photos.notFound',
-                }),
-              ),
+      const findPhotoOrFail = (id: string) =>
+        fromNullOr(repository.findById(id), () =>
+          new PhotoNotFound({ id, messageKey: 'photos.notFound' }),
         );
 
       const uploadPhoto = (
