@@ -1,10 +1,10 @@
-import { Effect } from 'effect';
 import { eq, ilike, and, sql, type SQL } from 'drizzle-orm';
 import type { SupplierQueryDto } from '@librestock/types/suppliers';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
 } from '../../platform/drizzle-query.utils';
+import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { suppliers } from '../../platform/db/schema';
 import { SuppliersInfrastructureError } from './suppliers.errors';
@@ -20,16 +20,9 @@ function buildSupplierFilters(query: SupplierQueryDto): SQL[] {
   return conditions;
 }
 
-const tryAsync = <A>(action: string, run: () => Promise<A>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new SuppliersInfrastructureError({
-        action,
-        cause,
-        messageKey: 'suppliers.repositoryFailed',
-      }),
-  });
+const tryAsync = makeTryAsync((action, cause) =>
+  new SuppliersInfrastructureError({ action, cause, messageKey: 'suppliers.repositoryFailed' }),
+);
 
 export class SuppliersRepository extends Effect.Service<SuppliersRepository>()(
   '@librestock/effect/SuppliersRepository',
