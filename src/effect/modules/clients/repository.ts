@@ -1,4 +1,3 @@
-import { Effect } from 'effect';
 import { eq, or, ilike, and, sql, type SQL } from 'drizzle-orm';
 import type { ClientQueryDto } from '@librestock/types/clients';
 import {
@@ -6,20 +5,14 @@ import {
   toRepositoryPaginatedResult,
   type RepositoryPaginatedResult,
 } from '../../platform/drizzle-query.utils';
+import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { clients } from '../../platform/db/schema';
 import { ClientsInfrastructureError } from './clients.errors';
 
-const tryAsync = <A>(action: string, run: () => Promise<A>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new ClientsInfrastructureError({
-        action,
-        cause,
-        messageKey: 'clients.repositoryFailed',
-      }),
-  });
+const tryAsync = makeTryAsync((action, cause) =>
+  new ClientsInfrastructureError({ action, cause, messageKey: 'clients.repositoryFailed' }),
+);
 
 function buildClientFilters(query: ClientQueryDto): SQL[] {
   const conditions: SQL[] = [];
