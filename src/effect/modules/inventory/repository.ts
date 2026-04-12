@@ -1,4 +1,3 @@
-import { Effect } from 'effect';
 import { eq, and, ilike, or, gte, lte, desc, sql, isNull, type SQL } from 'drizzle-orm';
 import type { InventoryQueryDto } from '@librestock/types/inventory';
 import { InventorySortField } from '@librestock/types/inventory';
@@ -7,20 +6,14 @@ import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
 } from '../../platform/drizzle-query.utils';
+import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
 import { inventory, products, locations, areas } from '../../platform/db/schema';
 import { InventoryInfrastructureError } from './inventory.errors';
 
-const tryAsync = <A>(action: string, run: () => Promise<A>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new InventoryInfrastructureError({
-        action,
-        cause,
-        messageKey: 'inventory.infrastructureFailed',
-      }),
-  });
+const tryAsync = makeTryAsync((action, cause) =>
+  new InventoryInfrastructureError({ action, cause, messageKey: 'inventory.infrastructureFailed' }),
+);
 
 function buildInventoryFilters(query: InventoryQueryDto): SQL[] {
   const conditions: SQL[] = [];
