@@ -6,8 +6,8 @@ import type {
   LocationResponseDto,
   PaginatedLocationsResponseDto,
 } from '@librestock/types/locations';
+import { fromNullOr } from '../../platform/from-null-or';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
-import type { locations } from '../../platform/db/schema';
 import { toLocationResponseDto } from './locations.utils';
 import {
   LocationNotFound,
@@ -15,26 +15,15 @@ import {
 } from './locations.errors';
 import { LocationsRepository } from './repository';
 
-type Location = typeof locations.$inferSelect;
-
 export class LocationsService extends Effect.Service<LocationsService>()(
   '@librestock/effect/LocationsService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* LocationsRepository;
 
-      const getLocationOrFail = (
-        id: string,
-      ): Effect.Effect<Location, LocationNotFound | LocationsInfrastructureError> =>
-        Effect.flatMap(repository.findById(id), (location) =>
-          location
-            ? Effect.succeed(location)
-            : Effect.fail(
-                new LocationNotFound({
-                  id,
-                  messageKey: 'locations.notFound',
-                }),
-              ),
+      const getLocationOrFail = (id: string) =>
+        fromNullOr(repository.findById(id), () =>
+          new LocationNotFound({ id, messageKey: 'locations.notFound' }),
         );
 
       const findAllPaginated = (
