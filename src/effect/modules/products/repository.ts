@@ -1,4 +1,3 @@
-import { Effect } from 'effect';
 import type { Schema } from 'effect';
 import { eq, and, ilike, or, gte, lte, isNull, isNotNull, inArray, sql, type SQL } from 'drizzle-orm';
 import { ProductSortField } from '@librestock/types/products';
@@ -7,10 +6,15 @@ import {
   toRepositoryPaginatedResult,
 } from '../../platform/drizzle-query.utils';
 import { buildOrderBy } from '../../platform/drizzle-sort.utils';
+import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
 import { products, categories, suppliers } from '../../platform/db/schema';
 import type { ProductQuerySchema } from './products.schema';
 import { ProductsInfrastructureError } from './products.errors';
+
+const tryAsync = makeTryAsync((action, cause) =>
+  new ProductsInfrastructureError({ action, cause, messageKey: 'products.repositoryFailed' }),
+);
 
 const productSortColumns = {
   [ProductSortField.NAME]: products.name,
