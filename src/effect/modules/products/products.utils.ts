@@ -55,11 +55,6 @@ export function toProductResponseDto(product: Product): ProductResponseDto {
   return dto;
 }
 
-export function toProductResponseDtoList(
-  products: Product[],
-): ProductResponseDto[] {
-  return products.map(toProductResponseDto);
-}
 
 export function toCreateProductEntity(
   dto: CreateProductDto,
