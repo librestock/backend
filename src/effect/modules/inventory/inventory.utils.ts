@@ -1,7 +1,5 @@
-import { Effect } from 'effect';
 import type { InventoryResponseDto } from '@librestock/types/inventory';
 import type { inventory } from '../../platform/db/schema';
-import { InventoryInfrastructureError } from './inventory.errors';
 
 type InventoryRow = typeof inventory.$inferSelect;
 type Inventory = InventoryRow & {
@@ -9,17 +7,6 @@ type Inventory = InventoryRow & {
   location?: { id: string; name: string; type: string } | null;
   area?: { id: string; name: string; code: string } | null;
 };
-
-export const inventoryTryAsync = <A>(action: string, run: () => Promise<A>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new InventoryInfrastructureError({
-        action,
-        cause,
-        messageKey: 'inventory.infrastructureFailed',
-      }),
-  });
 
 export function toInventoryResponseDto(
   inventory: Inventory,
