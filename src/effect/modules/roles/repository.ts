@@ -1,19 +1,12 @@
-import { Effect } from 'effect';
 import { eq, asc } from 'drizzle-orm';
+import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { roles, rolePermissions } from '../../platform/db/schema';
 import { RolesInfrastructureError } from './roles.errors';
 
-const tryAsync = <A>(action: string, run: () => Promise<A>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      new RolesInfrastructureError({
-        action,
-        cause,
-        messageKey: 'roles.repositoryFailed',
-      }),
-  });
+const tryAsync = makeTryAsync((action, cause) =>
+  new RolesInfrastructureError({ action, cause, messageKey: 'roles.repositoryFailed' }),
+);
 
 export class RolesRepository extends Effect.Service<RolesRepository>()(
   '@librestock/effect/RolesRepository',
