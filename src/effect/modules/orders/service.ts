@@ -19,7 +19,7 @@ import {
   OrderNotFound,
   type OrdersInfrastructureError,
 } from './orders.errors';
-import { OrderUtils, type Order } from './orders.utils';
+import { generateOrderPrefix, toOrderResponseDto, type Order } from './orders.utils';
 import { getOrderState } from './state/order-state';
 import { OrderItemsRepository, OrdersRepository } from './repository';
 
@@ -73,7 +73,7 @@ export class OrdersService extends Effect.Service<OrdersService>()(
         Effect.map(
           ordersRepository.getNextOrderNumberSequence(),
           (sequence) =>
-            `${OrderUtils.generateOrderPrefix(new Date())}-${String(sequence).padStart(5, '0')}`,
+            `${generateOrderPrefix(new Date())}-${String(sequence).padStart(5, '0')}`,
         );
 
       const findAllPaginated = (query: OrderQueryDto) =>
@@ -81,13 +81,13 @@ export class OrdersService extends Effect.Service<OrdersService>()(
           ordersRepository.findAllPaginated(query),
           (result) =>
             toPaginatedResponse(result, (order) =>
-              OrderUtils.toOrderResponseDto(order),
+              toOrderResponseDto(order),
             ),
         ).pipe(Effect.withSpan('OrdersService.findAllPaginated'));
 
       const findOne = (id: string) =>
         Effect.map(getOrderOrFail(id), (order) =>
-          OrderUtils.toOrderResponseDto(order),
+          toOrderResponseDto(order),
         ).pipe(Effect.withSpan('OrdersService.findOne', { attributes: { id } }));
 
       const create = (dto: CreateOrderDto, userId: string) =>
@@ -146,7 +146,7 @@ export class OrdersService extends Effect.Service<OrdersService>()(
           yield* orderItemsRepository.createMany(items);
 
           const orderWithRelations = yield* getOrderOrFail(order.id);
-          return OrderUtils.toOrderResponseDto(orderWithRelations);
+          return toOrderResponseDto(orderWithRelations);
         }).pipe(Effect.withSpan('OrdersService.create', { attributes: { clientId: dto.client_id } }));
 
       const update = (id: string, dto: UpdateOrderDto) =>
@@ -154,7 +154,7 @@ export class OrdersService extends Effect.Service<OrdersService>()(
           const order = yield* getOrderOrFail(id);
 
           if (Object.keys(dto).length === 0) {
-            return OrderUtils.toOrderResponseDto(order);
+            return toOrderResponseDto(order);
           }
 
           const updateData: Partial<Order> = {};
@@ -177,7 +177,7 @@ export class OrdersService extends Effect.Service<OrdersService>()(
           yield* ordersRepository.update(id, updateData);
 
           const updated = yield* getOrderOrFail(id);
-          return OrderUtils.toOrderResponseDto(updated);
+          return toOrderResponseDto(updated);
         }).pipe(Effect.withSpan('OrdersService.update', { attributes: { id } }));
 
       const updateStatus = (id: string, dto: UpdateOrderStatusDto) =>
@@ -195,7 +195,7 @@ export class OrdersService extends Effect.Service<OrdersService>()(
           yield* ordersRepository.update(id, updateData);
 
           const updated = yield* getOrderOrFail(id);
-          return OrderUtils.toOrderResponseDto(updated);
+          return toOrderResponseDto(updated);
         }).pipe(Effect.withSpan('OrdersService.updateStatus', { attributes: { id } }));
 
       const remove = (id: string) =>
