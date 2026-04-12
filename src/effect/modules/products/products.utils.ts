@@ -1,7 +1,5 @@
-import { Effect } from 'effect';
 import type { CreateProductDto, ProductResponseDto } from '@librestock/types/products';
 import type { products } from '../../platform/db/schema';
-import { ProductsInfrastructureError } from './products.errors';
 
 export type ProductRow = typeof products.$inferSelect;
 export type ProductInsert = typeof products.$inferInsert;
@@ -89,17 +87,3 @@ export function toCreateProductEntity(
   };
 }
 
-export function productTryAsync<A>(
-  action: string,
-  execute: () => Promise<A>,
-): Effect.Effect<A, ProductsInfrastructureError> {
-  return Effect.tryPromise({
-    try: execute,
-    catch: (cause) =>
-      new ProductsInfrastructureError({
-        action,
-        cause,
-        messageKey: 'products.infrastructureFailed',
-      }),
-  });
-}
