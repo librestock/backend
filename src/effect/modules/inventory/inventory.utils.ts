@@ -2,7 +2,7 @@ import type { InventoryResponseDto } from '@librestock/types/inventory';
 import type { inventory } from '../../platform/db/schema';
 
 type InventoryRow = typeof inventory.$inferSelect;
-type Inventory = InventoryRow & {
+export type Inventory = InventoryRow & {
   product?: { id: string; sku: string; name: string; unit: string | null } | null;
   location?: { id: string; name: string; type: string } | null;
   area?: { id: string; name: string; code: string } | null;

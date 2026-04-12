@@ -7,7 +7,6 @@ import { AreaNotFound, AreasInfrastructureError } from '../areas/areas.errors';
 import { AreasService } from '../areas/service';
 import { LocationsService } from '../locations/service';
 import { ProductsService } from '../products/service';
-import type { inventory } from '../../platform/db/schema';
 import {
   InvalidInventoryArea,
   InvalidInventoryLocation,
@@ -29,14 +28,8 @@ import type {
 import { InventoryRepository } from './repository';
 import {
   toInventoryResponseDto,
+  type Inventory,
 } from './inventory.utils';
-
-type InventoryRow = typeof inventory.$inferSelect;
-type Inventory = InventoryRow & {
-  product?: { id: string; sku: string; name: string; unit: string | null } | null;
-  location?: { id: string; name: string; type: string } | null;
-  area?: { id: string; name: string; code: string } | null;
-};
 
 type InventoryQueryDto = Schema.Schema.Type<typeof InventoryQuerySchema>;
 type CreateInventoryDto = Schema.Schema.Type<typeof CreateInventorySchema>;
