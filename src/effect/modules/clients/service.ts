@@ -1,11 +1,11 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
 import type { ClientResponseDto, ClientQueryDto } from '@librestock/types/clients';
+import { fromNullOr } from '../../platform/from-null-or';
 import {
   type PaginationMeta,
   toPaginatedResponse,
 } from '../../platform/pagination.utils';
-import type { clients } from '../../platform/db/schema';
 import type {
   CreateClientSchema,
   UpdateClientSchema,
@@ -18,8 +18,6 @@ import {
 } from './clients.errors';
 import { ClientsRepository } from './repository';
 
-type Client = typeof clients.$inferSelect;
-
 type CreateClientDto = Schema.Schema.Type<typeof CreateClientSchema>;
 type UpdateClientDto = Schema.Schema.Type<typeof UpdateClientSchema>;
 
@@ -29,18 +27,9 @@ export class ClientsService extends Effect.Service<ClientsService>()(
     effect: Effect.gen(function* () {
       const repository = yield* ClientsRepository;
 
-      const getClientOrFail = (
-        id: string,
-      ): Effect.Effect<Client, ClientNotFound | ClientsInfrastructureError> =>
-        Effect.flatMap(repository.findById(id), (client) =>
-          client
-            ? Effect.succeed(client)
-            : Effect.fail(
-                new ClientNotFound({
-                  id,
-                  messageKey: 'clients.notFound',
-                }),
-              ),
+      const getClientOrFail = (id: string) =>
+        fromNullOr(repository.findById(id), () =>
+          new ClientNotFound({ id, messageKey: 'clients.notFound' }),
         );
 
       const findAllPaginated = (
