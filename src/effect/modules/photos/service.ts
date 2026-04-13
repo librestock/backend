@@ -30,15 +30,16 @@ const MIME_EXT_MAP: Record<string, string> = {
   'image/gif': '.gif',
 };
 
-const MAGIC_SIGNATURES: Record<string, { bytes: number[]; offset: number }[]> = {
-  'image/jpeg': [{ bytes: [0xff, 0xd8, 0xff], offset: 0 }],
-  'image/png': [{ bytes: [0x89, 0x50, 0x4e, 0x47], offset: 0 }],
-  'image/gif': [{ bytes: [0x47, 0x49, 0x46, 0x38], offset: 0 }],
-  'image/webp': [
-    { bytes: [0x52, 0x49, 0x46, 0x46], offset: 0 },
-    { bytes: [0x57, 0x45, 0x42, 0x50], offset: 8 },
-  ],
-};
+const MAGIC_SIGNATURES: Record<string, { bytes: number[]; offset: number }[]> =
+  {
+    'image/jpeg': [{ bytes: [0xff, 0xd8, 0xff], offset: 0 }],
+    'image/png': [{ bytes: [0x89, 0x50, 0x4e, 0x47], offset: 0 }],
+    'image/gif': [{ bytes: [0x47, 0x49, 0x46, 0x38], offset: 0 }],
+    'image/webp': [
+      { bytes: [0x52, 0x49, 0x46, 0x46], offset: 0 },
+      { bytes: [0x57, 0x45, 0x42, 0x50], offset: 8 },
+    ],
+  };
 
 function matchesMagicBytes(buffer: Buffer, declaredMime: string): boolean {
   const signatures = MAGIC_SIGNATURES[declaredMime];
@@ -83,8 +84,9 @@ export class PhotosService extends Effect.Service<PhotosService>()(
         MIME_EXT_MAP[mimetype] ?? '.bin';
 
       const findPhotoOrFail = (id: string) =>
-        fromNullOr(repository.findById(id), () =>
-          new PhotoNotFound({ id, messageKey: 'photos.notFound' }),
+        fromNullOr(
+          repository.findById(id),
+          () => new PhotoNotFound({ id, messageKey: 'photos.notFound' }),
         );
 
       const uploadPhoto = (

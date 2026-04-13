@@ -72,7 +72,7 @@ bun run build            # Production build
 bun run start:prod       # Run production build
 bun run test             # Unit tests (Jest)
 bun run test:e2e         # E2E tests
-bun run lint             # ESLint
+bun run lint             # Oxlint
 bun run type-check       # TypeScript check
 bun run seed             # Seed database
 ```

@@ -1,6 +1,7 @@
 import {
   HttpApp,
   HttpApiBuilder,
+  HttpApiSwagger,
   HttpRouter,
   HttpServerResponse,
 } from '@effect/platform';
@@ -88,28 +89,21 @@ const bodyLimitMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>) =>
   });
 
 // ---------------------------------------------------------------------------
-// HttpApiBuilder layer for the health group
+// HttpApiBuilder layer for the typed API groups
 //
-// The health routes are declared via HttpApiGroup / HttpApiEndpoint in
-// src/effect/http/api.ts and implemented in HealthApiLive. The built
-// HttpApp.Default is mounted below so it coexists with the legacy HttpRouter.
+// Routes declared via HttpApiGroup / HttpApiEndpoint in src/effect/http/api.ts
+// and implemented by *ApiLive layers are compiled into a single HttpApp here.
+// HttpApiSwagger registers a GET /docs route on the same builder router,
+// serving an OpenAPI spec derived from AppApi.
 // ---------------------------------------------------------------------------
 
-const healthApiLayer = Layer.provide(
-  HttpApiBuilder.api(AppApi),
+const apiLayer = Layer.provide(HttpApiBuilder.api(AppApi), [
   HealthApiLive,
-);
+  HttpApiSwagger.layer({ path: '/docs' }),
+]);
 
-/**
- * The built health HttpApp.
- *
- * This Effect is run once at startup (inside buildHttpApp below) with
- * HealthService in scope. The result is an HttpApp whose handlers are
- * pure Effects with no external requirements (HealthService closes over
- * DrizzleDatabase and BetterAuth at layer-build time).
- */
-const healthBuilderApp = HttpApiBuilder.httpApp.pipe(
-  Effect.provide(healthApiLayer),
+const apiBuilderApp = HttpApiBuilder.httpApp.pipe(
+  Effect.provide(apiLayer),
   Effect.provide(HttpApiBuilder.Router.Live),
   Effect.provide(HttpApiBuilder.Middleware.layer),
 );
@@ -122,13 +116,16 @@ const healthBuilderApp = HttpApiBuilder.httpApp.pipe(
 // ---------------------------------------------------------------------------
 
 export const buildHttpApp = Effect.gen(function* () {
-  // Build the health API HttpApp once. HealthService is in scope from the
-  // applicationLayer provided in main.ts.
-  const healthApp = yield* healthBuilderApp;
+  // Build the HttpApiBuilder app once. HealthService is in scope from the
+  // applicationLayer provided in main.ts. The resulting HttpApp serves both
+  // the typed API routes and the Swagger UI at /docs.
+  const builderApp = yield* apiBuilderApp;
 
   const appRouter = HttpRouter.empty.pipe(
     // Health routes handled by HttpApiBuilder (typed, schema-validated)
-    HttpRouter.mountApp('/health-check', healthApp, { includePrefix: true }),
+    HttpRouter.mountApp('/health-check', builderApp, { includePrefix: true }),
+    // Swagger UI served from the same HttpApi builder app
+    HttpRouter.mountApp('/docs', builderApp, { includePrefix: true }),
     // Legacy routes remain on HttpRouter until migrated
     HttpRouter.mountApp('/api/auth', HttpApp.fromWebHandler(auth.handler), {
       includePrefix: true,
