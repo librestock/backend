@@ -1,5 +1,6 @@
 import { Effect } from 'effect';
 import { requireSession } from '../../platform/session';
+import { makeServiceTracer } from '../../platform/service-tracer';
 import { RolesService } from '../roles/service';
 import {
   toCurrentUserResponse,
@@ -12,27 +13,28 @@ export class AuthService extends Effect.Service<AuthService>()(
   {
     effect: Effect.gen(function* () {
       const rolesService = yield* RolesService;
+      const trace = makeServiceTracer('AuthService');
 
-      const me = () =>
+      const me = trace.traced('me', () =>
         Effect.gen(function* () {
           const session = yield* requireSession;
           const userPermissions = yield* rolesService.getPermissionsForUser(
             session.user.id,
           );
           return toCurrentUserResponse(session, userPermissions);
-        }).pipe(Effect.withSpan('AuthService.me'));
+        }));
 
-      const profile = () =>
+      const profile = trace.traced('profile', () =>
         Effect.gen(function* () {
           const session = yield* requireSession;
           return toProfileResponse(session);
-        }).pipe(Effect.withSpan('AuthService.profile'));
+        }));
 
-      const sessionClaims = () =>
+      const sessionClaims = trace.traced('sessionClaims', () =>
         Effect.gen(function* () {
           const session = yield* requireSession;
           return toSessionClaimsResponse(session);
-        }).pipe(Effect.withSpan('AuthService.sessionClaims'));
+        }));
 
       return {
         me,
