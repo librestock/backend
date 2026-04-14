@@ -52,7 +52,8 @@ export const auditLogsRouter = HttpRouter.empty.pipe(
     '/',
     Effect.gen(function* () {
       yield* requirePermission(Resource.AUDIT_LOGS, Permission.READ);
-      const query = yield* HttpServerRequest.schemaSearchParams(AuditLogQuerySchema);
+      const query =
+        yield* HttpServerRequest.schemaSearchParams(AuditLogQuerySchema);
       const auditLogsService = yield* AuditLogsService;
       return yield* respondJson(auditLogsService.query(query));
     }),
@@ -61,7 +62,9 @@ export const auditLogsRouter = HttpRouter.empty.pipe(
     '/:id',
     Effect.gen(function* () {
       yield* requirePermission(Resource.AUDIT_LOGS, Permission.READ);
-      const { id } = yield* HttpRouter.schemaPathParams(AuditLogPathParamsSchema);
+      const { id } = yield* HttpRouter.schemaPathParams(
+        AuditLogPathParamsSchema,
+      );
       const auditLogsService = yield* AuditLogsService;
       return yield* respondJson(auditLogsService.findById(id));
     }),

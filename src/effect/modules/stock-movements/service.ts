@@ -1,15 +1,11 @@
-import { Effect } from 'effect';
-import type { Schema } from 'effect';
 import type { StockMovementQueryDto } from '@librestock/types/stock-movements';
+import type { Schema } from 'effect';
+import { Effect } from 'effect';
 import { fromNullOr } from '../../platform/from-null-or';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
-import { ProductsService } from '../products/service';
 import { LocationsService } from '../locations/service';
-import type { CreateStockMovementSchema } from './stock-movements.schema';
-import {
-  type StockMovementWithRelations,
-  toStockMovementResponseDto,
-} from './stock-movements.utils';
+import { ProductsService } from '../products/service';
+import { StockMovementsRepository } from './repository';
 import {
   InvalidDestinationLocation,
   InvalidSourceLocation,
@@ -17,11 +13,13 @@ import {
   StockMovementLocationNotFound,
   StockMovementNotFound,
   StockMovementProductNotFound,
-  type StockMovementsInfrastructureError,
 } from './stock-movements.errors';
-import { StockMovementsRepository } from './repository';
+import type { CreateStockMovementSchema } from './stock-movements.schema';
+import { toStockMovementResponseDto } from './stock-movements.utils';
 
-type CreateStockMovementDto = Schema.Schema.Type<typeof CreateStockMovementSchema>;
+type CreateStockMovementDto = Schema.Schema.Type<
+  typeof CreateStockMovementSchema
+>;
 
 export class StockMovementsService extends Effect.Service<StockMovementsService>()(
   '@librestock/effect/StockMovementsService',
@@ -32,19 +30,25 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
       const locationsService = yield* LocationsService;
 
       const getMovementOrFail = (id: string) =>
-        fromNullOr(repository.findById(id), () =>
-          new StockMovementNotFound({ id, messageKey: 'stockMovements.notFound' }),
+        fromNullOr(
+          repository.findById(id),
+          () =>
+            new StockMovementNotFound({
+              id,
+              messageKey: 'stockMovements.notFound',
+            }),
         );
 
       const findAllPaginated = (query: StockMovementQueryDto) =>
-        Effect.map(
-          repository.findAllPaginated(query),
-          (result) => toPaginatedResponse(result, toStockMovementResponseDto),
+        Effect.map(repository.findAllPaginated(query), (result) =>
+          toPaginatedResponse(result, toStockMovementResponseDto),
         ).pipe(Effect.withSpan('StockMovementsService.findAllPaginated'));
 
       const findOne = (id: string) =>
         Effect.map(getMovementOrFail(id), toStockMovementResponseDto).pipe(
-          Effect.withSpan('StockMovementsService.findOne', { attributes: { id } }),
+          Effect.withSpan('StockMovementsService.findOne', {
+            attributes: { id },
+          }),
         );
 
       const findByProduct = (productId: string) =>
@@ -61,7 +65,11 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
 
           const stockMovements = yield* repository.findByProductId(productId);
           return stockMovements.map(toStockMovementResponseDto);
-        }).pipe(Effect.withSpan('StockMovementsService.findByProduct', { attributes: { productId } }));
+        }).pipe(
+          Effect.withSpan('StockMovementsService.findByProduct', {
+            attributes: { productId },
+          }),
+        );
 
       const findByLocation = (locationId: string) =>
         Effect.gen(function* () {
@@ -77,11 +85,17 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
 
           const stockMovements = yield* repository.findByLocationId(locationId);
           return stockMovements.map(toStockMovementResponseDto);
-        }).pipe(Effect.withSpan('StockMovementsService.findByLocation', { attributes: { locationId } }));
+        }).pipe(
+          Effect.withSpan('StockMovementsService.findByLocation', {
+            attributes: { locationId },
+          }),
+        );
 
       const create = (dto: CreateStockMovementDto, userId: string) =>
         Effect.gen(function* () {
-          const productExists = yield* productsService.existsById(dto.product_id);
+          const productExists = yield* productsService.existsById(
+            dto.product_id,
+          );
           if (!productExists) {
             return yield* Effect.fail(
               new InvalidStockMovementProduct({
@@ -92,7 +106,9 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
           }
 
           if (dto.from_location_id) {
-            const fromLocationExists = yield* locationsService.existsById(dto.from_location_id);
+            const fromLocationExists = yield* locationsService.existsById(
+              dto.from_location_id,
+            );
             if (!fromLocationExists) {
               return yield* Effect.fail(
                 new InvalidSourceLocation({
@@ -104,7 +120,9 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
           }
 
           if (dto.to_location_id) {
-            const toLocationExists = yield* locationsService.existsById(dto.to_location_id);
+            const toLocationExists = yield* locationsService.existsById(
+              dto.to_location_id,
+            );
             if (!toLocationExists) {
               return yield* Effect.fail(
                 new InvalidDestinationLocation({
@@ -128,9 +146,15 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
             user_id: userId,
           });
 
-          const stockMovementWithRelations = yield* getMovementOrFail(stockMovement.id);
+          const stockMovementWithRelations = yield* getMovementOrFail(
+            stockMovement.id,
+          );
           return toStockMovementResponseDto(stockMovementWithRelations);
-        }).pipe(Effect.withSpan('StockMovementsService.create', { attributes: { productId: dto.product_id } }));
+        }).pipe(
+          Effect.withSpan('StockMovementsService.create', {
+            attributes: { productId: dto.product_id },
+          }),
+        );
 
       return {
         findAllPaginated,
@@ -140,6 +164,10 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
         create,
       };
     }),
-    dependencies: [StockMovementsRepository.Default, ProductsService.Default, LocationsService.Default],
+    dependencies: [
+      StockMovementsRepository.Default,
+      ProductsService.Default,
+      LocationsService.Default,
+    ],
   },
 ) {}

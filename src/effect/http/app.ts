@@ -97,15 +97,17 @@ const bodyLimitMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>) =>
 // serving an OpenAPI spec derived from AppApi.
 // ---------------------------------------------------------------------------
 
-const apiLayer = Layer.provide(HttpApiBuilder.api(AppApi), [
-  HealthApiLive,
-  HttpApiSwagger.layer({ path: '/docs' }),
-]);
+const apiLayer = Layer.provide(HttpApiBuilder.api(AppApi), [HealthApiLive]);
 
 const apiBuilderApp = HttpApiBuilder.httpApp.pipe(
-  Effect.provide(apiLayer),
-  Effect.provide(HttpApiBuilder.Router.Live),
-  Effect.provide(HttpApiBuilder.Middleware.layer),
+  Effect.provide(
+    Layer.mergeAll(
+      apiLayer,
+      HttpApiSwagger.layer({ path: '/docs' }).pipe(Layer.provide(apiLayer)),
+      HttpApiBuilder.Router.Live,
+      HttpApiBuilder.Middleware.layer,
+    ),
+  ),
 );
 
 // ---------------------------------------------------------------------------

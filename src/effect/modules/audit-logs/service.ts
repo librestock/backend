@@ -36,8 +36,10 @@ export class AuditLogsService extends Effect.Service<AuditLogsService>()(
 
       const getAuditLogOrFail = (id: string) =>
         Effect.map(
-          fromNullOr(repository.findById(id), () =>
-            new AuditLogNotFound({ id, messageKey: 'auditLogs.notFound' }),
+          fromNullOr(
+            repository.findById(id),
+            () =>
+              new AuditLogNotFound({ id, messageKey: 'auditLogs.notFound' }),
           ),
           toAuditLogResponseDto,
         );
@@ -64,14 +66,22 @@ export class AuditLogsService extends Effect.Service<AuditLogsService>()(
         Effect.map(
           repository.findByEntityId(entityType, entityId),
           (auditLogs) => auditLogs.map(toAuditLogResponseDto),
-        ).pipe(Effect.withSpan('AuditLogsService.getEntityHistory', { attributes: { entityId } }));
+        ).pipe(
+          Effect.withSpan('AuditLogsService.getEntityHistory', {
+            attributes: { entityId },
+          }),
+        );
 
       const getUserHistory = (
         userId: string,
       ): Effect.Effect<AuditLogResponseDto[], AuditLogsInfrastructureError> =>
         Effect.map(repository.findByUserId(userId), (auditLogs) =>
           auditLogs.map(toAuditLogResponseDto),
-        ).pipe(Effect.withSpan('AuditLogsService.getUserHistory', { attributes: { userId } }));
+        ).pipe(
+          Effect.withSpan('AuditLogsService.getUserHistory', {
+            attributes: { userId },
+          }),
+        );
 
       return { query, findById, getEntityHistory, getUserHistory };
     }),

@@ -3,9 +3,9 @@ import type { stockMovements } from '../../platform/db/schema';
 
 type StockMovementRow = typeof stockMovements.$inferSelect;
 export type StockMovementWithRelations = StockMovementRow & {
-  product?: { id: string; name: string; sku: string } | null;
-  fromLocation?: { id: string; name: string } | null;
-  toLocation?: { id: string; name: string } | null;
+  product: { id: string; name: string; sku: string } | null;
+  fromLocation: { id: string; name: string } | null;
+  toLocation: { id: string; name: string } | null;
 };
 
 export function toStockMovementResponseDto(

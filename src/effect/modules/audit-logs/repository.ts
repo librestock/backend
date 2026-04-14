@@ -24,8 +24,13 @@ export interface AuditLogQueryOptions {
   readonly limit?: number;
 }
 
-const tryAsync = makeTryAsync((action, cause) =>
-  new AuditLogsInfrastructureError({ action, cause, messageKey: 'auditLogs.repositoryFailed' }),
+const tryAsync = makeTryAsync(
+  (action, cause) =>
+    new AuditLogsInfrastructureError({
+      action,
+      cause,
+      messageKey: 'auditLogs.repositoryFailed',
+    }),
 );
 
 function buildAuditFilters(options: AuditLogQueryOptions): SQL[] {
