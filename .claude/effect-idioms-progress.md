@@ -66,4 +66,12 @@ Source of truth for the ralph-loop task: extract Effect-TS idioms from the vendo
 
 ## Iteration log
 
-- **Iteration 1**: extracted idioms; audited code; scoped punch list; landed `Effect.merge` refactor in `health/service.ts` (#3). Next target (#4): service identifier hierarchy rename, or (#2): declare platform layer deps on HealthService/BrandingService.
+- **Iteration 1**: extracted idioms; audited code; scoped punch list; landed `Effect.merge` refactor in `health/service.ts` (#3).
+- **Iteration 2**: (#4) namespaced all service identifiers by module (`@librestock/effect/<module>/Name`); (#6) photos/service.ts: replaced inline `catchAll(e => cleanup, refail)` with `Effect.tapError + Effect.ignore`, and `catchAll(e => Effect.fail(new X))` with `Effect.mapError`. Investigated remaining `catchAll*` sites — all legitimate HTTP-boundary `catchAllCause(respondCause)` or fire-and-forget audit log-and-swallow. Rejected declaring `drizzleLayer`/`betterAuthLayer` as service deps — in-code comment warns this creates duplicate connections.
+- **Iteration 3**: collapsed existence-guard patterns to `Effect.filterOrFail(Boolean, () => err)` across `products`, `inventory`, and `stock-movements` services (was `yield* check; if (!check) yield* Effect.fail(...)` or `Effect.flatMap(check, e => e ? Effect.void : Effect.fail(...))`).
+
+### Remaining punch list
+1. Routers → HttpApi migration (large, risky; Health is the template).
+2. `accessors: true` on services — would remove `yield* SvcName; svc.method(...)` → `SvcName.method(...)` boilerplate in callers. Worth a PR.
+3. `Schema.TaggedError` migration — coupled with (1).
+4. Pre-existing TS warnings in `suppliers/service.ts` (unused imports) and `fulfillment/service.spec.ts` / `inventory/service.integration.spec.ts` (discriminated union narrowing). Not in scope.
