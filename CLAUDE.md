@@ -30,6 +30,25 @@
 - `AuditLogWriter` is fire-and-forget. Do not build correctness around audit writes succeeding synchronously.
 - Shared request/response contracts should come from `@librestock/types`, not backend-local DTO files.
 
+## Effect idioms
+
+Preferred operators — don't reintroduce the long forms during refactors:
+
+- **`Effect.merge(e)`** over `Effect.catchAll(e, (err) => Effect.succeed(err))` — folds error channel into success.
+- **`Effect.filterOrFail(predicate, () => err)`** over `yield* check; if (!check) yield* Effect.fail(err)` or `Effect.flatMap(check, (v) => v ? Effect.void : Effect.fail(err))`. Use `Boolean` as the predicate for raw boolean checks.
+- **`Effect.mapError((e) => new XError(e))`** over `Effect.catchAll((e) => Effect.fail(new XError(e)))`.
+- **`Effect.tapError(cleanup)` + `Effect.ignore(...)`** over inline `catchAll` that runs side-effecting cleanup and then refails with the original error.
+- **`Effect.void`** over `Effect.succeed(undefined)`.
+- **`makeTryAsync`** (from `src/effect/platform/try-async.ts`) for promise-wrapping paths that map every failure to the module's infrastructure error. Raw `Effect.tryPromise` is still correct when each call uses a **distinct hand-typed `MessageKey`** (see Structured Logging below) — collapsing those onto a dynamic-key helper would break Datadog indexing.
+
+### Services
+
+- `DrizzleDatabase` and `BetterAuth` are **not** declared as `dependencies:` on services. They are provided once via `platformLayer` in `main.ts`. Putting them on individual service defaults would create duplicate connection pools. (The constraint is also noted inline in `src/effect/modules/health/service.ts`.)
+
+### Tracing — off-limits
+
+`src/effect/platform/service-tracer.ts` (`makeServiceTracer`) is the project's chosen tracing abstraction. It overlaps superficially with `Effect.fn("span")(...)` but captures outcome classification (not_found vs validation_error vs failure) and request-context attributes that `Effect.fn` alone doesn't. **Do not migrate service methods to `Effect.fn` or replace this module without explicit direction** — it was recently rebuilt (`d6b68967`, `3872a732`).
+
 ## Structured Logging
 
 - All log message arguments must use properties defined in `LogProperties` (`src/effect/platform/messages.ts`). Do **not** pass arbitrary key-value pairs — every field must be known so it can be indexed by Datadog / OpenSearch.
