@@ -138,37 +138,36 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
             }
 
             // Decrement inventory first — fail fast if stock is unavailable
-            const decremented = yield* inventoryRepository
+            yield* inventoryRepository
               .adjustQuantity(p.inventoryId, -p.quantity)
               .pipe(
                 Effect.mapError(wrapInfrastructureError('decrement inventory')),
+                Effect.filterOrFail(
+                  (rows) => rows !== 0,
+                  () =>
+                    new FulfillmentPickFailed({
+                      orderItemId: p.orderItemId,
+                      messageKey: 'fulfillment.insufficientInventory',
+                    }),
+                ),
               );
 
-            if (decremented === 0) {
-              return yield* Effect.fail(
-                new FulfillmentPickFailed({
-                  orderItemId: p.orderItemId,
-                  messageKey: 'fulfillment.insufficientInventory',
-                }),
-              );
-            }
-
-            const updated = yield* orderItemsRepository
+            // Atomic increment — returns 0 rows if it would over-pick
+            yield* orderItemsRepository
               .incrementPicked(p.orderItemId, p.quantity)
               .pipe(
                 Effect.mapError(
                   wrapInfrastructureError('increment quantity_picked'),
                 ),
+                Effect.filterOrFail(
+                  (rows) => rows !== 0,
+                  () =>
+                    new FulfillmentPickFailed({
+                      orderItemId: p.orderItemId,
+                      messageKey: 'fulfillment.overPick',
+                    }),
+                ),
               );
-
-            if (updated === 0) {
-              return yield* Effect.fail(
-                new FulfillmentPickFailed({
-                  orderItemId: p.orderItemId,
-                  messageKey: 'fulfillment.overPick',
-                }),
-              );
-            }
 
             const inv = yield* inventoryRepository
               .findById(p.inventoryId)
