@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { Permission, Resource } from '@librestock/types/auth';
 import type { CreateRoleDto, UpdateRoleDto } from '@librestock/types/roles';
 import { makeGetOrFail } from '../../platform/from-null-or';
+import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { userRoles, roles, rolePermissions } from '../../platform/db/schema';
 import type { UserPermissions } from '../../platform/permission-provider';
@@ -101,43 +102,44 @@ export class RolesService extends Effect.Service<RolesService>()(
         (id) => new RoleNotFound({ id, messageKey: 'roles.notFound' }),
       );
 
+      const tryAsync = makeTryAsync(
+        (action, cause) =>
+          new RolesInfrastructureError({
+            action,
+            cause,
+            messageKey: 'roles.loadPermissionsFailed',
+          }),
+      );
+
       const fetchPermissionsFromDb = (
         userId: string,
       ): Effect.Effect<UserPermissions, RolesInfrastructureError> =>
-        Effect.tryPromise({
-          try: async () => {
-            const rows = await db
-              .select({
-                role_name: roles.name,
-                resource: rolePermissions.resource,
-                permission: rolePermissions.permission,
-              })
-              .from(userRoles)
-              .innerJoin(roles, eq(roles.id, userRoles.role_id))
-              .innerJoin(rolePermissions, eq(rolePermissions.role_id, userRoles.role_id))
-              .where(eq(userRoles.user_id, userId));
+        tryAsync('load user permissions', async () => {
+          const rows = await db
+            .select({
+              role_name: roles.name,
+              resource: rolePermissions.resource,
+              permission: rolePermissions.permission,
+            })
+            .from(userRoles)
+            .innerJoin(roles, eq(roles.id, userRoles.role_id))
+            .innerJoin(rolePermissions, eq(rolePermissions.role_id, userRoles.role_id))
+            .where(eq(userRoles.user_id, userId));
 
-            const roleNames = [...new Set(rows.map((row) => row.role_name))];
-            const permissionMap: Record<string, Set<string>> = {};
+          const roleNames = [...new Set(rows.map((row) => row.role_name))];
+          const permissionMap: Record<string, Set<string>> = {};
 
-            for (const row of rows) {
-              const resourcePermissions = (permissionMap[row.resource] ??= new Set());
-              resourcePermissions.add(row.permission);
-            }
+          for (const row of rows) {
+            const resourcePermissions = (permissionMap[row.resource] ??= new Set());
+            resourcePermissions.add(row.permission);
+          }
 
-            const permissions: Partial<Record<Resource, Permission[]>> = {};
-            for (const [resource, permissionSet] of Object.entries(permissionMap)) {
-              permissions[resource as Resource] = [...permissionSet] as Permission[];
-            }
+          const permissions: Partial<Record<Resource, Permission[]>> = {};
+          for (const [resource, permissionSet] of Object.entries(permissionMap)) {
+            permissions[resource as Resource] = [...permissionSet] as Permission[];
+          }
 
-            return { roleNames, permissions };
-          },
-          catch: (cause) =>
-            new RolesInfrastructureError({
-              action: 'load user permissions',
-              cause,
-              messageKey: 'roles.loadPermissionsFailed',
-            }),
+          return { roleNames, permissions };
         });
 
       const permissionCache = yield* Cache.make({
