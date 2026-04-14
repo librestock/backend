@@ -47,7 +47,7 @@ function getLocationOrderBy(sortBy?: LocationSortField, sortOrder?: SortOrder) {
 }
 
 export class LocationsRepository extends Effect.Service<LocationsRepository>()(
-  '@librestock/effect/LocationsRepository',
+  '@librestock/effect/locations/LocationsRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

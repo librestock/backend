@@ -22,7 +22,7 @@ type CreateClientDto = Schema.Schema.Type<typeof CreateClientSchema>;
 type UpdateClientDto = Schema.Schema.Type<typeof UpdateClientSchema>;
 
 export class ClientsService extends Effect.Service<ClientsService>()(
-  '@librestock/effect/ClientsService',
+  '@librestock/effect/clients/ClientsService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* ClientsRepository;

@@ -26,7 +26,7 @@ type Area = AreaRow & {
 };
 
 export class AreasService extends Effect.Service<AreasService>()(
-  '@librestock/effect/AreasService',
+  '@librestock/effect/areas/AreasService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* AreasRepository;

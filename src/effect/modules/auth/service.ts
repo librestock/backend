@@ -9,7 +9,7 @@ import {
 } from './mappers';
 
 export class AuthService extends Effect.Service<AuthService>()(
-  '@librestock/effect/AuthService',
+  '@librestock/effect/auth/AuthService',
   {
     effect: Effect.gen(function* () {
       const rolesService = yield* RolesService;

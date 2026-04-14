@@ -57,7 +57,7 @@ const toUserResponse = (
 });
 
 export class UsersService extends Effect.Service<UsersService>()(
-  '@librestock/effect/UsersService',
+  '@librestock/effect/users/UsersService',
   {
     effect: Effect.gen(function* () {
       const betterAuth = yield* BetterAuth;

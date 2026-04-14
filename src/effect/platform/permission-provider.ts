@@ -7,7 +7,7 @@ export interface UserPermissions {
 }
 
 export class PermissionProvider extends Context.Tag(
-  '@librestock/effect/PermissionProvider',
+  '@librestock/effect/platform/PermissionProvider',
 )<
   PermissionProvider,
   {

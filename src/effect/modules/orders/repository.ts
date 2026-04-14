@@ -23,7 +23,7 @@ const tryAsync = makeTryAsync((action, cause) =>
 );
 
 export class OrdersRepository extends Effect.Service<OrdersRepository>()(
-  '@librestock/effect/OrdersRepository',
+  '@librestock/effect/orders/OrdersRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;
@@ -190,7 +190,7 @@ export class OrdersRepository extends Effect.Service<OrdersRepository>()(
 ) {}
 
 export class OrderItemsRepository extends Effect.Service<OrderItemsRepository>()(
-  '@librestock/effect/OrderItemsRepository',
+  '@librestock/effect/orders/OrderItemsRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

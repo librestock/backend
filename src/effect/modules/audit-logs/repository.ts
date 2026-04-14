@@ -57,7 +57,7 @@ function buildAuditFilters(options: AuditLogQueryOptions): SQL[] {
 }
 
 export class AuditLogsRepository extends Effect.Service<AuditLogsRepository>()(
-  '@librestock/effect/AuditLogsRepository',
+  '@librestock/effect/audit-logs/AuditLogsRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

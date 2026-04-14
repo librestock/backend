@@ -30,7 +30,7 @@ type UpdateOrderDto = Schema.Schema.Type<typeof UpdateOrderSchema>;
 type UpdateOrderStatusDto = Schema.Schema.Type<typeof UpdateOrderStatusSchema>;
 
 export class OrdersService extends Effect.Service<OrdersService>()(
-  '@librestock/effect/OrdersService',
+  '@librestock/effect/orders/OrdersService',
   {
     effect: Effect.gen(function* () {
       const ordersRepository = yield* OrdersRepository;

@@ -32,7 +32,7 @@ function buildClientFilters(query: ClientQueryDto): SQL[] {
 }
 
 export class ClientsRepository extends Effect.Service<ClientsRepository>()(
-  '@librestock/effect/ClientsRepository',
+  '@librestock/effect/clients/ClientsRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

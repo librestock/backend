@@ -12,7 +12,7 @@ export interface RequestContext {
 }
 
 export const CurrentRequestContext = Context.GenericTag<RequestContext>(
-  '@librestock/effect/CurrentRequestContext',
+  '@librestock/effect/platform/CurrentRequestContext',
 );
 
 export const makeRequestContext = Effect.gen(function* () {

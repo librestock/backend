@@ -21,7 +21,7 @@ type CreateSupplierDto = Schema.Schema.Type<typeof CreateSupplierSchema>;
 type UpdateSupplierDto = Schema.Schema.Type<typeof UpdateSupplierSchema>;
 
 export class SuppliersService extends Effect.Service<SuppliersService>()(
-  '@librestock/effect/SuppliersService',
+  '@librestock/effect/suppliers/SuppliersService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* SuppliersRepository;

@@ -37,7 +37,7 @@ type UpdateInventoryDto = Schema.Schema.Type<typeof UpdateInventorySchema>;
 type AdjustInventoryDto = Schema.Schema.Type<typeof AdjustInventorySchema>;
 
 export class InventoryService extends Effect.Service<InventoryService>()(
-  '@librestock/effect/InventoryService',
+  '@librestock/effect/inventory/InventoryService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* InventoryRepository;

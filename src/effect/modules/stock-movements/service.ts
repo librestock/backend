@@ -22,7 +22,7 @@ type CreateStockMovementDto = Schema.Schema.Type<
 >;
 
 export class StockMovementsService extends Effect.Service<StockMovementsService>()(
-  '@librestock/effect/StockMovementsService',
+  '@librestock/effect/stock-movements/StockMovementsService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* StockMovementsRepository;

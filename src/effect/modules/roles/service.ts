@@ -90,7 +90,7 @@ const seedDefinitions: {
 ];
 
 export class RolesService extends Effect.Service<RolesService>()(
-  '@librestock/effect/RolesService',
+  '@librestock/effect/roles/RolesService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* RolesRepository;

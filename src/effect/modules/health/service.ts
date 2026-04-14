@@ -38,7 +38,7 @@ const makeHealthResponse = (
 };
 
 export class HealthService extends Effect.Service<HealthService>()(
-  '@librestock/effect/HealthService',
+  '@librestock/effect/health/HealthService',
   {
     effect: Effect.gen(function* () {
       // Acquire the platform services once at layer-build time and close over them.

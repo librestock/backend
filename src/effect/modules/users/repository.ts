@@ -10,7 +10,7 @@ const tryAsync = makeTryAsync((action, cause) =>
 );
 
 export class UsersRepository extends Effect.Service<UsersRepository>()(
-  '@librestock/effect/UsersRepository',
+  '@librestock/effect/users/UsersRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

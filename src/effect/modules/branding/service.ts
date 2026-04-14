@@ -22,7 +22,7 @@ const tryAsync = makeTryAsync((action, cause) =>
 );
 
 export class BrandingService extends Effect.Service<BrandingService>()(
-  '@librestock/effect/BrandingService',
+  '@librestock/effect/branding/BrandingService',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

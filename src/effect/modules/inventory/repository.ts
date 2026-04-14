@@ -102,7 +102,7 @@ function mapInventoryRow(row: InventoryJoinRow) {
 }
 
 export class InventoryRepository extends Effect.Service<InventoryRepository>()(
-  '@librestock/effect/InventoryRepository',
+  '@librestock/effect/inventory/InventoryRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

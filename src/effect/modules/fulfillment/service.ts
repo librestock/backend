@@ -20,7 +20,7 @@ import {
 } from './errors';
 
 export class FulfillmentService extends Effect.Service<FulfillmentService>()(
-  '@librestock/effect/FulfillmentService',
+  '@librestock/effect/fulfillment/FulfillmentService',
   {
     effect: Effect.gen(function* () {
       const ordersRepository = yield* OrdersRepository;

@@ -45,7 +45,7 @@ const buildTree = (categories: Category[]): CategoryWithChildrenResponseDto[] =>
 };
 
 export class CategoriesService extends Effect.Service<CategoriesService>()(
-  '@librestock/effect/CategoriesService',
+  '@librestock/effect/categories/CategoriesService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* CategoriesRepository;

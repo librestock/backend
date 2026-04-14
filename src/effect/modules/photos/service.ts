@@ -58,7 +58,7 @@ export interface UploadedFile {
 }
 
 export class PhotosService extends Effect.Service<PhotosService>()(
-  '@librestock/effect/PhotosService',
+  '@librestock/effect/photos/PhotosService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* PhotosRepository;
