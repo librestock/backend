@@ -46,7 +46,11 @@ export class HealthService extends Effect.Service<HealthService>()(
       // which is required for HttpApiBuilder handler compatibility.
       const db = yield* DrizzleDatabase;
       const auth = yield* BetterAuth;
-      const trace = makeServiceTracer('HealthService');
+      const trace = makeServiceTracer({
+        serviceName: 'HealthService',
+        module: 'health',
+        layer: 'service',
+      });
 
       const checkDatabase = Effect.tryPromise({
         try: async () => {

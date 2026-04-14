@@ -13,11 +13,17 @@ export class AuthService extends Effect.Service<AuthService>()(
   {
     effect: Effect.gen(function* () {
       const rolesService = yield* RolesService;
-      const trace = makeServiceTracer('AuthService');
+      const trace = makeServiceTracer({
+        serviceName: 'AuthService',
+        module: 'auth',
+        layer: 'service',
+        entityType: 'user',
+      });
 
       const me = trace.traced('me', () =>
         Effect.gen(function* () {
           const session = yield* requireSession;
+          yield* Effect.annotateCurrentSpan({ userId: session.user.id });
           const userPermissions = yield* rolesService.getPermissionsForUser(
             session.user.id,
           );
@@ -27,12 +33,14 @@ export class AuthService extends Effect.Service<AuthService>()(
       const profile = trace.traced('profile', () =>
         Effect.gen(function* () {
           const session = yield* requireSession;
+          yield* Effect.annotateCurrentSpan({ userId: session.user.id });
           return toProfileResponse(session);
         }));
 
       const sessionClaims = trace.traced('sessionClaims', () =>
         Effect.gen(function* () {
           const session = yield* requireSession;
+          yield* Effect.annotateCurrentSpan({ userId: session.user.id });
           return toSessionClaimsResponse(session);
         }));
 
