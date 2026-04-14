@@ -24,7 +24,7 @@ const makeMockRepository = (
   findByProductId: vi.fn().mockReturnValue(Effect.succeed([makePhotoEntity()])),
   findById: vi.fn().mockReturnValue(Effect.succeed(makePhotoEntity())),
   create: vi.fn().mockReturnValue(Effect.succeed(makePhotoEntity())),
-  delete: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+  delete: vi.fn().mockReturnValue(Effect.void),
   countByProductId: vi.fn().mockReturnValue(Effect.succeed(0)),
   ...overrides,
 });

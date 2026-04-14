@@ -84,10 +84,10 @@ describe('Effect UsersService', () => {
         },
       ])),
       findUserRoles: vi.fn().mockReturnValue(Effect.succeed([])),
-      replaceUserRoles: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+      replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
       hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(false)),
-      syncBetterAuthRole: vi.fn().mockReturnValue(Effect.succeed(undefined)),
-      deleteUserRoles: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+      syncBetterAuthRole: vi.fn().mockReturnValue(Effect.void),
+      deleteUserRoles: vi.fn().mockReturnValue(Effect.void),
     };
     const rolesService = {
       clearCacheForUser: vi.fn().mockReturnValue(Effect.void),
@@ -123,10 +123,10 @@ describe('Effect UsersService', () => {
           role: { name: 'Admin' },
         },
       ])),
-      replaceUserRoles: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+      replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
       hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(false)),
-      syncBetterAuthRole: vi.fn().mockReturnValue(Effect.succeed(undefined)),
-      deleteUserRoles: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+      syncBetterAuthRole: vi.fn().mockReturnValue(Effect.void),
+      deleteUserRoles: vi.fn().mockReturnValue(Effect.void),
     };
     const rolesService = {
       clearCacheForUser: vi.fn().mockReturnValue(Effect.void),
@@ -163,10 +163,10 @@ describe('Effect UsersService', () => {
           role: { name: 'Admin' },
         },
       ])),
-      replaceUserRoles: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+      replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
       hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(true)),
-      syncBetterAuthRole: vi.fn().mockReturnValue(Effect.succeed(undefined)),
-      deleteUserRoles: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+      syncBetterAuthRole: vi.fn().mockReturnValue(Effect.void),
+      deleteUserRoles: vi.fn().mockReturnValue(Effect.void),
     };
     const rolesService = {
       clearCacheForUser: vi.fn().mockReturnValue(Effect.void),
@@ -206,10 +206,10 @@ describe('Effect UsersService', () => {
     const usersRepository = {
       findRoleAssignments: vi.fn().mockReturnValue(Effect.succeed([])),
       findUserRoles: vi.fn().mockReturnValue(Effect.succeed([])),
-      replaceUserRoles: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+      replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
       hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(false)),
-      syncBetterAuthRole: vi.fn().mockReturnValue(Effect.succeed(undefined)),
-      deleteUserRoles: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+      syncBetterAuthRole: vi.fn().mockReturnValue(Effect.void),
+      deleteUserRoles: vi.fn().mockReturnValue(Effect.void),
     };
     const rolesService = {
       clearCacheForUser: vi.fn().mockReturnValue(Effect.void),
@@ -251,10 +251,10 @@ describe('Effect UsersService', () => {
     const usersRepository = {
       findRoleAssignments: vi.fn().mockReturnValue(Effect.succeed([])),
       findUserRoles: vi.fn().mockReturnValue(Effect.succeed([])),
-      replaceUserRoles: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+      replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
       hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(false)),
-      syncBetterAuthRole: vi.fn().mockReturnValue(Effect.succeed(undefined)),
-      deleteUserRoles: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+      syncBetterAuthRole: vi.fn().mockReturnValue(Effect.void),
+      deleteUserRoles: vi.fn().mockReturnValue(Effect.void),
     };
     const rolesService = {
       clearCacheForUser: vi.fn().mockReturnValue(Effect.void),

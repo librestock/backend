@@ -67,7 +67,7 @@ const makeMockOrdersRepository = (
   ),
   create: vi.fn().mockReturnValue(Effect.succeed(makeOrderEntity())),
   update: vi.fn().mockReturnValue(Effect.succeed(1)),
-  delete: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+  delete: vi.fn().mockReturnValue(Effect.void),
   getNextOrderNumberSequence: vi.fn().mockReturnValue(Effect.succeed(1)),
   existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
   ...overrides,
@@ -78,7 +78,7 @@ const makeMockOrderItemsRepository = (
 ) => ({
   findByOrderId: vi.fn().mockReturnValue(Effect.succeed([makeOrderItemEntity()])),
   createMany: vi.fn().mockReturnValue(Effect.succeed([makeOrderItemEntity()])),
-  deleteByOrderId: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+  deleteByOrderId: vi.fn().mockReturnValue(Effect.void),
   ...overrides,
 });
 

@@ -68,7 +68,7 @@ const makeMockRepository = (
   create: vi.fn().mockReturnValue(Effect.succeed(makeInventoryEntity({ id: 'inventory-created' }))),
   update: vi.fn().mockReturnValue(Effect.succeed(1)),
   adjustQuantity: vi.fn().mockReturnValue(Effect.succeed(1)),
-  delete: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+  delete: vi.fn().mockReturnValue(Effect.void),
   ...overrides,
 });
 
