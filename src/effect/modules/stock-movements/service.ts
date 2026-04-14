@@ -52,15 +52,16 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
 
       const findByProduct = (productId: string) =>
         Effect.gen(function* () {
-          const exists = yield* productsService.existsById(productId);
-          if (!exists) {
-            return yield* Effect.fail(
-              new StockMovementProductNotFound({
-                productId,
-                messageKey: 'stockMovements.productNotFound',
-              }),
-            );
-          }
+          yield* productsService.existsById(productId).pipe(
+            Effect.filterOrFail(
+              Boolean,
+              () =>
+                new StockMovementProductNotFound({
+                  productId,
+                  messageKey: 'stockMovements.productNotFound',
+                }),
+            ),
+          );
 
           const stockMovements = yield* repository.findByProductId(productId);
           return stockMovements.map(toStockMovementResponseDto);
@@ -72,15 +73,16 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
 
       const findByLocation = (locationId: string) =>
         Effect.gen(function* () {
-          const exists = yield* locationsService.existsById(locationId);
-          if (!exists) {
-            return yield* Effect.fail(
-              new StockMovementLocationNotFound({
-                locationId,
-                messageKey: 'stockMovements.locationNotFound',
-              }),
-            );
-          }
+          yield* locationsService.existsById(locationId).pipe(
+            Effect.filterOrFail(
+              Boolean,
+              () =>
+                new StockMovementLocationNotFound({
+                  locationId,
+                  messageKey: 'stockMovements.locationNotFound',
+                }),
+            ),
+          );
 
           const stockMovements = yield* repository.findByLocationId(locationId);
           return stockMovements.map(toStockMovementResponseDto);
@@ -92,44 +94,43 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
 
       const create = (dto: CreateStockMovementDto, userId: string) =>
         Effect.gen(function* () {
-          const productExists = yield* productsService.existsById(
-            dto.product_id,
+          yield* productsService.existsById(dto.product_id).pipe(
+            Effect.filterOrFail(
+              Boolean,
+              () =>
+                new InvalidStockMovementProduct({
+                  productId: dto.product_id,
+                  messageKey: 'stockMovements.productNotFound',
+                }),
+            ),
           );
-          if (!productExists) {
-            return yield* Effect.fail(
-              new InvalidStockMovementProduct({
-                productId: dto.product_id,
-                messageKey: 'stockMovements.productNotFound',
-              }),
-            );
-          }
 
           if (dto.from_location_id) {
-            const fromLocationExists = yield* locationsService.existsById(
-              dto.from_location_id,
+            const fromLocationId = dto.from_location_id;
+            yield* locationsService.existsById(fromLocationId).pipe(
+              Effect.filterOrFail(
+                Boolean,
+                () =>
+                  new InvalidSourceLocation({
+                    locationId: fromLocationId,
+                    messageKey: 'stockMovements.sourceLocationNotFound',
+                  }),
+              ),
             );
-            if (!fromLocationExists) {
-              return yield* Effect.fail(
-                new InvalidSourceLocation({
-                  locationId: dto.from_location_id,
-                  messageKey: 'stockMovements.sourceLocationNotFound',
-                }),
-              );
-            }
           }
 
           if (dto.to_location_id) {
-            const toLocationExists = yield* locationsService.existsById(
-              dto.to_location_id,
+            const toLocationId = dto.to_location_id;
+            yield* locationsService.existsById(toLocationId).pipe(
+              Effect.filterOrFail(
+                Boolean,
+                () =>
+                  new InvalidDestinationLocation({
+                    locationId: toLocationId,
+                    messageKey: 'stockMovements.destinationLocationNotFound',
+                  }),
+              ),
             );
-            if (!toLocationExists) {
-              return yield* Effect.fail(
-                new InvalidDestinationLocation({
-                  locationId: dto.to_location_id,
-                  messageKey: 'stockMovements.destinationLocationNotFound',
-                }),
-              );
-            }
           }
 
           const stockMovement = yield* repository.create({

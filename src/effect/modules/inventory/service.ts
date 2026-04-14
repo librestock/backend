@@ -51,31 +51,29 @@ export class InventoryService extends Effect.Service<InventoryService>()(
       );
 
       const ensureProductExists = (productId: string) =>
-        Effect.flatMap(
-          productsService.existsById(productId),
-          (exists) =>
-            exists
-              ? Effect.void
-              : Effect.fail(
-                  new InvalidInventoryProduct({
-                    productId,
-                    messageKey: 'inventory.productNotFound',
-                  }),
-                ),
+        productsService.existsById(productId).pipe(
+          Effect.filterOrFail(
+            Boolean,
+            () =>
+              new InvalidInventoryProduct({
+                productId,
+                messageKey: 'inventory.productNotFound',
+              }),
+          ),
+          Effect.asVoid,
         );
 
       const ensureLocationExists = (locationId: string) =>
-        Effect.flatMap(
-          locationsService.existsById(locationId),
-          (exists) =>
-            exists
-              ? Effect.void
-              : Effect.fail(
-                  new InvalidInventoryLocation({
-                    locationId,
-                    messageKey: 'inventory.locationNotFound',
-                  }),
-                ),
+        locationsService.existsById(locationId).pipe(
+          Effect.filterOrFail(
+            Boolean,
+            () =>
+              new InvalidInventoryLocation({
+                locationId,
+                messageKey: 'inventory.locationNotFound',
+              }),
+          ),
+          Effect.asVoid,
         );
 
       const getAreaForLocation = (
@@ -137,15 +135,16 @@ export class InventoryService extends Effect.Service<InventoryService>()(
 
       const findByProduct = (productId: string) =>
         Effect.gen(function* () {
-          const exists = yield* productsService.existsById(productId);
-          if (!exists) {
-            return yield* Effect.fail(
-              new InventoryProductNotFound({
-                productId,
-                messageKey: 'inventory.productNotFound',
-              }),
-            );
-          }
+          yield* productsService.existsById(productId).pipe(
+            Effect.filterOrFail(
+              Boolean,
+              () =>
+                new InventoryProductNotFound({
+                  productId,
+                  messageKey: 'inventory.productNotFound',
+                }),
+            ),
+          );
 
           const inventoryItems = yield* repository.findByProductId(productId);
           return inventoryItems.map(toInventoryResponseDto);
@@ -153,15 +152,16 @@ export class InventoryService extends Effect.Service<InventoryService>()(
 
       const findByLocation = (locationId: string) =>
         Effect.gen(function* () {
-          const exists = yield* locationsService.existsById(locationId);
-          if (!exists) {
-            return yield* Effect.fail(
-              new InventoryLocationNotFound({
-                locationId,
-                messageKey: 'inventory.locationNotFound',
-              }),
-            );
-          }
+          yield* locationsService.existsById(locationId).pipe(
+            Effect.filterOrFail(
+              Boolean,
+              () =>
+                new InventoryLocationNotFound({
+                  locationId,
+                  messageKey: 'inventory.locationNotFound',
+                }),
+            ),
+          );
 
           const inventoryItems = yield* repository.findByLocationId(locationId);
           return inventoryItems.map(toInventoryResponseDto);

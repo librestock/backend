@@ -54,33 +54,31 @@ export class ProductsService extends Effect.Service<ProductsService>()(
         );
 
       const checkCategoryExists = (categoryId: string) =>
-        Effect.flatMap(
-          categoriesService.existsById(categoryId),
-          (exists) =>
-            exists
-              ? Effect.void
-              : Effect.fail(
-                  new CategoryNotFound({
-                    categoryId,
-                    messageKey: 'products.categoryNotFound',
-                  }),
-                ),
+        categoriesService.existsById(categoryId).pipe(
+          Effect.filterOrFail(
+            Boolean,
+            () =>
+              new CategoryNotFound({
+                categoryId,
+                messageKey: 'products.categoryNotFound',
+              }),
+          ),
+          Effect.asVoid,
         );
 
       const ensureSkuAvailable = (
         sku: string,
       ): Effect.Effect<void, ProductsInfrastructureError | SkuAlreadyExists> =>
-        Effect.flatMap(
-          repository.findBySku(sku),
-          (existing) =>
-            existing
-              ? Effect.fail(
-                  new SkuAlreadyExists({
-                    sku,
-                    messageKey: 'products.skuAlreadyExists',
-                  }),
-                )
-              : Effect.void,
+        repository.findBySku(sku).pipe(
+          Effect.filterOrFail(
+            (existing) => existing === null,
+            () =>
+              new SkuAlreadyExists({
+                sku,
+                messageKey: 'products.skuAlreadyExists',
+              }),
+          ),
+          Effect.asVoid,
         );
 
       const validatePriceNotBelowCost = (
