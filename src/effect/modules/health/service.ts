@@ -81,19 +81,14 @@ export class HealthService extends Effect.Service<HealthService>()(
 
       const live = Effect.succeed(makeHealthResponse({})).pipe(trace.span('live'));
 
-      const ready = checkDatabase.pipe(
-        Effect.catchAll((failure) => Effect.succeed(failure)),
+      const ready = Effect.merge(checkDatabase).pipe(
         Effect.map((database) => makeHealthResponse({ database })),
         trace.span('ready'),
       );
 
       const healthCheck = Effect.all({
-        database: checkDatabase.pipe(
-          Effect.catchAll((failure) => Effect.succeed(failure)),
-        ),
-        'better-auth': checkBetterAuth.pipe(
-          Effect.catchAll((failure) => Effect.succeed(failure)),
-        ),
+        database: Effect.merge(checkDatabase),
+        'better-auth': Effect.merge(checkBetterAuth),
       }).pipe(
         Effect.map(makeHealthResponse),
         trace.span('healthCheck'),
