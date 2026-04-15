@@ -1,5 +1,4 @@
 import { Schema } from 'effect';
-import { LimitSchema, PageSchema } from '@librestock/types/common';
 import { StockMovementReason } from '@librestock/types/stock-movements';
 
 const StockMovementReasonValues = [
@@ -13,22 +12,6 @@ const StockMovementReasonValues = [
   StockMovementReason.RETURN_TO_SUPPLIER,
   StockMovementReason.INTERNAL_TRANSFER,
 ] as const;
-
-const NullableDateString = Schema.DateFromString;
-
-export const StockMovementIdSchema = Schema.UUID.annotations({
-  identifier: 'StockMovementId',
-});
-
-export const StockMovementQuerySchema = Schema.Struct({
-  page: Schema.optionalWith(PageSchema, { default: () => 1 }),
-  limit: Schema.optionalWith(LimitSchema, { default: () => 20 }),
-  product_id: Schema.optional(Schema.UUID),
-  location_id: Schema.optional(Schema.UUID),
-  reason: Schema.optional(Schema.Literal(...StockMovementReasonValues)),
-  date_from: Schema.optional(NullableDateString),
-  date_to: Schema.optional(NullableDateString),
-}).annotations({ identifier: 'StockMovementQuery' });
 
 export const CreateStockMovementSchema = Schema.Struct({
   product_id: Schema.UUID,

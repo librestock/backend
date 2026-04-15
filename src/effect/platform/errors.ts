@@ -192,16 +192,3 @@ export const respondEmpty = <E, R>(
     Effect.catchAllCause(respondCause),
     Effect.flatMap(withRequestIdHeader),
   );
-
-export const respondStaticJson = (
-  body: unknown,
-  options?: HttpServerResponse.Options.WithContentType,
-) =>
-  Effect.gen(function* () {
-    const { locale } = yield* getRequestContext;
-    const response = yield* HttpServerResponse.json(
-      localizeMessageTree(body, locale),
-      options,
-    );
-    return yield* withRequestIdHeader(response);
-  }).pipe(Effect.catchAllCause(respondCause));

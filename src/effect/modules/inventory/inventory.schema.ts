@@ -15,10 +15,6 @@ const SortOrderValues = [SortOrder.ASC, SortOrder.DESC] as const;
 const NullableDateString = Schema.NullOr(Schema.DateFromString);
 const NullableNonNegativeNumber = Schema.NullOr(Schema.Number.pipe(Schema.nonNegative()));
 
-export const InventoryIdSchema = Schema.UUID.annotations({
-  identifier: 'InventoryId',
-});
-
 export const InventoryQuerySchema = Schema.Struct({
   page: Schema.optionalWith(PageSchema, { default: () => 1 }),
   limit: Schema.optionalWith(LimitSchema, { default: () => 20 }),

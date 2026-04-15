@@ -1,5 +1,4 @@
 import { Schema } from 'effect';
-import { PageSchema, LimitSchema } from '@librestock/types/common';
 import { ClientStatus } from '@librestock/types/clients';
 
 const ClientStatusValues = [
@@ -12,15 +11,6 @@ const ClientStatusSchema = Schema.Literal(...ClientStatusValues);
 const EmailSchema = Schema.Trim.pipe(
   Schema.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/),
 );
-
-export const ClientIdSchema = Schema.UUID.annotations({ identifier: 'ClientId' });
-
-export const ClientQuerySchema = Schema.Struct({
-  page: Schema.optionalWith(PageSchema, { default: () => 1 }),
-  limit: Schema.optionalWith(LimitSchema, { default: () => 20 }),
-  q: Schema.optional(Schema.Trim),
-  account_status: Schema.optional(ClientStatusSchema),
-}).annotations({ identifier: 'ClientQuery' });
 
 export const CreateClientSchema = Schema.Struct({
   company_name: Schema.Trim.pipe(Schema.maxLength(200)),
