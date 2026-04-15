@@ -42,10 +42,6 @@ type AppErrorConstructor<
  *   yield* new ProductNotFound({ id, messageKey: "products.notFound" })
  */
 
-// ---------------------------------------------------------------------------
-// Type guard used by runEffect to detect our domain errors
-// ---------------------------------------------------------------------------
-
 export interface AppError<
   Tag extends string = string,
   StatusCode extends number = number,
@@ -67,19 +63,6 @@ export const isAppError = (value: unknown): value is AppError =>
   typeof value.messageKey === 'string' &&
   typeof value.statusCode === 'number';
 
-// ---------------------------------------------------------------------------
-// Branded factory helpers — produce a TaggedError subclass pre-wired with
-// the correct HTTP status code. Domain modules extend these.
-//
-// The returned constructor stays generic over extra payload fields while still
-// enforcing that every instance has a message and statusCode.
-// ---------------------------------------------------------------------------
-
-/**
- * Create a factory that produces TaggedError subclasses with a fixed statusCode.
- * Extra payload fields are carried by the generic constructor signature, so
- * subclasses can add domain-specific context without re-declaring `message`.
- */
 function makeErrorFactory<StatusCode extends number>(statusCode: StatusCode) {
   return <Tag extends string>(
     tag: Tag,

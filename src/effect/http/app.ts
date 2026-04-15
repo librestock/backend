@@ -88,15 +88,6 @@ const bodyLimitMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>) =>
     );
   });
 
-// ---------------------------------------------------------------------------
-// HttpApiBuilder layer for the typed API groups
-//
-// Routes declared via HttpApiGroup / HttpApiEndpoint in src/effect/http/api.ts
-// and implemented by *ApiLive layers are compiled into a single HttpApp here.
-// HttpApiSwagger registers a GET /docs route on the same builder router,
-// serving an OpenAPI spec derived from AppApi.
-// ---------------------------------------------------------------------------
-
 const apiLayer = Layer.provide(HttpApiBuilder.api(AppApi), [HealthApiLive]);
 
 const apiBuilderApp = HttpApiBuilder.httpApp.pipe(
@@ -109,13 +100,6 @@ const apiBuilderApp = HttpApiBuilder.httpApp.pipe(
     ),
   ),
 );
-
-// ---------------------------------------------------------------------------
-// Full HTTP app builder
-//
-// Exported as an Effect so main.ts can build it inside the Layer graph where
-// HealthService (and the platform layers it needs) are already available.
-// ---------------------------------------------------------------------------
 
 export const buildHttpApp = Effect.gen(function* () {
   // Build the HttpApiBuilder app once. HealthService is in scope from the

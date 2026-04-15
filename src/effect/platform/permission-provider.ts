@@ -11,7 +11,6 @@ export class PermissionProvider extends Context.Tag(
 )<
   PermissionProvider,
   {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    readonly getPermissionsForUser: (userId: string) => Effect.Effect<UserPermissions, any>;
+    readonly getPermissionsForUser: (userId: string) => Effect.Effect<UserPermissions, unknown>;
   }
 >() {}

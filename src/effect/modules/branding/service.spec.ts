@@ -70,10 +70,7 @@ describe('Effect BrandingService', () => {
 
   it('upserts and reloads on update', async () => {
     const entity = makeBrandingEntity();
-    // The mock db needs to handle both insert chain and select chain.
-    // Since the service calls insert().values().onConflictDoUpdate() then
-    // select().from().where().limit(), we create a mock that resolves
-    // to undefined for insert and to [entity] for select.
+    // Service calls insert(...).onConflictDoUpdate(...) then select(...).limit().
     const selectChain = createChainableMock([entity]);
     const insertChain = createChainableMock(undefined);
 

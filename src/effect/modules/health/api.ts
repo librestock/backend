@@ -1,10 +1,6 @@
 import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from '@effect/platform';
 import { Schema } from 'effect';
 
-// ---------------------------------------------------------------------------
-// Response schemas
-// ---------------------------------------------------------------------------
-
 const HealthDetails = Schema.Struct({
   status: Schema.Literal('up', 'down'),
   messageKey: Schema.optional(Schema.String),
@@ -17,10 +13,6 @@ export const HealthCheckResponseSchema = Schema.Struct({
   details: Schema.Record({ key: Schema.String, value: HealthDetails }),
 });
 
-// ---------------------------------------------------------------------------
-// Error types — annotated with HTTP status so HttpApiBuilder encodes them correctly
-// ---------------------------------------------------------------------------
-
 export class ServiceDown extends Schema.TaggedError<ServiceDown>()(
   'ServiceDown',
   {
@@ -28,10 +20,6 @@ export class ServiceDown extends Schema.TaggedError<ServiceDown>()(
   },
   HttpApiSchema.annotations({ status: 503 }),
 ) {}
-
-// ---------------------------------------------------------------------------
-// API group
-// ---------------------------------------------------------------------------
 
 export class HealthApi extends HttpApiGroup.make('health')
   .add(
