@@ -1,10 +1,15 @@
 import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import type { auditLogs } from '../../platform/db/schema';
 import { AuditLogsService } from './service';
 import { AuditLogsRepository } from './repository';
 
-const makeAuditLogEntity = (overrides: Record<string, any> = {}) => ({
+type AuditLogEntity = typeof auditLogs.$inferSelect;
+
+const makeAuditLogEntity = (
+  overrides: Partial<AuditLogEntity> = {},
+): AuditLogEntity => ({
   id: 'log-1',
   user_id: 'user-1',
   action: AuditAction.CREATE,
@@ -15,7 +20,7 @@ const makeAuditLogEntity = (overrides: Record<string, any> = {}) => ({
   user_agent: null,
   created_at: new Date('2026-01-01'),
   ...overrides,
-});
+} as AuditLogEntity);
 
 const makeMockRepository = (
   overrides: Record<string, Mock> = {},

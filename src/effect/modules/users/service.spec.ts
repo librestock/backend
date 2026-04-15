@@ -25,9 +25,9 @@ describe('Effect UsersService', () => {
     usersRepository,
     rolesService,
   }: {
-    betterAuth: any;
-    usersRepository: any;
-    rolesService: any;
+    betterAuth: unknown;
+    usersRepository: unknown;
+    rolesService: unknown;
   }) =>
     Effect.runPromise(
       UsersService.pipe(
@@ -35,9 +35,18 @@ describe('Effect UsersService', () => {
           UsersService.DefaultWithoutDependencies.pipe(
             Layer.provide(
               Layer.mergeAll(
-                Layer.succeed(BetterAuth, betterAuth),
-                Layer.succeed(UsersRepository, usersRepository),
-                Layer.succeed(RolesService, rolesService),
+                Layer.succeed(
+                  BetterAuth,
+                  betterAuth as typeof BetterAuth.Service,
+                ),
+                Layer.succeed(
+                  UsersRepository,
+                  usersRepository as typeof UsersRepository.Service,
+                ),
+                Layer.succeed(
+                  RolesService,
+                  rolesService as typeof RolesService.Service,
+                ),
               ),
             ),
           ),

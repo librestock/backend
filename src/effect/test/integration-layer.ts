@@ -16,6 +16,8 @@ let db: DrizzleDb | null = null;
 export function getTestDb(): DrizzleDb {
   if (!db) {
     pool = new pg.Pool({ connectionString: TEST_DATABASE_URL, max: 5 });
+    // drizzle()'s schema param rejects the spread-merge of relations at the type level,
+    // but the runtime shape matches DrizzleDb; the cast is safe here.
     db = drizzle(pool, {
       schema: { ...schema, ...relations },
     }) as unknown as DrizzleDb;
