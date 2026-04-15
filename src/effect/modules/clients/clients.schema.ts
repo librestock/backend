@@ -1,4 +1,5 @@
 import { Schema } from 'effect';
+import { EmailSchema } from '@librestock/types/common';
 import { ClientStatus } from '@librestock/types/clients';
 
 const ClientStatusValues = [
@@ -8,9 +9,6 @@ const ClientStatusValues = [
 ] as const;
 
 const ClientStatusSchema = Schema.Literal(...ClientStatusValues);
-const EmailSchema = Schema.Trim.pipe(
-  Schema.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/),
-);
 
 export const CreateClientSchema = Schema.Struct({
   company_name: Schema.Trim.pipe(Schema.maxLength(200)),

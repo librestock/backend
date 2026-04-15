@@ -19,3 +19,11 @@ export const fromNullOr = <A, E, E2, R>(
       ? Effect.succeed(value as NonNullable<A>)
       : Effect.fail(onNull()),
   );
+
+export const makeGetOrFail =
+  <A, E, R, Err>(
+    find: (id: string) => Effect.Effect<A | null, E, R>,
+    makeError: (id: string) => Err,
+  ) =>
+  (id: string): Effect.Effect<NonNullable<A>, E | Err, R> =>
+    fromNullOr(find(id), () => makeError(id));

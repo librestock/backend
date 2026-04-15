@@ -1,8 +1,6 @@
 import { Schema } from 'effect';
+import { EmailSchema } from '@librestock/types/common';
 
-const EmailSchema = Schema.Trim.pipe(
-  Schema.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/),
-);
 const HttpUrlSchema = Schema.Trim.pipe(
   Schema.pattern(/^https?:\/\/\S+$/),
   Schema.maxLength(500),

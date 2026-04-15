@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
 import type { SupplierQueryDto } from '@librestock/types/suppliers';
-import { fromNullOr } from '../../platform/from-null-or';
+import { makeGetOrFail } from '../../platform/from-null-or';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import type { suppliers } from '../../platform/db/schema';
 import type {
@@ -26,10 +26,10 @@ export class SuppliersService extends Effect.Service<SuppliersService>()(
     effect: Effect.gen(function* () {
       const repository = yield* SuppliersRepository;
 
-      const getSupplierOrFail = (id: string) =>
-        fromNullOr(repository.findById(id), () =>
-          new SupplierNotFound({ id, messageKey: 'suppliers.notFound' }),
-        );
+      const getSupplierOrFail = makeGetOrFail(
+        (id: string) => repository.findById(id),
+        (id) => new SupplierNotFound({ id, messageKey: 'suppliers.notFound' }),
+      );
 
       const findAllPaginated = (query: SupplierQueryDto) =>
         Effect.map(

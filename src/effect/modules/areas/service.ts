@@ -5,7 +5,7 @@ import type {
   UpdateAreaDto,
   AreaQueryDto,
 } from '@librestock/types/areas';
-import { fromNullOr } from '../../platform/from-null-or';
+import { makeGetOrFail } from '../../platform/from-null-or';
 import { LocationsService } from '../locations/service';
 import type { areas } from '../../platform/db/schema';
 import { toAreaResponseDto } from './areas.utils';
@@ -32,10 +32,10 @@ export class AreasService extends Effect.Service<AreasService>()(
       const repository = yield* AreasRepository;
       const locationsService = yield* LocationsService;
 
-      const getAreaOrFail = (id: string) =>
-        fromNullOr(repository.findById(id), () =>
-          new AreaNotFound({ id, messageKey: 'areas.notFound' }),
-        );
+      const getAreaOrFail = makeGetOrFail(
+        (id: string) => repository.findById(id),
+        (id) => new AreaNotFound({ id, messageKey: 'areas.notFound' }),
+      );
 
       const wouldCreateCircularReference = (
         areaId: string,
