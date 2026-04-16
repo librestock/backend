@@ -51,7 +51,7 @@ function buildStockMovementFilters(query: StockMovementQueryDto): SQL[] {
 }
 
 export class StockMovementsRepository extends Effect.Service<StockMovementsRepository>()(
-  '@librestock/effect/StockMovementsRepository',
+  '@librestock/effect/stock-movements/StockMovementsRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

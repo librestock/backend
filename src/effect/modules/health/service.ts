@@ -38,7 +38,7 @@ const makeHealthResponse = (
 };
 
 export class HealthService extends Effect.Service<HealthService>()(
-  '@librestock/effect/HealthService',
+  '@librestock/effect/health/HealthService',
   {
     effect: Effect.gen(function* () {
       // Acquire the platform services once at layer-build time and close over them.
@@ -46,7 +46,11 @@ export class HealthService extends Effect.Service<HealthService>()(
       // which is required for HttpApiBuilder handler compatibility.
       const db = yield* DrizzleDatabase;
       const auth = yield* BetterAuth;
-      const trace = makeServiceTracer('HealthService');
+      const trace = makeServiceTracer({
+        serviceName: 'HealthService',
+        module: 'health',
+        layer: 'service',
+      });
 
       const checkDatabase = Effect.tryPromise({
         try: async () => {
@@ -77,19 +81,14 @@ export class HealthService extends Effect.Service<HealthService>()(
 
       const live = Effect.succeed(makeHealthResponse({})).pipe(trace.span('live'));
 
-      const ready = checkDatabase.pipe(
-        Effect.catchAll((failure) => Effect.succeed(failure)),
+      const ready = Effect.merge(checkDatabase).pipe(
         Effect.map((database) => makeHealthResponse({ database })),
         trace.span('ready'),
       );
 
       const healthCheck = Effect.all({
-        database: checkDatabase.pipe(
-          Effect.catchAll((failure) => Effect.succeed(failure)),
-        ),
-        'better-auth': checkBetterAuth.pipe(
-          Effect.catchAll((failure) => Effect.succeed(failure)),
-        ),
+        database: Effect.merge(checkDatabase),
+        'better-auth': Effect.merge(checkBetterAuth),
       }).pipe(
         Effect.map(makeHealthResponse),
         trace.span('healthCheck'),

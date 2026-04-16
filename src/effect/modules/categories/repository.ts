@@ -10,7 +10,7 @@ const tryAsync = makeTryAsync((action, cause) =>
 );
 
 export class CategoriesRepository extends Effect.Service<CategoriesRepository>()(
-  '@librestock/effect/CategoriesRepository',
+  '@librestock/effect/categories/CategoriesRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;
@@ -43,7 +43,7 @@ export class CategoriesRepository extends Effect.Service<CategoriesRepository>()
       const existsByName = (name: string, parentId?: string | null) =>
         tryAsync('check category name uniqueness', async () => {
           const conditions = [eq(categories.name, name)];
-          if (parentId !== undefined && parentId !== null) {
+          if (parentId != null) {
             conditions.push(eq(categories.parent_id, parentId));
           }
           const rows = await db

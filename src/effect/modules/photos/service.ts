@@ -58,7 +58,7 @@ export interface UploadedFile {
 }
 
 export class PhotosService extends Effect.Service<PhotosService>()(
-  '@librestock/effect/PhotosService',
+  '@librestock/effect/photos/PhotosService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* PhotosRepository;
@@ -148,8 +148,8 @@ export class PhotosService extends Effect.Service<PhotosService>()(
           });
 
           const existingCount = yield* repository.countByProductId(productId);
-          const photo = yield* Effect.catchAll(
-            repository.create({
+          const photo = yield* repository
+            .create({
               product_id: productId,
               filename: file.originalname,
               mimetype: file.mimetype,
@@ -157,15 +157,8 @@ export class PhotosService extends Effect.Service<PhotosService>()(
               storage_path: storagePath,
               display_order: existingCount,
               uploaded_by: userId ?? null,
-            }),
-            (error) =>
-              Effect.flatMap(
-                safeUnlink(storagePath).pipe(
-                  Effect.catchAll(() => Effect.void),
-                ),
-                () => Effect.fail(error),
-              ),
-          );
+            })
+            .pipe(Effect.tapError(() => Effect.ignore(safeUnlink(storagePath))));
 
           return toPhotoResponseDto(photo);
         }).pipe(
@@ -234,14 +227,13 @@ export class PhotosService extends Effect.Service<PhotosService>()(
         Effect.gen(function* () {
           const photo = yield* findPhotoOrFail(id);
           yield* safeUnlink(photo.storage_path).pipe(
-            Effect.catchAll((cause) =>
-              Effect.fail(
+            Effect.mapError(
+              (cause) =>
                 new PhotosInfrastructureError({
                   action: 'delete photo file',
                   cause,
                   messageKey: 'photos.deleteFailed',
                 }),
-              ),
             ),
           );
           yield* repository.delete(id);

@@ -74,7 +74,7 @@ describe('Effect RolesService', () => {
       ),
       update: vi.fn(),
       delete: vi.fn(),
-      replacePermissions: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+      replacePermissions: vi.fn().mockReturnValue(Effect.void),
     };
     const mockDb = createChainableMock([]);
     const service = await makeService(repository, mockDb);
@@ -147,9 +147,9 @@ describe('Effect RolesService', () => {
         ),
       findByName: vi.fn().mockReturnValue(Effect.succeed(null)),
       create: vi.fn(),
-      update: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+      update: vi.fn().mockReturnValue(Effect.void),
       delete: vi.fn(),
-      replacePermissions: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+      replacePermissions: vi.fn().mockReturnValue(Effect.void),
     };
     const service = await makeService(repository, createChainableMock([]));
 

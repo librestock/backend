@@ -22,7 +22,7 @@ const makeMockRepository = (
   existsByName: vi.fn().mockReturnValue(Effect.succeed(false)),
   create: vi.fn().mockReturnValue(Effect.succeed(makeCategoryEntity())),
   update: vi.fn().mockReturnValue(Effect.succeed(1)),
-  delete: vi.fn().mockReturnValue(Effect.succeed(undefined)),
+  delete: vi.fn().mockReturnValue(Effect.void),
   findOne: vi.fn().mockReturnValue(Effect.succeed(null)),
   findAllDescendantIds: vi.fn().mockReturnValue(Effect.succeed([])),
   ...overrides,

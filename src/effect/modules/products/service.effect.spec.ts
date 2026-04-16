@@ -91,11 +91,11 @@ const defaultRepoMethods: Partial<ProductsRepository> = {
   create: () => Effect.succeed(makeProductEntity()),
   update: () => Effect.succeed(1),
   updateMany: () => Effect.succeed(1),
-  softDelete: () => Effect.succeed(undefined),
+  softDelete: () => Effect.void,
   softDeleteMany: () => Effect.succeed(1),
-  restore: () => Effect.succeed(undefined),
+  restore: () => Effect.void,
   restoreMany: () => Effect.succeed(1),
-  hardDelete: () => Effect.succeed(undefined),
+  hardDelete: () => Effect.void,
   hardDeleteMany: () => Effect.succeed(1),
 };
 
@@ -315,7 +315,7 @@ describe('ProductsService', () => {
         {
           softDelete: () => {
             softDeleteCalled = true;
-            return Effect.succeed(undefined);
+            return Effect.void;
           },
         },
       );
@@ -332,7 +332,7 @@ describe('ProductsService', () => {
         {
           hardDelete: () => {
             hardDeleteCalled = true;
-            return Effect.succeed(undefined);
+            return Effect.void;
           },
         },
       );

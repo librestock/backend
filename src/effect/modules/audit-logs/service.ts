@@ -29,7 +29,7 @@ const toAuditLogResponseDto = (auditLog: AuditLog): AuditLogResponseDto => ({
 });
 
 export class AuditLogsService extends Effect.Service<AuditLogsService>()(
-  '@librestock/effect/AuditLogsService',
+  '@librestock/effect/audit-logs/AuditLogsService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* AuditLogsRepository;

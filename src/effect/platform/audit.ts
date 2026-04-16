@@ -22,7 +22,7 @@ export interface AuditLogWriter {
 }
 
 export const AuditLogWriter = Context.GenericTag<AuditLogWriter>(
-  '@librestock/effect/AuditLogWriter',
+  '@librestock/effect/platform/AuditLogWriter',
 );
 
 export const makeAuditLogWriter = Effect.gen(function* () {

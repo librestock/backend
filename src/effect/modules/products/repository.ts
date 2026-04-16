@@ -57,7 +57,7 @@ function mapProductRow(row: ProductJoinRow) {
 }
 
 export class ProductsRepository extends Effect.Service<ProductsRepository>()(
-  '@librestock/effect/ProductsRepository',
+  '@librestock/effect/products/ProductsRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

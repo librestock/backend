@@ -16,7 +16,7 @@ import {
 import { LocationsRepository } from './repository';
 
 export class LocationsService extends Effect.Service<LocationsService>()(
-  '@librestock/effect/LocationsService',
+  '@librestock/effect/locations/LocationsService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* LocationsRepository;

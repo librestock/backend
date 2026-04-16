@@ -26,7 +26,7 @@ type Area = AreaRow & {
 };
 
 export class AreasService extends Effect.Service<AreasService>()(
-  '@librestock/effect/AreasService',
+  '@librestock/effect/areas/AreasService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* AreasRepository;
@@ -147,7 +147,7 @@ export class AreasService extends Effect.Service<AreasService>()(
         Effect.gen(function* () {
           const existingArea = yield* getAreaOrFail(id);
 
-          if (dto.parent_id !== undefined && dto.parent_id !== null) {
+          if (dto.parent_id != null) {
             if (dto.parent_id === id) {
               return yield* Effect.fail(
                 new AreaSelfParent({

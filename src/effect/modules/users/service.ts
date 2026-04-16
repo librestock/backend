@@ -57,13 +57,18 @@ const toUserResponse = (
 });
 
 export class UsersService extends Effect.Service<UsersService>()(
-  '@librestock/effect/UsersService',
+  '@librestock/effect/users/UsersService',
   {
     effect: Effect.gen(function* () {
       const betterAuth = yield* BetterAuth;
       const usersRepository = yield* UsersRepository;
       const rolesService = yield* RolesService;
-      const trace = makeServiceTracer('UsersService');
+      const trace = makeServiceTracer({
+        serviceName: 'UsersService',
+        module: 'users',
+        layer: 'service',
+        entityType: 'user',
+      });
 
       const getBetterAuthUserOrFail = (
         api: typeof import('../../../auth').auth.api,
@@ -116,7 +121,7 @@ export class UsersService extends Effect.Service<UsersService>()(
               roleEntities.map((roleEntity) => roleEntity.role.name),
             );
           }),
-        (id) => ({ attributes: { id } }),
+        (id) => ({ attributes: { userId: id } }),
       );
 
       const listUsers = trace.traced('listUsers', (query: UserQueryDto) =>

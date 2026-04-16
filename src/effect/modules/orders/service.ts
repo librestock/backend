@@ -1,5 +1,6 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
+import { makeServiceTracer } from '../../platform/service-tracer';
 import {
   type CreateOrderSchema,
   OrderStatus,
@@ -29,13 +30,19 @@ type UpdateOrderDto = Schema.Schema.Type<typeof UpdateOrderSchema>;
 type UpdateOrderStatusDto = Schema.Schema.Type<typeof UpdateOrderStatusSchema>;
 
 export class OrdersService extends Effect.Service<OrdersService>()(
-  '@librestock/effect/OrdersService',
+  '@librestock/effect/orders/OrdersService',
   {
     effect: Effect.gen(function* () {
       const ordersRepository = yield* OrdersRepository;
       const orderItemsRepository = yield* OrderItemsRepository;
       const clientsService = yield* ClientsService;
       const productsService = yield* ProductsService;
+      const trace = makeServiceTracer({
+        serviceName: 'OrdersService',
+        module: 'orders',
+        layer: 'service',
+        entityType: 'order',
+      });
 
       const getOrderOrFail = (id: string) =>
         fromNullOr(ordersRepository.findById(id), () =>
@@ -83,12 +90,12 @@ export class OrdersService extends Effect.Service<OrdersService>()(
             toPaginatedResponse(result, (order) =>
               toOrderResponseDto(order),
             ),
-        ).pipe(Effect.withSpan('OrdersService.findAllPaginated'));
+        ).pipe(trace.span('findAllPaginated'));
 
       const findOne = (id: string) =>
         Effect.map(getOrderOrFail(id), (order) =>
           toOrderResponseDto(order),
-        ).pipe(Effect.withSpan('OrdersService.findOne', { attributes: { id } }));
+        ).pipe(trace.span('findOne', { attributes: { orderId: id } }));
 
       const create = (dto: CreateOrderDto, userId: string) =>
         Effect.gen(function* () {
@@ -135,6 +142,8 @@ export class OrdersService extends Effect.Service<OrdersService>()(
             order_number,
           });
 
+          yield* Effect.annotateCurrentSpan({ orderId: order.id });
+
           const items = dto.items.map((item) => ({
             order_id: order.id,
             product_id: item.product_id,
@@ -147,7 +156,11 @@ export class OrdersService extends Effect.Service<OrdersService>()(
 
           const orderWithRelations = yield* getOrderOrFail(order.id);
           return toOrderResponseDto(orderWithRelations);
-        }).pipe(Effect.withSpan('OrdersService.create', { attributes: { clientId: dto.client_id } }));
+        }).pipe(
+          trace.span('create', {
+            attributes: { clientId: dto.client_id, userId },
+          }),
+        );
 
       const update = (id: string, dto: UpdateOrderDto) =>
         Effect.gen(function* () {
@@ -178,7 +191,7 @@ export class OrdersService extends Effect.Service<OrdersService>()(
 
           const updated = yield* getOrderOrFail(id);
           return toOrderResponseDto(updated);
-        }).pipe(Effect.withSpan('OrdersService.update', { attributes: { id } }));
+        }).pipe(trace.span('update', { attributes: { orderId: id } }));
 
       const updateStatus = (id: string, dto: UpdateOrderStatusDto) =>
         Effect.gen(function* () {
@@ -196,7 +209,7 @@ export class OrdersService extends Effect.Service<OrdersService>()(
 
           const updated = yield* getOrderOrFail(id);
           return toOrderResponseDto(updated);
-        }).pipe(Effect.withSpan('OrdersService.updateStatus', { attributes: { id } }));
+        }).pipe(trace.span('updateStatus', { attributes: { orderId: id } }));
 
       const remove = (id: string) =>
         Effect.gen(function* () {
@@ -213,11 +226,11 @@ export class OrdersService extends Effect.Service<OrdersService>()(
 
           yield* orderItemsRepository.deleteByOrderId(id);
           yield* ordersRepository.delete(id);
-        }).pipe(Effect.withSpan('OrdersService.delete', { attributes: { id } }));
+        }).pipe(trace.span('delete', { attributes: { orderId: id } }));
 
       const existsById = (id: string) =>
         ordersRepository.existsById(id).pipe(
-          Effect.withSpan('OrdersService.existsById', { attributes: { id } }),
+          trace.span('existsById', { attributes: { orderId: id } }),
         );
 
       return {
