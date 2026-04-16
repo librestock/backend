@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
 import '@librestock/types/inventory';
-import { fromNullOr } from '../../platform/from-null-or';
+import { makeGetOrFail } from '../../platform/from-null-or';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { AreaNotFound, AreasInfrastructureError } from '../areas/areas.errors';
 import { AreasService } from '../areas/service';
@@ -45,10 +45,10 @@ export class InventoryService extends Effect.Service<InventoryService>()(
       const locationsService = yield* LocationsService;
       const areasService = yield* AreasService;
 
-      const getInventoryOrFail = (id: string) =>
-        fromNullOr(repository.findById(id), () =>
-          new InventoryNotFound({ id, messageKey: 'inventory.notFound' }),
-        );
+      const getInventoryOrFail = makeGetOrFail(
+        (id: string) => repository.findById(id),
+        (id) => new InventoryNotFound({ id, messageKey: 'inventory.notFound' }),
+      );
 
       const ensureProductExists = (productId: string) =>
         Effect.flatMap(

@@ -1,13 +1,23 @@
 import { Effect } from 'effect';
-import type { UserQueryDto, UserResponseDto, BanUserDto } from '@librestock/types/users';
+import type {
+  UserQueryDto,
+  UserResponseDto,
+  BanUserDto,
+} from '@librestock/types/users';
 import { makeTryAsync } from '../../platform/try-async';
 import { BetterAuth, BetterAuthHeaders } from '../../platform/better-auth';
+import { makeServiceTracer } from '../../platform/service-tracer';
 import { RolesService } from '../roles/service';
 import { UserNotFound, UsersInfrastructureError } from './users.errors';
 import { UsersRepository } from './repository';
 
-const tryAsync = makeTryAsync((action, cause) =>
-  new UsersInfrastructureError({ action, cause, messageKey: 'users.infrastructureFailed' }),
+const tryAsync = makeTryAsync(
+  (action, cause) =>
+    new UsersInfrastructureError({
+      action,
+      cause,
+      messageKey: 'users.infrastructureFailed',
+    }),
 );
 
 interface BetterAuthUser {
@@ -53,6 +63,7 @@ export class UsersService extends Effect.Service<UsersService>()(
       const betterAuth = yield* BetterAuth;
       const usersRepository = yield* UsersRepository;
       const rolesService = yield* RolesService;
+      const trace = makeServiceTracer('UsersService');
 
       const getBetterAuthUserOrFail = (
         api: typeof import('../../../auth').auth.api,
@@ -87,24 +98,28 @@ export class UsersService extends Effect.Service<UsersService>()(
               );
         });
 
-      const getUser = (
-        id: string,
-      ): Effect.Effect<
-        UserResponseDto,
-        UserNotFound | UsersInfrastructureError,
-        globalThis.Headers
-      > =>
-        Effect.gen(function* () {
-          const user = yield* getBetterAuthUserOrFail(betterAuth.api, id);
-          const roleEntities = yield* usersRepository.findUserRoles(id);
+      const getUser = trace.traced(
+        'getUser',
+        (
+          id: string,
+        ): Effect.Effect<
+          UserResponseDto,
+          UserNotFound | UsersInfrastructureError,
+          globalThis.Headers
+        > =>
+          Effect.gen(function* () {
+            const user = yield* getBetterAuthUserOrFail(betterAuth.api, id);
+            const roleEntities = yield* usersRepository.findUserRoles(id);
 
-          return toUserResponse(
-            user,
-            roleEntities.map((roleEntity) => roleEntity.role.name),
-          );
-        }).pipe(Effect.withSpan('UsersService.getUser', { attributes: { id } }));
+            return toUserResponse(
+              user,
+              roleEntities.map((roleEntity) => roleEntity.role.name),
+            );
+          }),
+        (id) => ({ attributes: { id } }),
+      );
 
-      const listUsers = (query: UserQueryDto) =>
+      const listUsers = trace.traced('listUsers', (query: UserQueryDto) =>
         Effect.gen(function* () {
           const headers = yield* BetterAuthHeaders;
           const page = query.page ?? 1;
@@ -131,7 +146,9 @@ export class UsersService extends Effect.Service<UsersService>()(
 
           const users = (result.users ?? []) as BetterAuthUser[];
           const total = result.total ?? users.length;
-          const assignments = yield* usersRepository.findRoleAssignments(users.map((user) => user.id));
+          const assignments = yield* usersRepository.findRoleAssignments(
+            users.map((user) => user.id),
+          );
 
           const rolesByUserId = new Map<string, string[]>();
           for (const assignment of assignments) {
@@ -157,89 +174,112 @@ export class UsersService extends Effect.Service<UsersService>()(
             limit,
             total_pages: Math.ceil(filteredTotal / limit),
           };
-        }).pipe(Effect.withSpan('UsersService.listUsers'));
+        }),
+      );
 
-      const updateRoles = (userId: string, roleIds: string[]) =>
-        Effect.gen(function* () {
-          yield* getBetterAuthUserOrFail(betterAuth.api, userId);
-          yield* usersRepository.replaceUserRoles(userId, roleIds);
+      const updateRoles = trace.traced(
+        'updateRoles',
+        (userId: string, roleIds: string[]) =>
+          Effect.gen(function* () {
+            yield* getBetterAuthUserOrFail(betterAuth.api, userId);
+            yield* usersRepository.replaceUserRoles(userId, roleIds);
 
-          const hasAdminRole = yield* usersRepository.hasAdminRole(roleIds);
+            const hasAdminRole = yield* usersRepository.hasAdminRole(roleIds);
 
-          yield* usersRepository.syncBetterAuthRole(
-            userId,
-            hasAdminRole ? 'admin' : 'user',
-          );
-
-          yield* rolesService.clearCacheForUser(userId);
-
-          return yield* getUser(userId);
-        }).pipe(Effect.withSpan('UsersService.updateRoles', { attributes: { userId } }));
-
-      const banUser = (userId: string, dto: BanUserDto) =>
-        Effect.gen(function* () {
-          const headers = yield* BetterAuthHeaders;
-          yield* getBetterAuthUserOrFail(betterAuth.api, userId);
-
-          const body: BetterAuthBanUserBody = { userId };
-          if (dto.reason) {
-            body.banReason = dto.reason;
-          }
-          if (dto.expiresAt) {
-            body.banExpiresIn = Math.max(
-              0,
-              Math.floor((new Date(dto.expiresAt).getTime() - Date.now()) / 1000),
+            yield* usersRepository.syncBetterAuthRole(
+              userId,
+              hasAdminRole ? 'admin' : 'user',
             );
-          }
 
-          yield* tryAsync('ban user in auth provider', () =>
-            betterAuth.api.banUser({
-              headers,
-              body,
-            }),
-          );
+            yield* rolesService.clearCacheForUser(userId);
 
-          return yield* getUser(userId);
-        }).pipe(Effect.withSpan('UsersService.banUser', { attributes: { userId } }));
+            return yield* getUser(userId);
+          }),
+        (userId) => ({ attributes: { userId } }),
+      );
 
-      const unbanUser = (userId: string) =>
-        Effect.gen(function* () {
-          const headers = yield* BetterAuthHeaders;
-          yield* getBetterAuthUserOrFail(betterAuth.api, userId);
-          yield* tryAsync('unban user in auth provider', () =>
-            betterAuth.api.unbanUser({
-              headers,
-              body: { userId } satisfies BetterAuthUserActionBody,
-            }),
-          );
+      const banUser = trace.traced(
+        'banUser',
+        (userId: string, dto: BanUserDto) =>
+          Effect.gen(function* () {
+            const headers = yield* BetterAuthHeaders;
+            yield* getBetterAuthUserOrFail(betterAuth.api, userId);
 
-          return yield* getUser(userId);
-        }).pipe(Effect.withSpan('UsersService.unbanUser', { attributes: { userId } }));
+            const body: BetterAuthBanUserBody = { userId };
+            if (dto.reason) {
+              body.banReason = dto.reason;
+            }
+            if (dto.expiresAt) {
+              body.banExpiresIn = Math.max(
+                0,
+                Math.floor(
+                  (new Date(dto.expiresAt).getTime() - Date.now()) / 1000,
+                ),
+              );
+            }
 
-      const deleteUser = (userId: string) =>
-        Effect.gen(function* () {
-          const headers = yield* BetterAuthHeaders;
-          yield* getBetterAuthUserOrFail(betterAuth.api, userId);
-          yield* usersRepository.deleteUserRoles(userId);
-          yield* tryAsync('remove user from auth provider', () =>
-            betterAuth.api.removeUser({
-              headers,
-              body: { userId } satisfies BetterAuthUserActionBody,
-            }),
-          );
-        }).pipe(Effect.withSpan('UsersService.deleteUser', { attributes: { userId } }));
+            yield* tryAsync('ban user in auth provider', () =>
+              betterAuth.api.banUser({
+                headers,
+                body,
+              }),
+            );
 
-      const revokeSessions = (userId: string) =>
-        Effect.gen(function* () {
-          const headers = yield* BetterAuthHeaders;
-          yield* getBetterAuthUserOrFail(betterAuth.api, userId);
-          yield* tryAsync('revoke user sessions', () =>
-            betterAuth.api.revokeUserSessions({
-              headers,
-              body: { userId } satisfies BetterAuthUserActionBody,
-            }),
-          );
-        }).pipe(Effect.withSpan('UsersService.revokeSessions', { attributes: { userId } }));
+            return yield* getUser(userId);
+          }),
+        (userId) => ({ attributes: { userId } }),
+      );
+
+      const unbanUser = trace.traced(
+        'unbanUser',
+        (userId: string) =>
+          Effect.gen(function* () {
+            const headers = yield* BetterAuthHeaders;
+            yield* getBetterAuthUserOrFail(betterAuth.api, userId);
+            yield* tryAsync('unban user in auth provider', () =>
+              betterAuth.api.unbanUser({
+                headers,
+                body: { userId } satisfies BetterAuthUserActionBody,
+              }),
+            );
+
+            return yield* getUser(userId);
+          }),
+        (userId) => ({ attributes: { userId } }),
+      );
+
+      const deleteUser = trace.traced(
+        'deleteUser',
+        (userId: string) =>
+          Effect.gen(function* () {
+            const headers = yield* BetterAuthHeaders;
+            yield* getBetterAuthUserOrFail(betterAuth.api, userId);
+            yield* usersRepository.deleteUserRoles(userId);
+            yield* tryAsync('remove user from auth provider', () =>
+              betterAuth.api.removeUser({
+                headers,
+                body: { userId } satisfies BetterAuthUserActionBody,
+              }),
+            );
+          }),
+        (userId) => ({ attributes: { userId } }),
+      );
+
+      const revokeSessions = trace.traced(
+        'revokeSessions',
+        (userId: string) =>
+          Effect.gen(function* () {
+            const headers = yield* BetterAuthHeaders;
+            yield* getBetterAuthUserOrFail(betterAuth.api, userId);
+            yield* tryAsync('revoke user sessions', () =>
+              betterAuth.api.revokeUserSessions({
+                headers,
+                body: { userId } satisfies BetterAuthUserActionBody,
+              }),
+            );
+          }),
+        (userId) => ({ attributes: { userId } }),
+      );
 
       return {
         listUsers,

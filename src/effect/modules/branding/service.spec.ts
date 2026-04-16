@@ -1,5 +1,7 @@
 import { Effect, Layer } from 'effect';
-import { DrizzleDatabase } from '../../platform/drizzle';
+import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
+import type { brandingSettings } from '../../platform/db/schema';
+import { createChainableMock } from '../../test/utils';
 import { BrandingService } from './service';
 import {
   BRANDING_SETTINGS_ID,
@@ -7,7 +9,11 @@ import {
   POWERED_BY,
 } from './branding.constants';
 
-const makeBrandingEntity = (overrides: Record<string, any> = {}) => ({
+type BrandingEntity = typeof brandingSettings.$inferSelect;
+
+const makeBrandingEntity = (
+  overrides: Partial<BrandingEntity> = {},
+): BrandingEntity => ({
   id: BRANDING_SETTINGS_ID,
   app_name: 'TestApp',
   tagline: 'Test tagline',
@@ -19,22 +25,12 @@ const makeBrandingEntity = (overrides: Record<string, any> = {}) => ({
   ...overrides,
 });
 
-const createChainableMock = (resolveValue: any) => {
-  const chain: any = {};
-  const methods = ['select', 'from', 'where', 'limit', 'insert', 'values', 'onConflictDoUpdate', 'orderBy', 'offset'];
-  for (const method of methods) {
-    chain[method] = vi.fn().mockReturnValue(chain);
-  }
-  chain.then = (resolve: any) => resolve(resolveValue);
-  return chain;
-};
-
-const buildService = (mockDb: any) =>
+const buildService = (mockDb: unknown) =>
   Effect.runPromise(
     BrandingService.pipe(
       Effect.provide(
         BrandingService.Default.pipe(
-          Layer.provide(Layer.succeed(DrizzleDatabase, mockDb)),
+          Layer.provide(Layer.succeed(DrizzleDatabase, mockDb as DrizzleDb)),
         ),
       ),
     ),
@@ -70,17 +66,12 @@ describe('Effect BrandingService', () => {
 
   it('upserts and reloads on update', async () => {
     const entity = makeBrandingEntity();
-    // The mock db needs to handle both insert chain and select chain.
-    // Since the service calls insert().values().onConflictDoUpdate() then
-    // select().from().where().limit(), we create a mock that resolves
-    // to undefined for insert and to [entity] for select.
+    // Service calls insert(...).onConflictDoUpdate(...) then select(...).limit().
     const selectChain = createChainableMock([entity]);
     const insertChain = createChainableMock(undefined);
 
-    const mockDb: any = {
-      select: vi.fn().mockImplementation(() => {
-        return selectChain;
-      }),
+    const mockDb = {
+      select: vi.fn().mockReturnValue(selectChain),
       insert: vi.fn().mockReturnValue(insertChain),
     };
 

@@ -2,7 +2,7 @@ import { Cache, Duration, Effect } from 'effect';
 import { eq } from 'drizzle-orm';
 import { Permission, Resource } from '@librestock/types/auth';
 import type { CreateRoleDto, UpdateRoleDto } from '@librestock/types/roles';
-import { fromNullOr } from '../../platform/from-null-or';
+import { makeGetOrFail } from '../../platform/from-null-or';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { userRoles, roles, rolePermissions } from '../../platform/db/schema';
 import type { UserPermissions } from '../../platform/permission-provider';
@@ -96,10 +96,10 @@ export class RolesService extends Effect.Service<RolesService>()(
       const repository = yield* RolesRepository;
       const db = yield* DrizzleDatabase;
 
-      const getRoleOrFail = (id: string) =>
-        fromNullOr(repository.findById(id), () =>
-          new RoleNotFound({ id, messageKey: 'roles.notFound' }),
-        );
+      const getRoleOrFail = makeGetOrFail(
+        (id: string) => repository.findById(id),
+        (id) => new RoleNotFound({ id, messageKey: 'roles.notFound' }),
+      );
 
       const fetchPermissionsFromDb = (
         userId: string,

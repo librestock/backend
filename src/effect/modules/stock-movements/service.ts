@@ -1,7 +1,7 @@
 import type { StockMovementQueryDto } from '@librestock/types/stock-movements';
 import type { Schema } from 'effect';
 import { Effect } from 'effect';
-import { fromNullOr } from '../../platform/from-null-or';
+import { makeGetOrFail } from '../../platform/from-null-or';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { LocationsService } from '../locations/service';
 import { ProductsService } from '../products/service';
@@ -29,15 +29,14 @@ export class StockMovementsService extends Effect.Service<StockMovementsService>
       const productsService = yield* ProductsService;
       const locationsService = yield* LocationsService;
 
-      const getMovementOrFail = (id: string) =>
-        fromNullOr(
-          repository.findById(id),
-          () =>
-            new StockMovementNotFound({
-              id,
-              messageKey: 'stockMovements.notFound',
-            }),
-        );
+      const getMovementOrFail = makeGetOrFail(
+        (id: string) => repository.findById(id),
+        (id) =>
+          new StockMovementNotFound({
+            id,
+            messageKey: 'stockMovements.notFound',
+          }),
+      );
 
       const findAllPaginated = (query: StockMovementQueryDto) =>
         Effect.map(repository.findAllPaginated(query), (result) =>

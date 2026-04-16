@@ -46,13 +46,3 @@ export const getRequestContext = Effect.flatMap(
     onSome: Effect.succeed,
   }),
 );
-
-export const getRequestId = Effect.map(
-  getRequestContext,
-  (context) => context.requestId,
-);
-
-export const getRequestPath = Effect.map(
-  getRequestContext,
-  (context) => context.path,
-);

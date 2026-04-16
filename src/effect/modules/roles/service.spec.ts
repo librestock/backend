@@ -1,26 +1,16 @@
 import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
-import { DrizzleDatabase } from '../../platform/drizzle';
+import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
+import { createChainableMock } from '../../test/utils';
 import { RolesService } from './service';
 import { RolesRepository } from './repository';
 import { SystemRoleDeletionForbidden } from './roles.errors';
 
-// A chainable mock for Drizzle queries
-const createChainableMock = (resolveValue: any) => {
-  const chain: any = {};
-  const methods = ['select', 'from', 'innerJoin', 'where', 'limit', 'orderBy', 'offset'];
-  for (const method of methods) {
-    chain[method] = vi.fn().mockReturnValue(chain);
-  }
-  chain.then = (resolve: any) => resolve(resolveValue);
-  return chain;
-};
-
 describe('Effect RolesService', () => {
   const makeService = async (
     repository: Record<string, Mock>,
-    mockDb: any,
+    mockDb: unknown,
   ) =>
     Effect.runPromise(
       RolesService.pipe(
@@ -28,8 +18,11 @@ describe('Effect RolesService', () => {
           RolesService.DefaultWithoutDependencies.pipe(
             Layer.provide(
               Layer.mergeAll(
-                Layer.succeed(RolesRepository, repository as any),
-                Layer.succeed(DrizzleDatabase, mockDb),
+                Layer.succeed(
+                  RolesRepository,
+                  repository as unknown as typeof RolesRepository.Service,
+                ),
+                Layer.succeed(DrizzleDatabase, mockDb as DrizzleDb),
               ),
             ),
           ),

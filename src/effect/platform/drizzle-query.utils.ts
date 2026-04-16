@@ -1,5 +1,3 @@
-import { type SQL, and } from 'drizzle-orm';
-
 export interface PaginationWindow {
   page: number;
   limit: number;
@@ -43,10 +41,4 @@ export function toRepositoryPaginatedResult<T>(
     limit,
     total_pages: Math.ceil(total / limit),
   };
-}
-
-export function buildWhereClause(conditions: (SQL | undefined)[]): SQL | undefined {
-  const filtered = conditions.filter((c): c is SQL => c !== undefined);
-  if (filtered.length === 0) return undefined;
-  return and(...filtered);
 }

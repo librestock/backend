@@ -1,9 +1,14 @@
 import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
+import type { clients } from '../../platform/db/schema';
 import { ClientsService } from './service';
 import { ClientsRepository } from './repository';
 
-const makeClientEntity = (overrides: Record<string, any> = {}) => ({
+type ClientEntity = typeof clients.$inferSelect;
+
+const makeClientEntity = (
+  overrides: Partial<ClientEntity> = {},
+): ClientEntity => ({
   id: 'client-1',
   company_name: 'Acme Corp',
   contact_person: 'John Doe',
@@ -19,7 +24,7 @@ const makeClientEntity = (overrides: Record<string, any> = {}) => ({
   created_at: new Date('2026-01-01'),
   updated_at: new Date('2026-01-01'),
   ...overrides,
-});
+} as ClientEntity);
 
 const makeMockRepository = (
   overrides: Partial<Record<string, Mock>> = {},

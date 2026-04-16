@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { BetterAuth } from '../../platform/better-auth';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { type AnyMessageKey, type MessageArgs } from '../../platform/messages';
+import { makeServiceTracer } from '../../platform/service-tracer';
 
 interface HealthDetails {
   readonly status: 'up' | 'down';
@@ -45,6 +46,7 @@ export class HealthService extends Effect.Service<HealthService>()(
       // which is required for HttpApiBuilder handler compatibility.
       const db = yield* DrizzleDatabase;
       const auth = yield* BetterAuth;
+      const trace = makeServiceTracer('HealthService');
 
       const checkDatabase = Effect.tryPromise({
         try: async () => {
@@ -73,14 +75,12 @@ export class HealthService extends Effect.Service<HealthService>()(
       // Verify the auth reference is used (satisfies yield dependency)
       void auth;
 
-      const live = Effect.succeed(makeHealthResponse({})).pipe(
-        Effect.withSpan('HealthService.live'),
-      );
+      const live = Effect.succeed(makeHealthResponse({})).pipe(trace.span('live'));
 
       const ready = checkDatabase.pipe(
         Effect.catchAll((failure) => Effect.succeed(failure)),
         Effect.map((database) => makeHealthResponse({ database })),
-        Effect.withSpan('HealthService.ready'),
+        trace.span('ready'),
       );
 
       const healthCheck = Effect.all({
@@ -92,7 +92,7 @@ export class HealthService extends Effect.Service<HealthService>()(
         ),
       }).pipe(
         Effect.map(makeHealthResponse),
-        Effect.withSpan('HealthService.healthCheck'),
+        trace.span('healthCheck'),
       );
 
       return { live, ready, healthCheck };

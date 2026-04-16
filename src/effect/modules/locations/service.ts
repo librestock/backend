@@ -6,7 +6,7 @@ import type {
   LocationResponseDto,
   PaginatedLocationsResponseDto,
 } from '@librestock/types/locations';
-import { fromNullOr } from '../../platform/from-null-or';
+import { makeGetOrFail } from '../../platform/from-null-or';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { toLocationResponseDto } from './locations.utils';
 import {
@@ -21,10 +21,10 @@ export class LocationsService extends Effect.Service<LocationsService>()(
     effect: Effect.gen(function* () {
       const repository = yield* LocationsRepository;
 
-      const getLocationOrFail = (id: string) =>
-        fromNullOr(repository.findById(id), () =>
-          new LocationNotFound({ id, messageKey: 'locations.notFound' }),
-        );
+      const getLocationOrFail = makeGetOrFail(
+        (id: string) => repository.findById(id),
+        (id) => new LocationNotFound({ id, messageKey: 'locations.notFound' }),
+      );
 
       const findAllPaginated = (
         query: LocationQueryDto,

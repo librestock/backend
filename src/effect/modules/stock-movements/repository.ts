@@ -85,10 +85,12 @@ export class StockMovementsRepository extends Effect.Service<StockMovementsRepos
 
       const findById = (id: string) =>
         tryAsync('find stock movement by id', () =>
-          db.query.stockMovements.findFirst({
-            where: eq(stockMovements.id, id),
-            with: withRelations,
-          }).then((row) => row ?? null),
+          db.query.stockMovements
+            .findFirst({
+              where: eq(stockMovements.id, id),
+              with: withRelations,
+            })
+            .then((row) => row ?? null),
         );
 
       const findByProductId = (productId: string) =>

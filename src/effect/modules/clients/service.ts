@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
 import type { ClientResponseDto, ClientQueryDto } from '@librestock/types/clients';
-import { fromNullOr } from '../../platform/from-null-or';
+import { makeGetOrFail } from '../../platform/from-null-or';
 import {
   type PaginationMeta,
   toPaginatedResponse,
@@ -27,10 +27,10 @@ export class ClientsService extends Effect.Service<ClientsService>()(
     effect: Effect.gen(function* () {
       const repository = yield* ClientsRepository;
 
-      const getClientOrFail = (id: string) =>
-        fromNullOr(repository.findById(id), () =>
-          new ClientNotFound({ id, messageKey: 'clients.notFound' }),
-        );
+      const getClientOrFail = makeGetOrFail(
+        (id: string) => repository.findById(id),
+        (id) => new ClientNotFound({ id, messageKey: 'clients.notFound' }),
+      );
 
       const findAllPaginated = (
         query: ClientQueryDto,

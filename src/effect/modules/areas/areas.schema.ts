@@ -1,9 +1,5 @@
 import { Schema } from 'effect';
 
-const QueryBooleanSchema = Schema.BooleanFromString;
-
-export const AreaIdSchema = Schema.UUID.annotations({ identifier: 'AreaId' });
-
 export const CreateAreaSchema = Schema.Struct({
   location_id: Schema.UUID,
   parent_id: Schema.optional(Schema.UUID),
@@ -20,11 +16,3 @@ export const UpdateAreaSchema = Schema.Struct({
   description: Schema.optional(Schema.String),
   is_active: Schema.optional(Schema.Boolean),
 }).annotations({ identifier: 'UpdateArea' });
-
-export const AreaQuerySchema = Schema.Struct({
-  location_id: Schema.optional(Schema.UUID),
-  parent_id: Schema.optional(Schema.UUID),
-  root_only: Schema.optional(QueryBooleanSchema),
-  is_active: Schema.optional(QueryBooleanSchema),
-  include_children: Schema.optional(QueryBooleanSchema),
-}).annotations({ identifier: 'AreaQuery' });

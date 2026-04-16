@@ -49,8 +49,7 @@ src/
 │   ├── modules/           # Routers, services, repositories, schemas, errors
 │   └── platform/          # Drizzle, Better Auth, request/session/audit helpers
 ├── auth.ts                # Better Auth setup
-├── scripts/               # Seed/import scripts
-└── migrations/            # TypeORM migrations still used for legacy schema flow
+└── scripts/               # Seed/import scripts
 test/
 └── mocks/                 # Auth/UUID test helpers
 ```
@@ -70,7 +69,7 @@ bun install              # Install backend dependencies
 bun run start            # Run the API
 bun run build            # Production build
 bun run start:prod       # Run production build
-bun run test             # Unit tests (Jest)
+bun run test             # Unit tests (Vitest)
 bun run test:e2e         # E2E tests
 bun run lint             # Oxlint
 bun run type-check       # TypeScript check

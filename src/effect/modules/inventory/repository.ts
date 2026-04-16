@@ -114,11 +114,9 @@ export class InventoryRepository extends Effect.Service<InventoryRepository>()(
           const where = conditions.length > 0 ? and(...conditions) : undefined;
           const orderBy = getInventoryOrderBy(query.sort_by, query.sort_order);
 
-          // Count needs the products join for search/low_stock filters
           const [countResult] = await selectInventoryWithJoins(db)
             .where(where)
             .then(async () => {
-              // Use a separate count query to avoid issues
               return db
                 .select({ count: sql<number>`count(*)::int` })
                 .from(inventory)

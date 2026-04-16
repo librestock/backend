@@ -110,7 +110,6 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
             );
           }
 
-          // Transition to PICKING on the first pick
           if (order.status === OrderStatus.CONFIRMED) {
             yield* ordersRepository
               .update(input.orderId, { status: OrderStatus.PICKING })
@@ -121,7 +120,6 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
               );
           }
 
-          // Build a lookup of order items for product_id resolution
           const itemIds = input.picks.map((p) => p.orderItemId);
           const items = yield* orderItemsRepository
             .findByIds(itemIds)
@@ -155,7 +153,6 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
               );
             }
 
-            // Atomic increment — returns 0 rows if it would over-pick
             const updated = yield* orderItemsRepository
               .incrementPicked(p.orderItemId, p.quantity)
               .pipe(
@@ -173,12 +170,10 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
               );
             }
 
-            // Look up inventory record for location context
             const inv = yield* inventoryRepository
               .findById(p.inventoryId)
               .pipe(Effect.mapError(wrapInfrastructureError('load inventory')));
 
-            // Record stock movement
             yield* stockMovementsRepository
               .create({
                 product_id: item.product_id,

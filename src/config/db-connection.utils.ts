@@ -30,7 +30,7 @@ export interface DbConnectionParams {
 
 /**
  * Returns the shared database connection parameters from environment variables.
- * Used by both TypeORM (database.config.ts) and Better Auth (auth.ts).
+ * Used by Better Auth (auth.ts).
  */
 export function getDbConnectionParams(): { url: string } | DbConnectionParams {
   if (process.env.DATABASE_URL) {
