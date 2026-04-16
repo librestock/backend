@@ -167,7 +167,7 @@ describe('AuditLogsService Integration', () => {
       );
 
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].entity_type).toBe(AuditEntityType.PRODUCT);
+      expect(result.data[0]!.entity_type).toBe(AuditEntityType.PRODUCT);
     });
 
     it('filters by action', async () => {
@@ -193,7 +193,7 @@ describe('AuditLogsService Integration', () => {
       );
 
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].action).toBe(AuditAction.DELETE);
+      expect(result.data[0]!.action).toBe(AuditAction.DELETE);
     });
   });
 });

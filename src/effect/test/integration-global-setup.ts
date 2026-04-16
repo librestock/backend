@@ -35,7 +35,7 @@ export async function setup(): Promise<void> {
     );
     if (rows.length === 0) {
       await adminPool.query(`CREATE DATABASE "${TEST_DB_NAME}"`);
-      console.log(`Created test database: ${TEST_DB_NAME}`);
+      console.info(`Created test database: ${TEST_DB_NAME}`);
     }
   } finally {
     await adminPool.end();

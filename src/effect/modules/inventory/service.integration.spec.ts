@@ -209,9 +209,9 @@ describe('InventoryService Integration', () => {
       );
 
       expect(result).toHaveLength(1);
-      expect(result[0].product_id).toBe(product.id);
-      expect(result[0].product).toMatchObject({ name: product.name });
-      expect(result[0].location).toMatchObject({ name: location.name });
+      expect(result[0]!.product_id).toBe(product.id);
+      expect(result[0]!.product).toMatchObject({ name: product.name });
+      expect(result[0]!.location).toMatchObject({ name: location.name });
     });
   });
 

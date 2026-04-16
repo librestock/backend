@@ -154,7 +154,7 @@ describe('CategoriesService Integration', () => {
 
       const rootNode = tree.find((c: any) => c.name === 'Root');
       expect(rootNode).toBeTruthy();
-      expect(rootNode.children).toHaveLength(2);
+      expect(rootNode!.children).toHaveLength(2);
     });
   });
 

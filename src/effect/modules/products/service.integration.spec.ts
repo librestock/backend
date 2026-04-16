@@ -117,7 +117,7 @@ describe('ProductsService Integration', () => {
 
       const result = await run(
         Effect.flatMap(ProductsService, (svc) =>
-          Effect.flatMap(svc.findAll(), (all) => svc.findOne(all[0].id)),
+          Effect.flatMap(svc.findAll(), (all) => svc.findOne(all[0]!.id)),
         ),
       );
 
@@ -221,7 +221,7 @@ describe('ProductsService Integration', () => {
       );
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('In A');
+      expect(result[0]!.name).toBe('In A');
     });
 
     it('findByCategoryTree returns products from parent and child categories', async () => {

@@ -102,6 +102,13 @@ const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runPromise(effect);
 const fail = <A, E>(effect: Effect.Effect<A, E>) =>
   Effect.runPromise(Effect.flip(effect));
 
+function expectTag<T extends { _tag: string }, K extends T['_tag']>(
+  error: T,
+  tag: K,
+): asserts error is Extract<T, { _tag: K }> {
+  expect(error._tag).toBe(tag);
+}
+
 describe('Effect FulfillmentService', () => {
   describe('confirm', () => {
     it('confirms a draft order and returns the fulfillment view', async () => {
@@ -153,7 +160,7 @@ describe('Effect FulfillmentService', () => {
 
       const error = await fail(service.confirm('order-1', 'user-2'));
 
-      expect(error._tag).toBe('FulfillmentInvalidTransition');
+      expectTag(error, 'FulfillmentInvalidTransition');
       expect(error.orderId).toBe('order-1');
       expect(error.from).toBe(OrderStatus.CONFIRMED);
       expect(error.to).toBe(OrderStatus.CONFIRMED);
@@ -168,7 +175,7 @@ describe('Effect FulfillmentService', () => {
 
       const error = await fail(service.confirm('missing-order', 'user-2'));
 
-      expect(error._tag).toBe('FulfillmentOrderNotFound');
+      expectTag(error, 'FulfillmentOrderNotFound');
       expect(error.orderId).toBe('missing-order');
     });
 
@@ -181,7 +188,7 @@ describe('Effect FulfillmentService', () => {
 
       const error = await fail(service.confirm('order-1', 'user-2'));
 
-      expect(error._tag).toBe('FulfillmentInfrastructureError');
+      expectTag(error, 'FulfillmentInfrastructureError');
       expect(error.action).toBe('confirm order');
       expect(error.cause).toBeInstanceOf(Error);
       expect((error.cause as Error).message).toBe('write failed');
@@ -200,7 +207,7 @@ describe('Effect FulfillmentService', () => {
         }),
       );
 
-      expect(error._tag).toBe('FulfillmentInvalidTransition');
+      expectTag(error, 'FulfillmentInvalidTransition');
       expect(error.orderId).toBe('order-1');
       expect(error.from).toBe(OrderStatus.DRAFT);
       expect(error.to).toBe(OrderStatus.PICKING);
@@ -219,7 +226,7 @@ describe('Effect FulfillmentService', () => {
         }),
       );
 
-      expect(error._tag).toBe('FulfillmentNotImplemented');
+      expectTag(error, 'FulfillmentNotImplemented');
       expect(error.operation).toBe('pack');
     });
   });
@@ -230,7 +237,7 @@ describe('Effect FulfillmentService', () => {
 
       const error = await fail(service.ship('order-1', 'user-2'));
 
-      expect(error._tag).toBe('FulfillmentNotImplemented');
+      expectTag(error, 'FulfillmentNotImplemented');
       expect(error.operation).toBe('ship');
     });
   });

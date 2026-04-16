@@ -160,7 +160,7 @@ describe('OrdersService Integration', () => {
 
       expect(result.client_name).toBe(client.company_name);
       expect(result.items).toHaveLength(1);
-      expect(result.items[0].product_name).toBe(product.name);
+      expect(result.items[0]!.product_name).toBe(product.name);
     });
 
     it('fails for a nonexistent order', async () => {

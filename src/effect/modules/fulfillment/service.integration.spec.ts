@@ -147,7 +147,7 @@ describe('FulfillmentService Integration', () => {
 
       // Fulfillment view should reflect picked quantities
       expect(result.status).toBe(OrderStatus.PICKING);
-      expect(result.items[0].quantityPicked).toBe(3);
+      expect(result.items[0]!.quantityPicked).toBe(3);
 
       // Verify inventory was actually decremented in DB
       const invResult = await db.execute(
@@ -209,7 +209,7 @@ describe('FulfillmentService Integration', () => {
         ),
       );
 
-      expect(result.items[0].quantityPicked).toBe(4);
+      expect(result.items[0]!.quantityPicked).toBe(4);
     });
 
     it('rejects over-picking beyond ordered quantity', async () => {
@@ -289,7 +289,7 @@ describe('FulfillmentService Integration', () => {
             });
 
             expect(picked.status).toBe(OrderStatus.PICKING);
-            expect(picked.items[0].quantityPicked).toBe(5);
+            expect(picked.items[0]!.quantityPicked).toBe(5);
             return picked;
           }),
         ),
