@@ -3,7 +3,6 @@ import { Permission, Resource } from '@librestock/types/auth';
 
 const ResourceValues = [
   Resource.DASHBOARD,
-  Resource.STOCK,
   Resource.ORDERS,
   Resource.CLIENTS,
   Resource.SUPPLIERS,

@@ -22,7 +22,7 @@ export const clientsRouter = HttpRouter.empty.pipe(
   HttpRouter.get(
     '/',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.READ);
+      yield* requirePermission(Resource.CLIENTS, Permission.READ);
       const query = yield* HttpServerRequest.schemaSearchParams(ClientQuerySchema);
       const clientsService = yield* ClientsService;
       return yield* respondJson(clientsService.findAllPaginated(query));
@@ -31,7 +31,7 @@ export const clientsRouter = HttpRouter.empty.pipe(
   HttpRouter.get(
     '/:id',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.READ);
+      yield* requirePermission(Resource.CLIENTS, Permission.READ);
       const { id } = yield* HttpRouter.schemaPathParams(ClientPathParams);
       const clientsService = yield* ClientsService;
       return yield* respondJson(clientsService.findOne(id));
@@ -40,7 +40,7 @@ export const clientsRouter = HttpRouter.empty.pipe(
   HttpRouter.post(
     '/',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.WRITE);
+      yield* requirePermission(Resource.CLIENTS, Permission.WRITE);
       const dto = yield* HttpServerRequest.schemaBodyJson(CreateClientSchema);
       const clientsService = yield* ClientsService;
       const result = yield* clientsService.create(dto);
@@ -56,7 +56,7 @@ export const clientsRouter = HttpRouter.empty.pipe(
   HttpRouter.put(
     '/:id',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.WRITE);
+      yield* requirePermission(Resource.CLIENTS, Permission.WRITE);
       const { id } = yield* HttpRouter.schemaPathParams(ClientPathParams);
       const dto = yield* HttpServerRequest.schemaBodyJson(UpdateClientSchema);
       const clientsService = yield* ClientsService;
@@ -73,7 +73,7 @@ export const clientsRouter = HttpRouter.empty.pipe(
   HttpRouter.del(
     '/:id',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.WRITE);
+      yield* requirePermission(Resource.CLIENTS, Permission.WRITE);
       const { id } = yield* HttpRouter.schemaPathParams(ClientPathParams);
       const clientsService = yield* ClientsService;
       yield* clientsService.delete(id);

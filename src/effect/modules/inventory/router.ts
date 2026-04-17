@@ -25,7 +25,7 @@ export const inventoryRouter = HttpRouter.empty.pipe(
   HttpRouter.get(
     '/',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.READ);
+      yield* requirePermission(Resource.INVENTORY, Permission.READ);
       const query =
         yield* HttpServerRequest.schemaSearchParams(InventoryQuerySchema);
       const inventoryService = yield* InventoryService;
@@ -35,7 +35,7 @@ export const inventoryRouter = HttpRouter.empty.pipe(
   HttpRouter.get(
     '/all',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.READ);
+      yield* requirePermission(Resource.INVENTORY, Permission.READ);
       const inventoryService = yield* InventoryService;
       return yield* respondJson(inventoryService.findAll());
     }),
@@ -43,7 +43,7 @@ export const inventoryRouter = HttpRouter.empty.pipe(
   HttpRouter.get(
     '/product/:productId',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.READ);
+      yield* requirePermission(Resource.INVENTORY, Permission.READ);
       const { productId } =
         yield* HttpRouter.schemaPathParams(ProductPathParams);
       const inventoryService = yield* InventoryService;
@@ -53,7 +53,7 @@ export const inventoryRouter = HttpRouter.empty.pipe(
   HttpRouter.get(
     '/location/:locationId',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.READ);
+      yield* requirePermission(Resource.INVENTORY, Permission.READ);
       const { locationId } =
         yield* HttpRouter.schemaPathParams(LocationPathParams);
       const inventoryService = yield* InventoryService;
@@ -63,7 +63,7 @@ export const inventoryRouter = HttpRouter.empty.pipe(
   HttpRouter.get(
     '/summary',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.READ);
+      yield* requirePermission(Resource.INVENTORY, Permission.READ);
       const inventoryService = yield* InventoryService;
       return yield* respondJson(inventoryService.findSummary());
     }),
@@ -71,7 +71,7 @@ export const inventoryRouter = HttpRouter.empty.pipe(
   HttpRouter.get(
     '/:id',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.READ);
+      yield* requirePermission(Resource.INVENTORY, Permission.READ);
       const { id } = yield* HttpRouter.schemaPathParams(InventoryPathParams);
       const inventoryService = yield* InventoryService;
       return yield* respondJson(inventoryService.findOne(id));
@@ -80,7 +80,7 @@ export const inventoryRouter = HttpRouter.empty.pipe(
   HttpRouter.post(
     '/',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.WRITE);
+      yield* requirePermission(Resource.INVENTORY, Permission.WRITE);
       const dto = yield* HttpServerRequest.schemaBodyJson(
         CreateInventorySchema,
       );
@@ -98,7 +98,7 @@ export const inventoryRouter = HttpRouter.empty.pipe(
   HttpRouter.put(
     '/:id',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.WRITE);
+      yield* requirePermission(Resource.INVENTORY, Permission.WRITE);
       const { id } = yield* HttpRouter.schemaPathParams(InventoryPathParams);
       const dto = yield* HttpServerRequest.schemaBodyJson(
         UpdateInventorySchema,
@@ -117,7 +117,7 @@ export const inventoryRouter = HttpRouter.empty.pipe(
   HttpRouter.patch(
     '/:id/adjust',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.WRITE);
+      yield* requirePermission(Resource.INVENTORY, Permission.WRITE);
       const { id } = yield* HttpRouter.schemaPathParams(InventoryPathParams);
       const dto = yield* HttpServerRequest.schemaBodyJson(
         AdjustInventorySchema,
@@ -136,7 +136,7 @@ export const inventoryRouter = HttpRouter.empty.pipe(
   HttpRouter.del(
     '/:id',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.WRITE);
+      yield* requirePermission(Resource.INVENTORY, Permission.WRITE);
       const { id } = yield* HttpRouter.schemaPathParams(InventoryPathParams);
       const inventoryService = yield* InventoryService;
       yield* inventoryService.delete(id);

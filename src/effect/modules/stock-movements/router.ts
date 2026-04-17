@@ -21,7 +21,7 @@ export const stockMovementsRouter = HttpRouter.empty.pipe(
   HttpRouter.get(
     '/',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.READ);
+      yield* requirePermission(Resource.STOCK_MOVEMENTS, Permission.READ);
       const query = yield* HttpServerRequest.schemaSearchParams(
         StockMovementQuerySchema,
       );
@@ -32,7 +32,7 @@ export const stockMovementsRouter = HttpRouter.empty.pipe(
   HttpRouter.get(
     '/product/:productId',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.READ);
+      yield* requirePermission(Resource.STOCK_MOVEMENTS, Permission.READ);
       const { productId } =
         yield* HttpRouter.schemaPathParams(ProductPathParams);
       const stockMovementsService = yield* StockMovementsService;
@@ -42,7 +42,7 @@ export const stockMovementsRouter = HttpRouter.empty.pipe(
   HttpRouter.get(
     '/location/:locationId',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.READ);
+      yield* requirePermission(Resource.STOCK_MOVEMENTS, Permission.READ);
       const { locationId } =
         yield* HttpRouter.schemaPathParams(LocationPathParams);
       const stockMovementsService = yield* StockMovementsService;
@@ -54,7 +54,7 @@ export const stockMovementsRouter = HttpRouter.empty.pipe(
   HttpRouter.get(
     '/:id',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.READ);
+      yield* requirePermission(Resource.STOCK_MOVEMENTS, Permission.READ);
       const { id } = yield* HttpRouter.schemaPathParams(
         StockMovementPathParams,
       );
@@ -65,7 +65,7 @@ export const stockMovementsRouter = HttpRouter.empty.pipe(
   HttpRouter.post(
     '/',
     Effect.gen(function* () {
-      yield* requirePermission(Resource.STOCK, Permission.WRITE);
+      yield* requirePermission(Resource.STOCK_MOVEMENTS, Permission.WRITE);
       const dto = yield* HttpServerRequest.schemaBodyJson(
         CreateStockMovementSchema,
       );
