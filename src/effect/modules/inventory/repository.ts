@@ -1,16 +1,27 @@
 import { Effect } from 'effect';
 import { eq, and, ilike, or, gte, lte, desc, sql, isNull, type SQL } from 'drizzle-orm';
-import type { InventoryQueryDto } from '@librestock/types/inventory';
+import type {
+  InventoryQueryDto,
+  InventorySummaryDto,
+} from '@librestock/types/inventory';
 import { InventorySortField } from '@librestock/types/inventory';
 import { buildOrderBy } from '../../platform/drizzle-sort.utils';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
+  type RepositoryPaginatedResult,
 } from '../../platform/drizzle-query.utils';
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
 import { inventory, products, locations, areas } from '../../platform/db/schema';
 import { InventoryInfrastructureError } from './inventory.errors';
+
+type InventoryRow = typeof inventory.$inferSelect;
+export type InventoryWithRelations = InventoryRow & {
+  product: typeof products.$inferSelect | null;
+  location: typeof locations.$inferSelect | null;
+  area: typeof areas.$inferSelect | null;
+};
 
 const tryAsync = makeTryAsync((action, cause) =>
   new InventoryInfrastructureError({ action, cause, messageKey: 'inventory.infrastructureFailed' }),
@@ -92,7 +103,7 @@ function selectInventoryWithJoins(db: DrizzleDb) {
     .leftJoin(areas, eq(inventory.area_id, areas.id));
 }
 
-function mapInventoryRow(row: InventoryJoinRow) {
+function mapInventoryRow(row: InventoryJoinRow): InventoryWithRelations {
   return {
     ...row.inv,
     product: row.product,
@@ -107,7 +118,12 @@ export class InventoryRepository extends Effect.Service<InventoryRepository>()(
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;
 
-      const findAllPaginated = (query: InventoryQueryDto) =>
+      const findAllPaginated = (
+        query: InventoryQueryDto,
+      ): Effect.Effect<
+        RepositoryPaginatedResult<InventoryWithRelations>,
+        InventoryInfrastructureError
+      > =>
         tryAsync('list inventory paginated', async () => {
           const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
           const conditions = buildInventoryFilters(query);
@@ -135,14 +151,22 @@ export class InventoryRepository extends Effect.Service<InventoryRepository>()(
           return toRepositoryPaginatedResult(rows.map(mapInventoryRow), total, page, limit);
         });
 
-      const findAll = () =>
+      const findAll = (): Effect.Effect<
+        InventoryWithRelations[],
+        InventoryInfrastructureError
+      > =>
         tryAsync('list all inventory', async () => {
           const rows = await selectInventoryWithJoins(db)
             .orderBy(desc(inventory.updated_at));
           return rows.map(mapInventoryRow);
         });
 
-      const findById = (id: string) =>
+      const findById = (
+        id: string,
+      ): Effect.Effect<
+        InventoryWithRelations | null,
+        InventoryInfrastructureError
+      > =>
         tryAsync('find inventory by id', async () => {
           const rows = await selectInventoryWithJoins(db)
             .where(eq(inventory.id, id))
@@ -150,7 +174,12 @@ export class InventoryRepository extends Effect.Service<InventoryRepository>()(
           return rows[0] ? mapInventoryRow(rows[0]) : null;
         });
 
-      const findByProductId = (productId: string) =>
+      const findByProductId = (
+        productId: string,
+      ): Effect.Effect<
+        InventoryWithRelations[],
+        InventoryInfrastructureError
+      > =>
         tryAsync('find inventory by product', async () => {
           const rows = await selectInventoryWithJoins(db)
             .where(eq(inventory.product_id, productId))
@@ -158,7 +187,12 @@ export class InventoryRepository extends Effect.Service<InventoryRepository>()(
           return rows.map(mapInventoryRow);
         });
 
-      const findByLocationId = (locationId: string) =>
+      const findByLocationId = (
+        locationId: string,
+      ): Effect.Effect<
+        InventoryWithRelations[],
+        InventoryInfrastructureError
+      > =>
         tryAsync('find inventory by location', async () => {
           const rows = await selectInventoryWithJoins(db)
             .where(eq(inventory.location_id, locationId))
@@ -166,7 +200,14 @@ export class InventoryRepository extends Effect.Service<InventoryRepository>()(
           return rows.map(mapInventoryRow);
         });
 
-      const findByProductAndLocation = (productId: string, locationId: string, areaId?: string | null) =>
+      const findByProductAndLocation = (
+        productId: string,
+        locationId: string,
+        areaId?: string | null,
+      ): Effect.Effect<
+        InventoryWithRelations | null,
+        InventoryInfrastructureError
+      > =>
         tryAsync('find inventory by product and location', async () => {
           const conditions: SQL[] = [
             eq(inventory.product_id, productId),
@@ -186,13 +227,18 @@ export class InventoryRepository extends Effect.Service<InventoryRepository>()(
           return rows[0] ? mapInventoryRow(rows[0]) : null;
         });
 
-      const create = (data: typeof inventory.$inferInsert) =>
+      const create = (
+        data: typeof inventory.$inferInsert,
+      ): Effect.Effect<InventoryRow, InventoryInfrastructureError> =>
         tryAsync('create inventory', async () => {
           const rows = await db.insert(inventory).values(data).returning();
           return rows[0]!;
         });
 
-      const update = (id: string, data: Partial<typeof inventory.$inferInsert>) =>
+      const update = (
+        id: string,
+        data: Partial<typeof inventory.$inferInsert>,
+      ): Effect.Effect<number, InventoryInfrastructureError> =>
         tryAsync('update inventory', async () => {
           const rows = await db
             .update(inventory)
@@ -202,7 +248,10 @@ export class InventoryRepository extends Effect.Service<InventoryRepository>()(
           return rows.length;
         });
 
-      const adjustQuantity = (id: string, adjustment: number) =>
+      const adjustQuantity = (
+        id: string,
+        adjustment: number,
+      ): Effect.Effect<number, InventoryInfrastructureError> =>
         tryAsync('adjust inventory quantity', async () => {
           const rows = await db
             .update(inventory)
@@ -220,10 +269,30 @@ export class InventoryRepository extends Effect.Service<InventoryRepository>()(
           return rows.length;
         });
 
-      const remove = (id: string) =>
-        tryAsync('delete inventory', () =>
-          db.delete(inventory).where(eq(inventory.id, id)),
-        );
+      const remove = (
+        id: string,
+      ): Effect.Effect<void, InventoryInfrastructureError> =>
+        tryAsync('delete inventory', async () => {
+          await db.delete(inventory).where(eq(inventory.id, id));
+        });
+
+      const findSummary = (): Effect.Effect<
+        InventorySummaryDto,
+        InventoryInfrastructureError
+      > =>
+        tryAsync('get inventory summary', async (): Promise<InventorySummaryDto> => {
+          const [row] = await db
+            .select({
+              low_stock_count: sql<number>`count(*) filter (where ${inventory.quantity} <= ${products.reorder_point})::int`,
+              expiring_soon_count: sql<number>`count(*) filter (where ${inventory.expiry_date} is not null and ${inventory.expiry_date} <= now() + interval '30 days')::int`,
+            })
+            .from(inventory)
+            .leftJoin(products, eq(inventory.product_id, products.id));
+          return {
+            low_stock_count: row?.low_stock_count ?? 0,
+            expiring_soon_count: row?.expiring_soon_count ?? 0,
+          };
+        });
 
       return {
         findAllPaginated,
@@ -236,6 +305,7 @@ export class InventoryRepository extends Effect.Service<InventoryRepository>()(
         update,
         adjustQuantity,
         delete: remove,
+        findSummary,
       };
     }),
   },

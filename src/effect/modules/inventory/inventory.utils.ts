@@ -3,7 +3,12 @@ import type { inventory } from '../../platform/db/schema';
 
 type InventoryRow = typeof inventory.$inferSelect;
 export type Inventory = InventoryRow & {
-  product?: { id: string; sku: string; name: string; unit: string | null } | null;
+  product?: {
+    id: string;
+    sku: string;
+    name: string;
+    unit: string | null;
+  } | null;
   location?: { id: string; name: string; type: string } | null;
   area?: { id: string; name: string; code: string } | null;
 };
@@ -49,3 +54,4 @@ export function toInventoryResponseDto(
     updated_at: inventory.updated_at,
   };
 }
+
