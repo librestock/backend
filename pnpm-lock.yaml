@@ -27,8 +27,8 @@ importers:
         specifier: ^0.51.0
         version: 0.51.0(@effect/experimental@0.58.0(@effect/platform@0.96.0(effect@3.21.0))(effect@3.21.0))(@effect/platform@0.96.0(effect@3.21.0))(effect@3.21.0)
       '@librestock/types':
-        specifier: ^1.5.0
-        version: 1.5.0(effect@3.21.0)
+        specifier: ^1.6.0
+        version: 1.6.0(effect@3.21.0)
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: ^0.214.0
         version: 0.214.0(@opentelemetry/api@1.9.1)
@@ -725,8 +725,8 @@ packages:
   '@librestock/tsconfig@1.1.5':
     resolution: {integrity: sha512-lN8mFJWG/2hTtTuiK4/yWSEWtwviLsQhC6uW71tSllHbvMk/S0gk5DLmrehrNrEsmql8YybThVXdEjdFNl+VhQ==}
 
-  '@librestock/types@1.5.0':
-    resolution: {integrity: sha512-jH7lAnc7/QN3cVOkwRjjvVSD0eo69tJkjqRgmSUkFiIfHajEaRWRCABuzn4lrqyAn2U/NaYZBp8E4FgVzW+Alg==}
+  '@librestock/types@1.6.0':
+    resolution: {integrity: sha512-ElzW7b3azMnuZ5ConA+0h6nBTfaVgbF/nNCtADkCowvpdleZ9Py9x1eh20zsZ+NYDS8zzhu7gpyWpOZQvDoLKg==}
     peerDependencies:
       effect: ^3.19.0
 
@@ -2267,7 +2267,7 @@ snapshots:
 
   '@librestock/tsconfig@1.1.5': {}
 
-  '@librestock/types@1.5.0(effect@3.21.0)':
+  '@librestock/types@1.6.0(effect@3.21.0)':
     dependencies:
       effect: 3.21.0
       zod: 4.3.6
