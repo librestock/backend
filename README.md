@@ -93,7 +93,3 @@ All `/api/v1/*` endpoints require Better Auth authentication except the health c
 ```bash
 curl -H "Authorization: Bearer <token>" http://localhost:8080/api/v1/products
 ```
-
-## License
-
-AGPL-3.0

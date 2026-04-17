@@ -1,0 +1,66 @@
+name: Deploy
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: backend-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER || 'root' }}
+      DEPLOY_API_HEALTH_URL: ${{ vars.DEPLOY_API_HEALTH_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: backend
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Build backend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: Write SSH key
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Create release archive
+        working-directory: .
+        run: tar -czf backend-release.tgz backend
+
+      - name: Upload release archive
+        working-directory: .
+        run: scp backend-release.tgz "$DEPLOY_USER@$DEPLOY_HOST:/tmp/backend-release.tgz"
+
+      - name: Deploy on server
+        run: ssh "$DEPLOY_USER@$DEPLOY_HOST" "librestock-deploy backend /tmp/backend-release.tgz"
+
+      - name: Verify API health
+        if: ${{ env.DEPLOY_API_HEALTH_URL != '' }}
+        run: curl --fail --retry 10 --retry-delay 5 "$DEPLOY_API_HEALTH_URL"
