@@ -26,6 +26,10 @@ jobs:
         with:
           path: backend
 
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -34,14 +38,32 @@ jobs:
         with:
           version: 10
 
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Build backend
+        run: pnpm run build
+
+      - name: Prune to production dependencies
+        run: pnpm prune --prod
+
+      - name: Stage release artifact
+        working-directory: .
         run: |
-          pnpm install --frozen-lockfile
-          pnpm run build
+          mkdir -p artifact/backend
+          cp -R backend/dist artifact/backend/dist
+          cp -R backend/node_modules artifact/backend/node_modules
+          cp backend/package.json artifact/backend/package.json
+          cp backend/drizzle.config.ts artifact/backend/drizzle.config.ts
+          if [ -d backend/drizzle ]; then
+            cp -R backend/drizzle artifact/backend/drizzle
+          else
+            mkdir -p artifact/backend/drizzle
+          fi
+
+      - name: Create release archive
+        working-directory: .
+        run: tar -czf backend-release.tgz -C artifact backend
 
       - name: Write SSH key
         run: |
@@ -49,10 +71,6 @@ jobs:
           printf '%s\n' "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
-
-      - name: Create release archive
-        working-directory: .
-        run: tar -czf backend-release.tgz backend
 
       - name: Upload release archive
         working-directory: .
