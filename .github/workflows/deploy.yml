@@ -19,7 +19,7 @@ jobs:
         working-directory: backend
     env:
       DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-      DEPLOY_USER: ${{ vars.DEPLOY_USER || 'root' }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER || 'deploy' }}
       DEPLOY_API_HEALTH_URL: ${{ vars.DEPLOY_API_HEALTH_URL }}
     steps:
       - uses: actions/checkout@v4
@@ -65,19 +65,29 @@ jobs:
         working-directory: .
         run: tar -czf backend-release.tgz -C artifact backend
 
-      - name: Write SSH key
+      - name: Configure SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+
+      - name: Trust droplet host key
         run: |
           install -m 700 -d ~/.ssh
-          printf '%s\n' "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if ssh-keyscan -T 5 "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null && [ -s ~/.ssh/known_hosts ]; then
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "ssh-keyscan failed after 10 attempts" >&2
+          exit 1
 
       - name: Upload release archive
         working-directory: .
         run: scp backend-release.tgz "$DEPLOY_USER@$DEPLOY_HOST:/tmp/backend-release.tgz"
 
       - name: Deploy on server
-        run: ssh "$DEPLOY_USER@$DEPLOY_HOST" "librestock-deploy backend /tmp/backend-release.tgz"
+        run: ssh "$DEPLOY_USER@$DEPLOY_HOST" "sudo /usr/local/bin/librestock-deploy backend /tmp/backend-release.tgz"
 
       - name: Verify API health
         if: ${{ env.DEPLOY_API_HEALTH_URL != '' }}
