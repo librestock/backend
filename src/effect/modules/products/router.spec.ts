@@ -1,0 +1,1169 @@
+/**
+ * Unit-scope tests for `productsRouter`.
+ *
+ * Scope: HTTP boundary only — guard → decode → service → respond. Service
+ * internals live in `service.spec.ts` / `service.effect.spec.ts` /
+ * `service.integration.spec.ts`.
+ *
+ * Canonical coverage per route:
+ *   1. Permission guard rejects insufficient role → 403
+ *   2. Decode failure on malformed body / params → 400
+ *   3. Service success → correct status + payload shape
+ *   4. Service tagged error → mapped HTTP status (404, 409, 400, 500)
+ *
+ * Mutations are `@Auditable`. The audit writer is fire-and-forget, so we
+ * verify it's *called* via a spy — we do not couple to whether its
+ * downstream effect succeeds.
+ *
+ * This router has 13 routes; individual bulk/GET/category routes share
+ * their permission-guard / decode / service-success / service-error
+ * patterns, so a handful of lower-risk redundancy-only 4th-tests have
+ * been omitted. Every route still has the core three (guard + success +
+ * error or decode) at minimum; where a decode path exists it's
+ * explicitly exercised.
+ */
+import { Effect } from 'effect';
+import { Permission, Resource } from '@librestock/types/auth';
+import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import {
+  CategoryNotFound,
+  PriceBelowCost,
+  ProductNotDeleted,
+  ProductNotFound,
+  ProductsInfrastructureError,
+  SkuAlreadyExists,
+} from './products.errors';
+import { makeProductsRouterHarness } from './__fixtures__/router-harness';
+import { ProductsService } from './service';
+
+vi.mock('./service', async () => {
+  const { Context, Layer } =
+    await vi.importActual<typeof import('effect')>('effect');
+  return {
+    ProductsService: Context.GenericTag('@librestock/test/ProductsService'),
+    productsLayer: Layer.empty,
+  };
+});
+
+// ---------------------------------------------------------------------------
+// Fixtures
+// ---------------------------------------------------------------------------
+const PRODUCT_ID = '11111111-1111-4111-8111-111111111111';
+const OTHER_PRODUCT_ID = '22222222-2222-4222-8222-222222222222';
+const CATEGORY_ID = '33333333-3333-4333-8333-333333333333';
+
+const makeProductResponse = (overrides: Record<string, unknown> = {}) => ({
+  id: PRODUCT_ID,
+  sku: 'SKU-1',
+  name: 'Whisky',
+  description: null,
+  category_id: CATEGORY_ID,
+  volume_ml: null,
+  weight_kg: null,
+  dimensions_cm: null,
+  standard_cost: null,
+  standard_price: null,
+  markup_percentage: null,
+  reorder_point: 10,
+  primary_supplier_id: null,
+  supplier_sku: null,
+  barcode: null,
+  unit: null,
+  is_active: true,
+  is_perishable: false,
+  notes: null,
+  created_at: '2026-01-01T00:00:00.000Z',
+  updated_at: '2026-01-01T00:00:00.000Z',
+  deleted_at: null,
+  created_by: null,
+  updated_by: null,
+  deleted_by: null,
+  ...overrides,
+});
+
+const bulkResult = (overrides: Partial<{ succeeded: string[]; failed: unknown[]; success_count: number; failure_count: number }> = {}) => ({
+  succeeded: [PRODUCT_ID],
+  failed: [],
+  success_count: 1,
+  failure_count: 0,
+  ...overrides,
+});
+
+const validCreateBody = {
+  sku: 'SKU-1',
+  name: 'Whisky',
+  category_id: CATEGORY_ID,
+  reorder_point: 10,
+  is_active: true,
+  is_perishable: false,
+};
+
+const writeAll = {
+  [Resource.PRODUCTS]: [Permission.READ, Permission.WRITE],
+};
+const readOnly = {
+  [Resource.PRODUCTS]: [Permission.READ],
+};
+
+const jsonHeaders = { 'content-type': 'application/json' };
+
+describe('productsRouter', () => {
+  // -------------------------------------------------------------------
+  // GET /products/all
+  // -------------------------------------------------------------------
+  describe('GET /products/all', () => {
+    it('rejects without PRODUCTS:read permission', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { findAll: () => Effect.succeed([makeProductResponse()]) },
+        permissions: {},
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/all'),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('returns 401 when the session is absent', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { findAll: () => Effect.succeed([]) },
+        permissions: readOnly,
+        session: null,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/all'),
+      );
+      expect(response.status).toBe(401);
+    });
+
+    it('returns the unpaginated product list on success', async () => {
+      const findAll = vi.fn(() => Effect.succeed([makeProductResponse()]));
+      const { handler } = makeProductsRouterHarness({
+        service: { findAll },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/all'),
+      );
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body).toHaveLength(1);
+      expect(body[0]).toMatchObject({ id: PRODUCT_ID });
+      expect(findAll).toHaveBeenCalledTimes(1);
+    });
+
+    it('maps infrastructure failure → 500', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          findAll: () =>
+            Effect.fail(
+              new ProductsInfrastructureError({
+                action: 'findAll',
+                messageKey: 'products.infrastructureError',
+              }),
+            ),
+        },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/all'),
+      );
+      expect(response.status).toBe(500);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // GET /products — paginated
+  // -------------------------------------------------------------------
+  describe('GET /products (paginated)', () => {
+    const paginated = {
+      data: [makeProductResponse()],
+      meta: { total: 1, page: 1, limit: 20, total_pages: 1 },
+    };
+
+    it('rejects without PRODUCTS:read permission', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { findAllPaginated: () => Effect.succeed(paginated) },
+        permissions: {},
+      });
+
+      const response = await handler(new Request('http://localhost/products'));
+      expect(response.status).toBe(403);
+    });
+
+    it('returns 400 when the query is malformed', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { findAllPaginated: () => Effect.succeed(paginated) },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products?min_price=-1'),
+      );
+      expect(response.status).toBe(400);
+    });
+
+    it('returns the paginated payload on success', async () => {
+      const findAllPaginated = vi.fn(() => Effect.succeed(paginated));
+      const { handler } = makeProductsRouterHarness({
+        service: { findAllPaginated },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products?page=1&limit=20'),
+      );
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        data: [{ id: PRODUCT_ID }],
+        meta: { total: 1 },
+      });
+      expect(findAllPaginated).toHaveBeenCalledTimes(1);
+    });
+
+    it('maps infrastructure failure → 500', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          findAllPaginated: () =>
+            Effect.fail(
+              new ProductsInfrastructureError({
+                action: 'findAllPaginated',
+                messageKey: 'products.infrastructureError',
+              }),
+            ),
+        },
+        permissions: readOnly,
+      });
+
+      const response = await handler(new Request('http://localhost/products'));
+      expect(response.status).toBe(500);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // POST /products/bulk
+  // -------------------------------------------------------------------
+  describe('POST /products/bulk', () => {
+    const validBody = { products: [validCreateBody] };
+
+    it('rejects without PRODUCTS:write permission', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { bulkCreate: () => Effect.succeed(bulkResult()) },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk', {
+          method: 'POST',
+          headers: jsonHeaders,
+          body: JSON.stringify(validBody),
+        }),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('returns 400 on malformed body', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          bulkCreate: () => Effect.die('service should not be called'),
+        },
+        permissions: writeAll,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk', {
+          method: 'POST',
+          headers: jsonHeaders,
+          // empty array violates minItems(1)
+          body: JSON.stringify({ products: [] }),
+        }),
+      );
+      expect(response.status).toBe(400);
+    });
+
+    it('returns 201 and writes a CREATE audit on success', async () => {
+      const bulkCreate = vi.fn(() => Effect.succeed(bulkResult()));
+      const auditLog = vi.fn(() => Effect.void);
+      const { handler } = makeProductsRouterHarness({
+        service: { bulkCreate },
+        permissions: writeAll,
+        auditLog,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk', {
+          method: 'POST',
+          headers: jsonHeaders,
+          body: JSON.stringify(validBody),
+        }),
+      );
+
+      expect(response.status).toBe(201);
+      expect(bulkCreate).toHaveBeenCalledTimes(1);
+      expect(auditLog).toHaveBeenCalledWith({
+        action: AuditAction.CREATE,
+        entityType: AuditEntityType.PRODUCT,
+        entityId: PRODUCT_ID,
+      });
+    });
+
+    it('maps infrastructure failure → 500', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          bulkCreate: () =>
+            Effect.fail(
+              new ProductsInfrastructureError({
+                action: 'bulkCreate',
+                messageKey: 'products.infrastructureError',
+              }),
+            ),
+        },
+        permissions: writeAll,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk', {
+          method: 'POST',
+          headers: jsonHeaders,
+          body: JSON.stringify(validBody),
+        }),
+      );
+      expect(response.status).toBe(500);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // GET /products/category/:categoryId/tree
+  // -------------------------------------------------------------------
+  describe('GET /products/category/:categoryId/tree', () => {
+    it('rejects without PRODUCTS:read permission', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { findByCategoryTree: () => Effect.succeed([]) },
+        permissions: {},
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/category/${CATEGORY_ID}/tree`),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('returns 400 when categoryId is not a UUID', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { findByCategoryTree: () => Effect.succeed([]) },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/category/not-a-uuid/tree'),
+      );
+      expect(response.status).toBe(400);
+    });
+
+    it('returns the product list on success', async () => {
+      const findByCategoryTree = vi.fn(() =>
+        Effect.succeed([makeProductResponse()]),
+      );
+      const { handler } = makeProductsRouterHarness({
+        service: { findByCategoryTree },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/category/${CATEGORY_ID}/tree`),
+      );
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toHaveLength(1);
+      expect(findByCategoryTree).toHaveBeenCalledWith(CATEGORY_ID);
+    });
+
+    it('maps CategoryNotFound → 404', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          findByCategoryTree: () =>
+            Effect.fail(
+              new CategoryNotFound({
+                categoryId: CATEGORY_ID,
+                messageKey: 'products.categoryNotFound',
+              }),
+            ),
+        },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/category/${CATEGORY_ID}/tree`),
+      );
+      expect(response.status).toBe(404);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // GET /products/category/:categoryId
+  // -------------------------------------------------------------------
+  describe('GET /products/category/:categoryId', () => {
+    it('rejects without PRODUCTS:read permission', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { findByCategory: () => Effect.succeed([]) },
+        permissions: {},
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/category/${CATEGORY_ID}`),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('returns 400 when categoryId is not a UUID', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { findByCategory: () => Effect.succeed([]) },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/category/not-a-uuid'),
+      );
+      expect(response.status).toBe(400);
+    });
+
+    it('returns the product list on success', async () => {
+      const findByCategory = vi.fn(() =>
+        Effect.succeed([makeProductResponse()]),
+      );
+      const { handler } = makeProductsRouterHarness({
+        service: { findByCategory },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/category/${CATEGORY_ID}`),
+      );
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toHaveLength(1);
+      expect(findByCategory).toHaveBeenCalledWith(CATEGORY_ID);
+    });
+
+    it('maps infrastructure failure → 500', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          findByCategory: () =>
+            Effect.fail(
+              new ProductsInfrastructureError({
+                action: 'findByCategory',
+                messageKey: 'products.infrastructureError',
+              }),
+            ),
+        },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/category/${CATEGORY_ID}`),
+      );
+      expect(response.status).toBe(500);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // POST /products — create
+  // -------------------------------------------------------------------
+  describe('POST /products', () => {
+    it('rejects without PRODUCTS:write permission', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { create: () => Effect.succeed(makeProductResponse()) },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products', {
+          method: 'POST',
+          headers: jsonHeaders,
+          body: JSON.stringify(validCreateBody),
+        }),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('returns 400 on malformed body', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          create: () => Effect.die('service should not be called'),
+        },
+        permissions: writeAll,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products', {
+          method: 'POST',
+          headers: jsonHeaders,
+          // missing `name`, `sku`, etc.
+          body: JSON.stringify({ reorder_point: 5 }),
+        }),
+      );
+      expect(response.status).toBe(400);
+    });
+
+    it('returns 201 and writes a CREATE audit on success', async () => {
+      const created = makeProductResponse();
+      const create = vi.fn(() => Effect.succeed(created));
+      const auditLog = vi.fn(() => Effect.void);
+      const { handler } = makeProductsRouterHarness({
+        service: { create },
+        permissions: writeAll,
+        auditLog,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products', {
+          method: 'POST',
+          headers: jsonHeaders,
+          body: JSON.stringify(validCreateBody),
+        }),
+      );
+
+      expect(response.status).toBe(201);
+      await expect(response.json()).resolves.toMatchObject({ id: PRODUCT_ID });
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(auditLog).toHaveBeenCalledWith({
+        action: AuditAction.CREATE,
+        entityType: AuditEntityType.PRODUCT,
+        entityId: PRODUCT_ID,
+      });
+    });
+
+    it('maps SkuAlreadyExists → 400 and skips audit', async () => {
+      const auditLog = vi.fn(() => Effect.void);
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          create: () =>
+            Effect.fail(
+              new SkuAlreadyExists({
+                sku: 'SKU-1',
+                messageKey: 'products.skuAlreadyExists',
+              }),
+            ),
+        },
+        permissions: writeAll,
+        auditLog,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products', {
+          method: 'POST',
+          headers: jsonHeaders,
+          body: JSON.stringify(validCreateBody),
+        }),
+      );
+      expect(response.status).toBe(400);
+      expect(auditLog).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // PATCH /products/bulk/status
+  // -------------------------------------------------------------------
+  describe('PATCH /products/bulk/status', () => {
+    const validBody = { ids: [PRODUCT_ID, OTHER_PRODUCT_ID], is_active: false };
+
+    it('rejects without PRODUCTS:write permission', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { bulkUpdateStatus: () => Effect.succeed(bulkResult()) },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk/status', {
+          method: 'PATCH',
+          headers: jsonHeaders,
+          body: JSON.stringify(validBody),
+        }),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('returns 400 on malformed body', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          bulkUpdateStatus: () =>
+            Effect.die('service should not be called'),
+        },
+        permissions: writeAll,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk/status', {
+          method: 'PATCH',
+          headers: jsonHeaders,
+          // is_active missing
+          body: JSON.stringify({ ids: [PRODUCT_ID] }),
+        }),
+      );
+      expect(response.status).toBe(400);
+    });
+
+    it('returns 200 and writes a STATUS_CHANGE audit on success', async () => {
+      const bulkUpdateStatus = vi.fn(() => Effect.succeed(bulkResult()));
+      const auditLog = vi.fn(() => Effect.void);
+      const { handler } = makeProductsRouterHarness({
+        service: { bulkUpdateStatus },
+        permissions: writeAll,
+        auditLog,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk/status', {
+          method: 'PATCH',
+          headers: jsonHeaders,
+          body: JSON.stringify(validBody),
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(bulkUpdateStatus).toHaveBeenCalledTimes(1);
+      expect(auditLog).toHaveBeenCalledWith({
+        action: AuditAction.STATUS_CHANGE,
+        entityType: AuditEntityType.PRODUCT,
+        entityId: PRODUCT_ID,
+      });
+    });
+
+    it('maps infrastructure failure → 500', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          bulkUpdateStatus: () =>
+            Effect.fail(
+              new ProductsInfrastructureError({
+                action: 'bulkUpdateStatus',
+                messageKey: 'products.infrastructureError',
+              }),
+            ),
+        },
+        permissions: writeAll,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk/status', {
+          method: 'PATCH',
+          headers: jsonHeaders,
+          body: JSON.stringify(validBody),
+        }),
+      );
+      expect(response.status).toBe(500);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // PATCH /products/bulk/restore
+  // -------------------------------------------------------------------
+  describe('PATCH /products/bulk/restore', () => {
+    const validBody = { ids: [PRODUCT_ID] };
+
+    it('rejects without PRODUCTS:write permission', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { bulkRestore: () => Effect.succeed(bulkResult()) },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk/restore', {
+          method: 'PATCH',
+          headers: jsonHeaders,
+          body: JSON.stringify(validBody),
+        }),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('returns 400 on malformed body', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          bulkRestore: () => Effect.die('service should not be called'),
+        },
+        permissions: writeAll,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk/restore', {
+          method: 'PATCH',
+          headers: jsonHeaders,
+          body: JSON.stringify({ ids: [] }),
+        }),
+      );
+      expect(response.status).toBe(400);
+    });
+
+    it('returns 200 and writes a RESTORE audit on success', async () => {
+      const bulkRestore = vi.fn(() => Effect.succeed(bulkResult()));
+      const auditLog = vi.fn(() => Effect.void);
+      const { handler } = makeProductsRouterHarness({
+        service: { bulkRestore },
+        permissions: writeAll,
+        auditLog,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk/restore', {
+          method: 'PATCH',
+          headers: jsonHeaders,
+          body: JSON.stringify(validBody),
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(bulkRestore).toHaveBeenCalledTimes(1);
+      expect(auditLog).toHaveBeenCalledWith({
+        action: AuditAction.RESTORE,
+        entityType: AuditEntityType.PRODUCT,
+        entityId: PRODUCT_ID,
+      });
+    });
+
+    it('maps ProductNotDeleted → 400', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          bulkRestore: () =>
+            Effect.fail(
+              new ProductNotDeleted({
+                productId: PRODUCT_ID,
+                messageKey: 'products.notDeleted',
+              }),
+            ),
+        },
+        permissions: writeAll,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk/restore', {
+          method: 'PATCH',
+          headers: jsonHeaders,
+          body: JSON.stringify(validBody),
+        }),
+      );
+      expect(response.status).toBe(400);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // DELETE /products/bulk
+  // -------------------------------------------------------------------
+  describe('DELETE /products/bulk', () => {
+    const validBody = { ids: [PRODUCT_ID] };
+
+    it('rejects without PRODUCTS:write permission', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { bulkDelete: () => Effect.succeed(bulkResult()) },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk', {
+          method: 'DELETE',
+          headers: jsonHeaders,
+          body: JSON.stringify(validBody),
+        }),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('returns 400 on malformed body', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          bulkDelete: () => Effect.die('service should not be called'),
+        },
+        permissions: writeAll,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk', {
+          method: 'DELETE',
+          headers: jsonHeaders,
+          body: JSON.stringify({ ids: [] }),
+        }),
+      );
+      expect(response.status).toBe(400);
+    });
+
+    it('returns 200 and writes a DELETE audit on success', async () => {
+      const bulkDelete = vi.fn(() => Effect.succeed(bulkResult()));
+      const auditLog = vi.fn(() => Effect.void);
+      const { handler } = makeProductsRouterHarness({
+        service: { bulkDelete },
+        permissions: writeAll,
+        auditLog,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk', {
+          method: 'DELETE',
+          headers: jsonHeaders,
+          body: JSON.stringify(validBody),
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(bulkDelete).toHaveBeenCalledTimes(1);
+      expect(auditLog).toHaveBeenCalledWith({
+        action: AuditAction.DELETE,
+        entityType: AuditEntityType.PRODUCT,
+        entityId: PRODUCT_ID,
+      });
+    });
+
+    it('maps infrastructure failure → 500', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          bulkDelete: () =>
+            Effect.fail(
+              new ProductsInfrastructureError({
+                action: 'bulkDelete',
+                messageKey: 'products.infrastructureError',
+              }),
+            ),
+        },
+        permissions: writeAll,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/bulk', {
+          method: 'DELETE',
+          headers: jsonHeaders,
+          body: JSON.stringify(validBody),
+        }),
+      );
+      expect(response.status).toBe(500);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // GET /products/:id
+  // -------------------------------------------------------------------
+  describe('GET /products/:id', () => {
+    it('rejects without PRODUCTS:read permission', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { findOne: () => Effect.succeed(makeProductResponse()) },
+        permissions: {},
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/${PRODUCT_ID}`),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('returns 400 when id is not a UUID', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { findOne: () => Effect.succeed(makeProductResponse()) },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/not-a-uuid'),
+      );
+      expect(response.status).toBe(400);
+    });
+
+    it('returns the product on success', async () => {
+      const findOne = vi.fn((id: string) =>
+        Effect.succeed(makeProductResponse({ id })),
+      );
+      const { handler } = makeProductsRouterHarness({
+        service: { findOne },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/${PRODUCT_ID}`),
+      );
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({ id: PRODUCT_ID });
+      expect(findOne).toHaveBeenCalledWith(PRODUCT_ID, false);
+    });
+
+    it('maps ProductNotFound → 404', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          findOne: (id: string) =>
+            Effect.fail(
+              new ProductNotFound({
+                productId: id,
+                messageKey: 'products.notFound',
+              }),
+            ),
+        },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/${PRODUCT_ID}`),
+      );
+      expect(response.status).toBe(404);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // PUT /products/:id
+  // -------------------------------------------------------------------
+  describe('PUT /products/:id', () => {
+    const updateBody = { name: 'Renamed' };
+
+    it('rejects without PRODUCTS:write permission', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { update: () => Effect.succeed(makeProductResponse()) },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/${PRODUCT_ID}`, {
+          method: 'PUT',
+          headers: jsonHeaders,
+          body: JSON.stringify(updateBody),
+        }),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('returns 400 when the body fails schema decode', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { update: () => Effect.succeed(makeProductResponse()) },
+        permissions: writeAll,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/${PRODUCT_ID}`, {
+          method: 'PUT',
+          headers: jsonHeaders,
+          // name becomes empty after Trim
+          body: JSON.stringify({ name: '' }),
+        }),
+      );
+      expect(response.status).toBe(400);
+    });
+
+    it('returns 200 and writes an UPDATE audit on success', async () => {
+      const updated = makeProductResponse({ name: 'Renamed' });
+      const update = vi.fn(() => Effect.succeed(updated));
+      const auditLog = vi.fn(() => Effect.void);
+      const { handler } = makeProductsRouterHarness({
+        service: { update },
+        permissions: writeAll,
+        auditLog,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/${PRODUCT_ID}`, {
+          method: 'PUT',
+          headers: jsonHeaders,
+          body: JSON.stringify(updateBody),
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({ name: 'Renamed' });
+      expect(auditLog).toHaveBeenCalledWith({
+        action: AuditAction.UPDATE,
+        entityType: AuditEntityType.PRODUCT,
+        entityId: PRODUCT_ID,
+      });
+    });
+
+    it('maps PriceBelowCost → 400 and skips audit', async () => {
+      const auditLog = vi.fn(() => Effect.void);
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          update: () =>
+            Effect.fail(
+              new PriceBelowCost({
+                standardPrice: 1,
+                standardCost: 5,
+                messageKey: 'products.priceBelowCost',
+              }),
+            ),
+        },
+        permissions: writeAll,
+        auditLog,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/${PRODUCT_ID}`, {
+          method: 'PUT',
+          headers: jsonHeaders,
+          body: JSON.stringify(updateBody),
+        }),
+      );
+      expect(response.status).toBe(400);
+      expect(auditLog).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // PATCH /products/:id/restore
+  // -------------------------------------------------------------------
+  describe('PATCH /products/:id/restore', () => {
+    it('rejects without PRODUCTS:write permission', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { restore: () => Effect.succeed(makeProductResponse()) },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/${PRODUCT_ID}/restore`, {
+          method: 'PATCH',
+        }),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('returns 400 when id is not a UUID', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { restore: () => Effect.succeed(makeProductResponse()) },
+        permissions: writeAll,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/not-a-uuid/restore', {
+          method: 'PATCH',
+        }),
+      );
+      expect(response.status).toBe(400);
+    });
+
+    it('returns 200 and writes a RESTORE audit on success', async () => {
+      const restore = vi.fn(() => Effect.succeed(makeProductResponse()));
+      const auditLog = vi.fn(() => Effect.void);
+      const { handler } = makeProductsRouterHarness({
+        service: { restore },
+        permissions: writeAll,
+        auditLog,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/${PRODUCT_ID}/restore`, {
+          method: 'PATCH',
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(restore).toHaveBeenCalledWith(PRODUCT_ID);
+      expect(auditLog).toHaveBeenCalledWith({
+        action: AuditAction.RESTORE,
+        entityType: AuditEntityType.PRODUCT,
+        entityId: PRODUCT_ID,
+      });
+    });
+
+    it('maps ProductNotDeleted → 400', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          restore: () =>
+            Effect.fail(
+              new ProductNotDeleted({
+                productId: PRODUCT_ID,
+                messageKey: 'products.notDeleted',
+              }),
+            ),
+        },
+        permissions: writeAll,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/${PRODUCT_ID}/restore`, {
+          method: 'PATCH',
+        }),
+      );
+      expect(response.status).toBe(400);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // DELETE /products/:id
+  // -------------------------------------------------------------------
+  describe('DELETE /products/:id', () => {
+    it('rejects without PRODUCTS:write permission', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { delete: () => Effect.void },
+        permissions: readOnly,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/${PRODUCT_ID}`, {
+          method: 'DELETE',
+        }),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('returns 400 when id is not a UUID', async () => {
+      const { handler } = makeProductsRouterHarness({
+        service: { delete: () => Effect.void },
+        permissions: writeAll,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/products/not-a-uuid', {
+          method: 'DELETE',
+        }),
+      );
+      expect(response.status).toBe(400);
+    });
+
+    it('returns 200 and writes a DELETE audit on success', async () => {
+      const del = vi.fn(() => Effect.void);
+      const auditLog = vi.fn(() => Effect.void);
+      const { handler } = makeProductsRouterHarness({
+        service: { delete: del },
+        permissions: writeAll,
+        auditLog,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/${PRODUCT_ID}`, {
+          method: 'DELETE',
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body).toHaveProperty('message');
+      expect(del).toHaveBeenCalledWith(PRODUCT_ID, expect.any(String), false);
+      expect(auditLog).toHaveBeenCalledWith({
+        action: AuditAction.DELETE,
+        entityType: AuditEntityType.PRODUCT,
+        entityId: PRODUCT_ID,
+      });
+    });
+
+    it('maps ProductNotFound → 404 and skips audit', async () => {
+      const auditLog = vi.fn(() => Effect.void);
+      const { handler } = makeProductsRouterHarness({
+        service: {
+          delete: (id: string) =>
+            Effect.fail(
+              new ProductNotFound({
+                productId: id,
+                messageKey: 'products.notFound',
+              }),
+            ),
+        },
+        permissions: writeAll,
+        auditLog,
+      });
+
+      const response = await handler(
+        new Request(`http://localhost/products/${PRODUCT_ID}`, {
+          method: 'DELETE',
+        }),
+      );
+      expect(response.status).toBe(404);
+      expect(auditLog).not.toHaveBeenCalled();
+    });
+  });
+
+  it('exposes the ProductsService tag', () => {
+    expect(ProductsService).toBeDefined();
+  });
+});
