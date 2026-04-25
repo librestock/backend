@@ -246,7 +246,7 @@ describe('auditLogsRouter', () => {
       );
 
       expect(response.status).toBe(200);
-      const body = (await response.json()) as Array<{ id: string }>;
+      const body = await response.json();
       expect(body[0]).toMatchObject({ id: LOG_ID });
     });
 
@@ -295,7 +295,7 @@ describe('auditLogsRouter', () => {
       );
 
       expect(response.status).toBe(200);
-      const body = (await response.json()) as Array<{ id: string }>;
+      const body = await response.json();
       expect(body[0]).toMatchObject({ id: LOG_ID });
     });
 

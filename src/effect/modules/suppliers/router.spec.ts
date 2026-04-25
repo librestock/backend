@@ -9,7 +9,7 @@ import { Effect } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
 import type { SupplierResponseDto } from '@librestock/types/suppliers';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
-import { SupplierNotFound } from './suppliers.errors';
+import { SupplierNotFound, SuppliersInfrastructureError } from './suppliers.errors';
 import { makeSuppliersRouterHarness } from './__fixtures__/router-harness';
 import { SuppliersService } from './service';
 
@@ -274,13 +274,12 @@ describe('suppliersRouter', () => {
       const { handler } = makeSuppliersRouterHarness({
         service: {
           create: () =>
-            Effect.fail({
-              _tag: 'SuppliersInfrastructureError',
-              statusCode: 500,
-              messageKey: 'suppliers.infrastructureError',
-              message: 'boom',
-              action: 'insert',
-            }),
+            Effect.fail(
+              new SuppliersInfrastructureError({
+                messageKey: 'suppliers.repositoryFailed',
+                action: 'insert',
+              }),
+            ),
         },
         permissions: writeAll,
         auditLog,

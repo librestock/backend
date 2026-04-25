@@ -1,3 +1,4 @@
+import { describe, expect, it, vi } from 'vitest';
 import { type Context, Effect, Layer } from 'effect';
 import { HttpApp, HttpRouter } from '@effect/platform';
 import { Permission, Resource } from '@librestock/types/auth';
@@ -121,7 +122,7 @@ describe('categoriesRouter', () => {
       );
 
       expect(response.status).toBe(200);
-      const body = (await response.json()) as Array<{ id: string }>;
+      const body = await response.json();
       expect(body[0]).toMatchObject({ id: CATEGORY_ID });
     });
 

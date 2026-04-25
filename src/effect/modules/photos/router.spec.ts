@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 /**
  * Unit-scope tests for the photos HTTP boundary.
  *

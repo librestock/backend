@@ -6,7 +6,7 @@
  *                                  `platformLayer` in `src/effect/main.ts`.
  *   - `provideTestLayer(...)`    — convenience: `Effect.provide(Layer.mergeAll(...))`
  *                                  with the test platform pre-merged.
- *   - `runTest` / `runTestExit` — `Effect.runPromise` wrappers that always
+ *   - `runTest` / `runTestFailure` — `Effect.runPromise` wrappers that always
  *                                  provide the test platform.
  *   - `withTestDb({ before, after, each })` — idempotent hook registration for
  *                                  integration specs (uses Vitest globals).
@@ -74,10 +74,12 @@ const betterAuthHeadersLayer = Layer.succeed(
  * The Better Auth layer here is the **stubbed** one from
  * `./better-auth-test` — no network calls, no real session DB.
  */
-export const testPlatformLayer = Layer.mergeAll(
-  makeTestDrizzleLayer(),
-  makeBetterAuthTestLayer(),
-  betterAuthHeadersLayer,
+export const testPlatformLayer = Layer.suspend(() =>
+  Layer.mergeAll(
+    makeTestDrizzleLayer(),
+    makeBetterAuthTestLayer(),
+    betterAuthHeadersLayer,
+  ),
 );
 
 /**
@@ -130,7 +132,12 @@ export const runTestFailure = <A, E, R>(
  * Relies on Vitest globals (`beforeAll`, `afterAll`, `beforeEach`) which are
  * enabled in both `vitest.config.ts` and `vitest.integration.config.ts`.
  */
+let _testDbHooksRegistered = false;
+
 export function withTestDb(): void {
+  if (_testDbHooksRegistered) return;
+  _testDbHooksRegistered = true;
+
   beforeAll(() => {
     getTestDb();
   });

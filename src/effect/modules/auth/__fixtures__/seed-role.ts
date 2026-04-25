@@ -84,9 +84,11 @@ const upsertRole = async (
       .where(eq(roles.name, input.name))
       .limit(1);
     if (!rows[0]) {
-      throw new Error(
+      const err = new Error(
         `upsertRole: unique violation on "${input.name}" but row not present on lookup`,
       );
+      (err as unknown as { code: string }).code = '23503';
+      throw err;
     }
     return rows[0].id;
   }
@@ -107,7 +109,7 @@ export async function seedRole(
   db: DrizzleDb,
   input: SeedRoleInput,
 ): Promise<{ id: string; name: string }> {
-  const roleId = await retryOnTransient(
+  let roleId = await retryOnTransient(
     () => upsertRole(db, input),
     'seedRole.role',
   );
@@ -123,6 +125,7 @@ export async function seedRole(
         .limit(1);
       const targetId =
         existing[0]?.id ?? (await upsertRole(db, input));
+      roleId = targetId;
 
       await db.insert(rolePermissions).values(
         input.permissions!.map((p) => ({
