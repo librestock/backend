@@ -16,6 +16,10 @@ export const deCatalog: Record<MessageKey, string> = {
   'auditLogs.repositoryFailed': 'Der Audit-Log-Vorgang ist fehlgeschlagen.',
   'auth.permissionDenied': 'Unzureichende Berechtigungen.',
   'auth.unauthorized': 'Nicht autorisiert.',
+  'tenant.membershipRejected':
+    'Der aktive Tenant ist fuer diesen Benutzer nicht verfuegbar.',
+  'tenant.notResolved':
+    'Fuer diese Anfrage konnte kein aktiver Tenant ermittelt werden.',
   'branding.repositoryFailed': 'Der Branding-Vorgang ist fehlgeschlagen.',
   'branding.sessionUserUnavailable':
     'Der Sitzungsbenutzer ist nicht verfuegbar.',

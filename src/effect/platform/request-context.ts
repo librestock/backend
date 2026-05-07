@@ -1,4 +1,5 @@
 import { Headers, HttpServerRequest } from '@effect/platform';
+import type { HttpMethod } from '@effect/platform/HttpMethod';
 import { Context, Effect, Option } from 'effect';
 import { v4 as uuidv4, validate as uuidValidate } from 'uuid';
 import { resolveLocale, type SupportedLocale } from './messages';
@@ -6,9 +7,12 @@ import { resolveLocale, type SupportedLocale } from './messages';
 export interface RequestContext {
   readonly requestId: string;
   readonly path: string;
-  readonly method: string;
+  readonly method: HttpMethod;
   readonly ip: string | null;
   readonly locale: SupportedLocale;
+  tenantId?: string;
+  tenantName?: string;
+  tenantSlug?: string;
 }
 
 export const CurrentRequestContext = Context.GenericTag<RequestContext>(
@@ -30,13 +34,15 @@ export const makeRequestContext = Effect.gen(function* () {
     Option.getOrNull(Headers.get(request.headers, 'accept-language')),
   );
 
-  return {
+  const requestContext: RequestContext = {
     requestId,
     path,
     method: request.method,
     ip: Option.getOrNull(request.remoteAddress),
     locale,
-  } satisfies RequestContext;
+  };
+
+  return requestContext;
 });
 
 export const getRequestContext = Effect.flatMap(

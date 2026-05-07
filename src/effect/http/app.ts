@@ -21,6 +21,7 @@ import { corsMiddleware } from './cors';
 import { securityHeadersMiddleware } from './security-headers';
 import { requestLoggingMiddleware } from './logging';
 import { AppApi } from './api';
+import { tenantContextMiddleware } from './tenant';
 
 const MAX_REQUEST_BODY_BYTES = 10 * 1024 * 1024;
 
@@ -125,6 +126,8 @@ export const buildHttpApp = Effect.gen(function* () {
   );
 
   return requestLoggingMiddleware(
-    securityHeadersMiddleware(corsMiddleware(bodyLimitMiddleware(base))),
+    securityHeadersMiddleware(
+      corsMiddleware(bodyLimitMiddleware(tenantContextMiddleware(base))),
+    ),
   );
 });

@@ -35,6 +35,7 @@ export {
   closeTestDb,
   truncateAll,
   makeTestDrizzleLayer,
+  makeTestRequestContext,
 } from '../test/integration-layer';
 export {
   TEST_USER_ID,
@@ -122,8 +123,7 @@ export const runTest = <A, E, R>(
 export const runTestFailure = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
   layer: Layer.Layer<R, never, never>,
-): Promise<E> =>
-  Effect.runPromise(Effect.flip(Effect.provide(effect, layer)));
+): Promise<E> => Effect.runPromise(Effect.flip(Effect.provide(effect, layer)));
 
 /**
  * Registers the canonical integration hooks (getTestDb on beforeAll,

@@ -14,6 +14,9 @@ export const enCatalog = {
   'auditLogs.repositoryFailed': 'Audit log operation failed.',
   'auth.permissionDenied': 'Insufficient permissions.',
   'auth.unauthorized': 'Unauthorized.',
+  'tenant.membershipRejected':
+    'The active tenant is not available for this user.',
+  'tenant.notResolved': 'No active tenant could be resolved for this request.',
   'branding.repositoryFailed': 'Branding operation failed.',
   'branding.sessionUserUnavailable': 'Session user is not available.',
   'categories.circularReference':

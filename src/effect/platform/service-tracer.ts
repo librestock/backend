@@ -28,6 +28,7 @@ export interface TraceAttributeCatalog {
   readonly parentId: string;
   readonly productId: string;
   readonly requestId: string;
+  readonly tenantId: string;
   readonly userId: string;
 }
 
@@ -124,6 +125,12 @@ export const TRACE_ATTRIBUTE_DEFINITIONS = {
     description:
       'Request identifier auto-attached by the helper when CurrentRequestContext is in scope',
   },
+  tenantId: {
+    type: 'string',
+    cardinality: 'low',
+    description:
+      'Tenant identifier auto-attached by the helper when tenant context is known',
+  },
   userId: {
     type: 'string',
     cardinality: 'high',
@@ -150,6 +157,7 @@ export const TRACE_ATTRIBUTE_KEYS = [
   'parentId',
   'productId',
   'requestId',
+  'tenantId',
   'userId',
 ] as const satisfies ReadonlyArray<keyof TraceAttributeCatalog>;
 
@@ -211,7 +219,11 @@ const attachRequestId = Effect.flatMap(
   Effect.serviceOption(CurrentRequestContext),
   Option.match({
     onNone: () => Effect.void,
-    onSome: (ctx) => Effect.annotateCurrentSpan({ requestId: ctx.requestId }),
+    onSome: (ctx) =>
+      Effect.annotateCurrentSpan({
+        requestId: ctx.requestId,
+        ...(ctx.tenantId ? { tenantId: ctx.tenantId } : {}),
+      }),
   }),
 );
 
