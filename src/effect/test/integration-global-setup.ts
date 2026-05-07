@@ -1,14 +1,23 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import pg from 'pg';
+import { getCommittedSqlMigrations } from '../platform/db/committed-sql-migrations';
 
 const TEST_DB_NAME = 'librestock_inventory_test';
 
 const PROJECT_ROOT = path.resolve(import.meta.dirname, '..', '..', '..');
-const DRIZZLE_KIT_BIN = path.join(PROJECT_ROOT, 'node_modules', '.bin', 'drizzle-kit');
+const DRIZZLE_KIT_BIN = path.join(
+  PROJECT_ROOT,
+  'node_modules',
+  '.bin',
+  'drizzle-kit',
+);
+const MIGRATIONS_DIR = path.join(PROJECT_ROOT, 'drizzle');
 
 function getAdminUrl(): string {
-  const base = process.env.TEST_DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5432';
+  const base =
+    process.env.TEST_DATABASE_URL ??
+    'postgresql://postgres:postgres@localhost:5432';
   const url = new URL(base);
   url.pathname = '/postgres';
   return url.toString();
@@ -47,17 +56,27 @@ export async function setup(): Promise<void> {
     [
       'push',
       '--force',
-      '--dialect', 'postgresql',
-      '--schema', './src/effect/platform/db/schema.ts',
-      '--url', testUrl,
+      '--dialect',
+      'postgresql',
+      '--schema',
+      './src/effect/platform/db/schema.ts',
+      '--url',
+      testUrl,
     ],
     { cwd: PROJECT_ROOT, stdio: 'pipe' },
   );
 
-  // 3. Create custom sequences not managed by Drizzle
+  // 3. Apply committed SQL migrations for developer test DBs that predate them.
   const testPool = new pg.Pool({ connectionString: testUrl });
   try {
-    await testPool.query(`CREATE SEQUENCE IF NOT EXISTS order_number_seq START 1`);
+    for (const migration of getCommittedSqlMigrations(MIGRATIONS_DIR)) {
+      await testPool.query(migration.sql);
+    }
+
+    // 4. Create custom sequences not managed by Drizzle
+    await testPool.query(
+      `CREATE SEQUENCE IF NOT EXISTS order_number_seq START 1`,
+    );
   } finally {
     await testPool.end();
   }

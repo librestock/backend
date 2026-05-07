@@ -11,15 +11,14 @@ import {
   jsonb,
   uniqueIndex,
   index,
+  primaryKey,
 } from 'drizzle-orm/pg-core';
-import {
-  AuditAction,
-  AuditEntityType,
-} from '@librestock/types/audit-logs';
+import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import { ClientStatus } from '@librestock/types/clients';
 import { LocationType } from '@librestock/types/locations';
 import { OrderStatus } from '@librestock/types/orders';
 import { StockMovementReason } from '@librestock/types/stock-movements';
+import { DEFAULT_TENANT_ID } from '../tenant-constants';
 
 // ── pgEnums ──────────────────────────────────────────────────────────────
 
@@ -87,23 +86,75 @@ export const auditEntityTypeEnum = pgEnum('audit_logs_entity_type', [
 
 // ── Tables ───────────────────────────────────────────────────────────────
 
+export const organizations = pgTable(
+  'organization',
+  {
+    id: uuid('id').primaryKey(),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    logo: text('logo'),
+    metadata: text('metadata'),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [uniqueIndex('organization_slug_unique').on(table.slug)],
+);
+
+export const members = pgTable(
+  'member',
+  {
+    id: text('id').primaryKey(),
+    organization_id: uuid('organization_id').notNull(),
+    user_id: uuid('user_id').notNull(),
+    role: text('role').notNull().default('member'),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('member_user_organization_unique').on(
+      table.user_id,
+      table.organization_id,
+    ),
+    index('member_user_id_idx').on(table.user_id),
+    index('member_organization_id_idx').on(table.organization_id),
+  ],
+);
+
 export const categories = pgTable('categories', {
   id: uuid('id').primaryKey().defaultRandom(),
+  tenant_id: uuid('tenant_id').default(DEFAULT_TENANT_ID).notNull(),
   name: varchar('name', { length: 100 }).notNull(),
   parent_id: uuid('parent_id'),
   description: varchar('description', { length: 500 }),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  created_at: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
-export const roles = pgTable('roles', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: varchar('name', { length: 100 }).notNull().unique(),
-  description: varchar('description', { length: 500 }),
-  is_system: boolean('is_system').notNull().default(false),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const roles = pgTable(
+  'roles',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenant_id: uuid('tenant_id').default(DEFAULT_TENANT_ID).notNull(),
+    name: varchar('name', { length: 100 }).notNull(),
+    description: varchar('description', { length: 500 }),
+    is_system: boolean('is_system').notNull().default(false),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('roles_tenant_name_unique').on(table.tenant_id, table.name),
+  ],
+);
 
 export const rolePermissions = pgTable(
   'role_permissions',
@@ -128,33 +179,45 @@ export const userRoles = pgTable(
   'user_roles',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    tenant_id: uuid('tenant_id').default(DEFAULT_TENANT_ID).notNull(),
     user_id: uuid('user_id').notNull(),
     role_id: uuid('role_id')
       .notNull()
       .references(() => roles.id, { onDelete: 'cascade' }),
   },
   (table) => [
-    uniqueIndex('user_roles_user_role_unique').on(table.user_id, table.role_id),
+    uniqueIndex('user_roles_tenant_user_role_unique').on(
+      table.tenant_id,
+      table.user_id,
+      table.role_id,
+    ),
     index('user_roles_user_id_idx').on(table.user_id),
+    index('user_roles_tenant_user_id_idx').on(table.tenant_id, table.user_id),
   ],
 );
 
 export const locations = pgTable('locations', {
   id: uuid('id').primaryKey().defaultRandom(),
+  tenant_id: uuid('tenant_id').default(DEFAULT_TENANT_ID).notNull(),
   name: varchar('name').notNull(),
   type: locationTypeEnum('type').notNull(),
   address: text('address').notNull().default(''),
   contact_person: varchar('contact_person').notNull().default(''),
   phone: varchar('phone').notNull().default(''),
   is_active: boolean('is_active').notNull().default(true),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  created_at: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const areas = pgTable(
   'areas',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    tenant_id: uuid('tenant_id').default(DEFAULT_TENANT_ID).notNull(),
     location_id: uuid('location_id')
       .notNull()
       .references(() => locations.id, { onDelete: 'cascade' }),
@@ -163,8 +226,12 @@ export const areas = pgTable(
     code: varchar('code', { length: 50 }).notNull().default(''),
     description: text('description').notNull().default(''),
     is_active: boolean('is_active').notNull().default(true),
-    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     index('areas_location_id_idx').on(table.location_id),
@@ -175,6 +242,7 @@ export const areas = pgTable(
 
 export const suppliers = pgTable('suppliers', {
   id: uuid('id').primaryKey().defaultRandom(),
+  tenant_id: uuid('tenant_id').default(DEFAULT_TENANT_ID).notNull(),
   name: varchar('name').notNull(),
   contact_person: varchar('contact_person'),
   email: varchar('email'),
@@ -183,51 +251,79 @@ export const suppliers = pgTable('suppliers', {
   website: varchar('website'),
   notes: text('notes'),
   is_active: boolean('is_active').notNull().default(true),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  created_at: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const products = pgTable(
   'products',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    sku: varchar('sku', { length: 50 }).notNull().unique(),
+    tenant_id: uuid('tenant_id').default(DEFAULT_TENANT_ID).notNull(),
+    sku: varchar('sku', { length: 50 }).notNull(),
     name: varchar('name', { length: 200 }).notNull(),
     description: text('description'),
     category_id: uuid('category_id')
       .notNull()
       .references(() => categories.id, { onDelete: 'restrict' }),
     volume_ml: integer('volume_ml'),
-    weight_kg: decimal('weight_kg', { precision: 10, scale: 3, mode: 'number' }),
+    weight_kg: decimal('weight_kg', {
+      precision: 10,
+      scale: 3,
+      mode: 'number',
+    }),
     dimensions_cm: varchar('dimensions_cm', { length: 50 }),
-    standard_cost: decimal('standard_cost', { precision: 12, scale: 2, mode: 'number' }),
-    standard_price: decimal('standard_price', { precision: 12, scale: 2, mode: 'number' }),
+    standard_cost: decimal('standard_cost', {
+      precision: 12,
+      scale: 2,
+      mode: 'number',
+    }),
+    standard_price: decimal('standard_price', {
+      precision: 12,
+      scale: 2,
+      mode: 'number',
+    }),
     markup_percentage: decimal('markup_percentage', {
       precision: 6,
       scale: 2,
       mode: 'number',
     }),
     reorder_point: integer('reorder_point').notNull().default(0),
-    primary_supplier_id: uuid('primary_supplier_id').references(() => suppliers.id, {
-      onDelete: 'set null',
-    }),
+    primary_supplier_id: uuid('primary_supplier_id').references(
+      () => suppliers.id,
+      {
+        onDelete: 'set null',
+      },
+    ),
     supplier_sku: varchar('supplier_sku', { length: 50 }),
     barcode: varchar('barcode', { length: 100 }),
     unit: varchar('unit', { length: 50 }),
     is_active: boolean('is_active').notNull().default(true),
     is_perishable: boolean('is_perishable').notNull().default(false),
     notes: text('notes'),
-    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     deleted_at: timestamp('deleted_at', { withTimezone: true }),
     created_by: varchar('created_by', { length: 255 }),
     updated_by: varchar('updated_by', { length: 255 }),
     deleted_by: varchar('deleted_by', { length: 255 }),
   },
   (table) => [
+    uniqueIndex('products_tenant_sku_unique').on(table.tenant_id, table.sku),
     index('products_deleted_at_idx').on(table.deleted_at),
     index('products_active_deleted_idx').on(table.is_active, table.deleted_at),
-    index('products_category_deleted_idx').on(table.category_id, table.deleted_at),
+    index('products_category_deleted_idx').on(
+      table.category_id,
+      table.deleted_at,
+    ),
   ],
 );
 
@@ -244,30 +340,42 @@ export const photos = pgTable(
     storage_path: varchar('storage_path', { length: 500 }).notNull(),
     display_order: integer('display_order').notNull().default(0),
     uploaded_by: uuid('uploaded_by'),
-    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [index('photos_product_id_idx').on(table.product_id)],
 );
 
 export const supplierProducts = pgTable('supplier_products', {
   id: uuid('id').primaryKey().defaultRandom(),
+  tenant_id: uuid('tenant_id').default(DEFAULT_TENANT_ID).notNull(),
   supplier_id: uuid('supplier_id')
     .notNull()
     .references(() => suppliers.id),
   product_id: uuid('product_id').notNull(),
   supplier_sku: varchar('supplier_sku'),
-  cost_per_unit: decimal('cost_per_unit', { precision: 12, scale: 2, mode: 'number' }),
+  cost_per_unit: decimal('cost_per_unit', {
+    precision: 12,
+    scale: 2,
+    mode: 'number',
+  }),
   lead_time_days: integer('lead_time_days'),
   minimum_order_quantity: integer('minimum_order_quantity'),
   is_preferred: boolean('is_preferred').notNull().default(false),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  created_at: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const clients = pgTable(
   'clients',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    tenant_id: uuid('tenant_id').default(DEFAULT_TENANT_ID).notNull(),
     company_name: varchar('company_name').notNull(),
     yacht_name: varchar('yacht_name'),
     contact_person: varchar('contact_person').notNull(),
@@ -275,14 +383,25 @@ export const clients = pgTable(
     phone: varchar('phone'),
     billing_address: text('billing_address'),
     default_delivery_address: text('default_delivery_address'),
-    account_status: clientStatusEnum('account_status').notNull().default(ClientStatus.ACTIVE),
+    account_status: clientStatusEnum('account_status')
+      .notNull()
+      .default(ClientStatus.ACTIVE),
     payment_terms: varchar('payment_terms'),
-    credit_limit: decimal('credit_limit', { precision: 12, scale: 2, mode: 'number' }),
+    credit_limit: decimal('credit_limit', {
+      precision: 12,
+      scale: 2,
+      mode: 'number',
+    }),
     notes: text('notes'),
-    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
+    index('clients_tenant_id_idx').on(table.tenant_id),
     index('clients_email_idx').on(table.email),
     index('clients_account_status_idx').on(table.account_status),
   ],
@@ -292,6 +411,7 @@ export const orders = pgTable(
   'orders',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    tenant_id: uuid('tenant_id').default(DEFAULT_TENANT_ID).notNull(),
     order_number: varchar('order_number').notNull(),
     client_id: uuid('client_id')
       .notNull()
@@ -301,7 +421,11 @@ export const orders = pgTable(
     delivery_address: text('delivery_address').notNull(),
     yacht_name: varchar('yacht_name'),
     special_instructions: text('special_instructions'),
-    total_amount: decimal('total_amount', { precision: 12, scale: 2, mode: 'number' })
+    total_amount: decimal('total_amount', {
+      precision: 12,
+      scale: 2,
+      mode: 'number',
+    })
       .notNull()
       .default(0),
     assigned_to: uuid('assigned_to'),
@@ -310,11 +434,18 @@ export const orders = pgTable(
     shipped_at: timestamp('shipped_at', { withTimezone: true }),
     delivered_at: timestamp('delivered_at', { withTimezone: true }),
     kanban_task_id: varchar('kanban_task_id'),
-    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
-    uniqueIndex('orders_order_number_unique').on(table.order_number),
+    uniqueIndex('orders_tenant_order_number_unique').on(
+      table.tenant_id,
+      table.order_number,
+    ),
     index('orders_client_id_idx').on(table.client_id),
     index('orders_status_idx').on(table.status),
   ],
@@ -331,13 +462,25 @@ export const orderItems = pgTable(
       .notNull()
       .references(() => products.id),
     quantity: integer('quantity').notNull(),
-    unit_price: decimal('unit_price', { precision: 12, scale: 2, mode: 'number' }).notNull(),
-    subtotal: decimal('subtotal', { precision: 12, scale: 2, mode: 'number' }).notNull(),
+    unit_price: decimal('unit_price', {
+      precision: 12,
+      scale: 2,
+      mode: 'number',
+    }).notNull(),
+    subtotal: decimal('subtotal', {
+      precision: 12,
+      scale: 2,
+      mode: 'number',
+    }).notNull(),
     notes: text('notes'),
     quantity_picked: integer('quantity_picked').notNull().default(0),
     quantity_packed: integer('quantity_packed').notNull().default(0),
-    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     index('order_items_order_id_idx').on(table.order_id),
@@ -349,26 +492,41 @@ export const inventory = pgTable(
   'inventory',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    tenant_id: uuid('tenant_id').default(DEFAULT_TENANT_ID).notNull(),
     product_id: uuid('product_id')
       .notNull()
       .references(() => products.id),
     location_id: uuid('location_id')
       .notNull()
       .references(() => locations.id),
-    area_id: uuid('area_id').references(() => areas.id, { onDelete: 'set null' }),
+    area_id: uuid('area_id').references(() => areas.id, {
+      onDelete: 'set null',
+    }),
     quantity: integer('quantity').notNull().default(0),
     batch_number: varchar('batch_number').notNull().default(''),
     expiry_date: timestamp('expiry_date', { withTimezone: true }),
-    cost_per_unit: decimal('cost_per_unit', { precision: 12, scale: 2, mode: 'number' }),
+    cost_per_unit: decimal('cost_per_unit', {
+      precision: 12,
+      scale: 2,
+      mode: 'number',
+    }),
     received_date: timestamp('received_date', { withTimezone: true }),
-    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
+    index('inventory_tenant_id_idx').on(table.tenant_id),
     index('inventory_product_id_idx').on(table.product_id),
     index('inventory_location_id_idx').on(table.location_id),
     index('inventory_area_id_idx').on(table.area_id),
-    index('inventory_product_location_idx').on(table.product_id, table.location_id),
+    index('inventory_product_location_idx').on(
+      table.product_id,
+      table.location_id,
+    ),
     index('inventory_product_location_area_idx').on(
       table.product_id,
       table.location_id,
@@ -381,6 +539,7 @@ export const stockMovements = pgTable(
   'stock_movements',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    tenant_id: uuid('tenant_id').default(DEFAULT_TENANT_ID).notNull(),
     product_id: uuid('product_id')
       .notNull()
       .references(() => products.id),
@@ -390,13 +549,20 @@ export const stockMovements = pgTable(
     reason: stockMovementReasonEnum('reason').notNull(),
     order_id: uuid('order_id').references(() => orders.id),
     reference_number: varchar('reference_number'),
-    cost_per_unit: decimal('cost_per_unit', { precision: 12, scale: 2, mode: 'number' }),
+    cost_per_unit: decimal('cost_per_unit', {
+      precision: 12,
+      scale: 2,
+      mode: 'number',
+    }),
     kanban_task_id: varchar('kanban_task_id'),
     user_id: uuid('user_id').notNull(),
     notes: text('notes'),
-    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
+    index('stock_movements_tenant_id_idx').on(table.tenant_id),
     index('stock_movements_product_id_idx').on(table.product_id),
     index('stock_movements_from_location_id_idx').on(table.from_location_id),
     index('stock_movements_to_location_id_idx').on(table.to_location_id),
@@ -409,6 +575,7 @@ export const auditLogs = pgTable(
   'audit_logs',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    tenant_id: uuid('tenant_id').default(DEFAULT_TENANT_ID).notNull(),
     user_id: uuid('user_id'),
     action: auditActionEnum('action').notNull(),
     entity_type: auditEntityTypeEnum('entity_type').notNull(),
@@ -416,22 +583,40 @@ export const auditLogs = pgTable(
     changes: jsonb('changes'),
     ip_address: varchar('ip_address'),
     user_agent: varchar('user_agent'),
-    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
-    index('audit_logs_entity_type_entity_id_idx').on(table.entity_type, table.entity_id),
+    index('audit_logs_tenant_id_idx').on(table.tenant_id),
+    index('audit_logs_entity_type_entity_id_idx').on(
+      table.entity_type,
+      table.entity_id,
+    ),
     index('audit_logs_user_id_idx').on(table.user_id),
     index('audit_logs_created_at_idx').on(table.created_at),
   ],
 );
 
-export const brandingSettings = pgTable('branding_settings', {
-  id: integer('id').primaryKey().default(1),
-  app_name: varchar('app_name', { length: 100 }).notNull(),
-  tagline: varchar('tagline', { length: 255 }).notNull(),
-  logo_url: varchar('logo_url', { length: 500 }),
-  favicon_url: varchar('favicon_url', { length: 500 }),
-  primary_color: varchar('primary_color', { length: 7 }).notNull(),
-  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  updated_by: varchar('updated_by'),
-});
+export const brandingSettings = pgTable(
+  'branding_settings',
+  {
+    id: integer('id').notNull().default(1),
+    tenant_id: uuid('tenant_id').default(DEFAULT_TENANT_ID).notNull(),
+    app_name: varchar('app_name', { length: 100 }).notNull(),
+    tagline: varchar('tagline', { length: 255 }).notNull(),
+    logo_url: varchar('logo_url', { length: 500 }),
+    favicon_url: varchar('favicon_url', { length: 500 }),
+    primary_color: varchar('primary_color', { length: 7 }).notNull(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_by: varchar('updated_by'),
+  },
+  (table) => [
+    primaryKey({
+      name: 'branding_settings_tenant_id_id_pk',
+      columns: [table.tenant_id, table.id],
+    }),
+  ],
+);
