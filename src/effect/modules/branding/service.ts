@@ -1,5 +1,5 @@
 import { Effect } from 'effect';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type {
   BrandingResponseDto,
   UpdateBrandingDto,
@@ -8,17 +8,24 @@ import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { brandingSettings } from '../../platform/db/schema';
 import {
+  requireRequestTenantId,
+  type TenantNotResolved,
+} from '../../platform/tenant-context';
+import {
   BRANDING_SETTINGS_ID,
   DEFAULT_BRANDING,
   POWERED_BY,
 } from './branding.constants';
 import { toBrandingResponse } from './branding.utils';
-import {
-  BrandingInfrastructureError,
-} from './branding.errors';
+import { BrandingInfrastructureError } from './branding.errors';
 
-const tryAsync = makeTryAsync((action, cause) =>
-  new BrandingInfrastructureError({ action, cause, messageKey: 'branding.repositoryFailed' }),
+const tryAsync = makeTryAsync(
+  (action, cause) =>
+    new BrandingInfrastructureError({
+      action,
+      cause,
+      messageKey: 'branding.repositoryFailed',
+    }),
 );
 
 export class BrandingService extends Effect.Service<BrandingService>()(
@@ -27,45 +34,62 @@ export class BrandingService extends Effect.Service<BrandingService>()(
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;
 
-      const get = (): Effect.Effect<BrandingResponseDto, BrandingInfrastructureError> =>
-        Effect.map(
-          tryAsync('load branding settings', async () => {
-            const rows = await db
-              .select()
-              .from(brandingSettings)
-              .where(eq(brandingSettings.id, BRANDING_SETTINGS_ID))
-              .limit(1);
-            return rows[0] ?? null;
-          }),
-          (settings) =>
-            settings
-              ? toBrandingResponse(settings)
-              : {
-                  ...DEFAULT_BRANDING,
-                  powered_by: POWERED_BY,
-                  updated_at: new Date(),
-                },
-        ).pipe(Effect.withSpan('BrandingService.get'));
+      const get = (): Effect.Effect<
+        BrandingResponseDto,
+        BrandingInfrastructureError | TenantNotResolved
+      > =>
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          const settings = yield* tryAsync(
+            'load branding settings',
+            async () => {
+              const rows = await db
+                .select()
+                .from(brandingSettings)
+                .where(
+                  and(
+                    eq(brandingSettings.id, BRANDING_SETTINGS_ID),
+                    eq(brandingSettings.tenant_id, tenantId),
+                  ),
+                )
+                .limit(1);
+              return rows[0] ?? null;
+            },
+          );
+          return settings
+            ? toBrandingResponse(settings)
+            : {
+                ...DEFAULT_BRANDING,
+                powered_by: POWERED_BY,
+                updated_at: new Date(),
+              };
+        }).pipe(Effect.withSpan('BrandingService.get'));
 
       const update = (
         dto: UpdateBrandingDto,
         userId: string,
-      ): Effect.Effect<BrandingResponseDto, BrandingInfrastructureError> =>
+      ): Effect.Effect<
+        BrandingResponseDto,
+        BrandingInfrastructureError | TenantNotResolved
+      > =>
         Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
           yield* tryAsync('upsert branding settings', () =>
             db
               .insert(brandingSettings)
               .values({
                 id: BRANDING_SETTINGS_ID,
+                tenant_id: tenantId,
                 app_name: dto.app_name ?? DEFAULT_BRANDING.app_name,
                 tagline: dto.tagline ?? DEFAULT_BRANDING.tagline,
-                primary_color: dto.primary_color ?? DEFAULT_BRANDING.primary_color,
+                primary_color:
+                  dto.primary_color ?? DEFAULT_BRANDING.primary_color,
                 ...dto,
                 updated_by: userId,
                 updated_at: new Date(),
               })
               .onConflictDoUpdate({
-                target: brandingSettings.id,
+                target: [brandingSettings.tenant_id, brandingSettings.id],
                 set: {
                   ...dto,
                   updated_by: userId,
@@ -74,14 +98,17 @@ export class BrandingService extends Effect.Service<BrandingService>()(
               }),
           );
 
-          const rows = yield* tryAsync(
-            'load persisted branding settings',
-            () =>
-              db
-                .select()
-                .from(brandingSettings)
-                .where(eq(brandingSettings.id, BRANDING_SETTINGS_ID))
-                .limit(1),
+          const rows = yield* tryAsync('load persisted branding settings', () =>
+            db
+              .select()
+              .from(brandingSettings)
+              .where(
+                and(
+                  eq(brandingSettings.id, BRANDING_SETTINGS_ID),
+                  eq(brandingSettings.tenant_id, tenantId),
+                ),
+              )
+              .limit(1),
           );
 
           if (!rows[0]) {
@@ -94,7 +121,9 @@ export class BrandingService extends Effect.Service<BrandingService>()(
           }
 
           return toBrandingResponse(rows[0]);
-        }).pipe(Effect.withSpan('BrandingService.update', { attributes: { userId } }));
+        }).pipe(
+          Effect.withSpan('BrandingService.update', { attributes: { userId } }),
+        );
 
       return { get, update };
     }),

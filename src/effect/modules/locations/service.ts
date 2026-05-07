@@ -13,6 +13,7 @@ import {
   LocationNotFound,
   type LocationsInfrastructureError,
 } from './locations.errors';
+import type { TenantNotResolved } from '../../platform/tenant-context';
 import { LocationsRepository } from './repository';
 
 export class LocationsService extends Effect.Service<LocationsService>()(
@@ -28,26 +29,38 @@ export class LocationsService extends Effect.Service<LocationsService>()(
 
       const findAllPaginated = (
         query: LocationQueryDto,
-      ): Effect.Effect<PaginatedLocationsResponseDto, LocationsInfrastructureError> =>
+      ): Effect.Effect<
+        PaginatedLocationsResponseDto,
+        LocationsInfrastructureError | TenantNotResolved
+      > =>
         Effect.map(repository.findAllPaginated(query), (result) =>
           toPaginatedResponse(result, toLocationResponseDto),
         ).pipe(Effect.withSpan('LocationsService.findAllPaginated'));
 
-      const findAll = (): Effect.Effect<LocationResponseDto[], LocationsInfrastructureError> =>
+      const findAll = (): Effect.Effect<
+        LocationResponseDto[],
+        LocationsInfrastructureError | TenantNotResolved
+      > =>
         Effect.map(repository.findAll(), (locations) =>
           locations.map(toLocationResponseDto),
         ).pipe(Effect.withSpan('LocationsService.findAll'));
 
       const findOne = (
         id: string,
-      ): Effect.Effect<LocationResponseDto, LocationNotFound | LocationsInfrastructureError> =>
+      ): Effect.Effect<
+        LocationResponseDto,
+        LocationNotFound | LocationsInfrastructureError | TenantNotResolved
+      > =>
         Effect.map(getLocationOrFail(id), toLocationResponseDto).pipe(
           Effect.withSpan('LocationsService.findOne', { attributes: { id } }),
         );
 
       const create = (
         dto: CreateLocationDto,
-      ): Effect.Effect<LocationResponseDto, LocationsInfrastructureError> =>
+      ): Effect.Effect<
+        LocationResponseDto,
+        LocationsInfrastructureError | TenantNotResolved
+      > =>
         Effect.map(
           repository.create({
             name: dto.name,
@@ -63,7 +76,10 @@ export class LocationsService extends Effect.Service<LocationsService>()(
       const update = (
         id: string,
         dto: UpdateLocationDto,
-      ): Effect.Effect<LocationResponseDto, LocationNotFound | LocationsInfrastructureError> =>
+      ): Effect.Effect<
+        LocationResponseDto,
+        LocationNotFound | LocationsInfrastructureError | TenantNotResolved
+      > =>
         Effect.gen(function* () {
           const location = yield* getLocationOrFail(id);
 
@@ -79,7 +95,10 @@ export class LocationsService extends Effect.Service<LocationsService>()(
 
       const remove = (
         id: string,
-      ): Effect.Effect<void, LocationNotFound | LocationsInfrastructureError> =>
+      ): Effect.Effect<
+        void,
+        LocationNotFound | LocationsInfrastructureError | TenantNotResolved
+      > =>
         Effect.gen(function* () {
           yield* getLocationOrFail(id);
           yield* repository.delete(id);

@@ -11,10 +11,16 @@ import {
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { locations } from '../../platform/db/schema';
+import { requireRequestTenantId } from '../../platform/tenant-context';
 import { LocationsInfrastructureError } from './locations.errors';
 
-const tryAsync = makeTryAsync((action, cause) =>
-  new LocationsInfrastructureError({ action, cause, messageKey: 'locations.repositoryFailed' }),
+const tryAsync = makeTryAsync(
+  (action, cause) =>
+    new LocationsInfrastructureError({
+      action,
+      cause,
+      messageKey: 'locations.repositoryFailed',
+    }),
 );
 
 function buildLocationFilters(query: LocationQueryDto): SQL[] {
@@ -53,74 +59,132 @@ export class LocationsRepository extends Effect.Service<LocationsRepository>()(
       const db = yield* DrizzleDatabase;
 
       const findAllPaginated = (query: LocationQueryDto) =>
-        tryAsync('list locations', async () => {
-          const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
-          const conditions = buildLocationFilters(query);
-          const where = conditions.length > 0 ? and(...conditions) : undefined;
-          const orderBy = getLocationOrderBy(query.sort_by, query.sort_order);
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('list locations', async () => {
+            const { page, limit, skip } = resolvePaginationWindow(
+              query.page,
+              query.limit,
+            );
+            const where = and(
+              eq(locations.tenant_id, tenantId),
+              ...buildLocationFilters(query),
+            );
+            const orderBy = getLocationOrderBy(query.sort_by, query.sort_order);
 
-          const [countResult, data] = await Promise.all([
-            db.select({ count: sql<number>`count(*)::int` }).from(locations).where(where),
-            db
-              .select()
-              .from(locations)
-              .where(where)
-              .orderBy(orderBy)
-              .offset(skip)
-              .limit(limit),
-          ]);
+            const [countResult, data] = await Promise.all([
+              db
+                .select({ count: sql<number>`count(*)::int` })
+                .from(locations)
+                .where(where),
+              db
+                .select()
+                .from(locations)
+                .where(where)
+                .orderBy(orderBy)
+                .offset(skip)
+                .limit(limit),
+            ]);
 
-          const total = countResult[0]?.count ?? 0;
-          return toRepositoryPaginatedResult(data, total, page, limit);
+            const total = countResult[0]?.count ?? 0;
+            return toRepositoryPaginatedResult(data, total, page, limit);
+          });
         });
 
       const findAll = () =>
-        tryAsync('list all locations', () =>
-          db
-            .select()
-            .from(locations)
-            .orderBy(sql`"name" ASC`),
-        );
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('list all locations', () =>
+            db
+              .select()
+              .from(locations)
+              .where(eq(locations.tenant_id, tenantId))
+              .orderBy(sql`"name" ASC`),
+          );
+        });
 
       const findById = (id: string) =>
-        tryAsync('load location', async () => {
-          const rows = await db
-            .select()
-            .from(locations)
-            .where(eq(locations.id, id))
-            .limit(1);
-          return rows[0] ?? null;
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('load location', async () => {
+            const rows = await db
+              .select()
+              .from(locations)
+              .where(
+                and(
+                  eq(locations.tenant_id, tenantId),
+                  eq(locations.id, id),
+                ),
+              )
+              .limit(1);
+            return rows[0] ?? null;
+          });
         });
 
       const existsById = (id: string) =>
-        tryAsync('check location existence', async () => {
-          const rows = await db
-            .select({ id: locations.id })
-            .from(locations)
-            .where(eq(locations.id, id))
-            .limit(1);
-          return rows.length > 0;
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('check location existence', async () => {
+            const rows = await db
+              .select({ id: locations.id })
+              .from(locations)
+              .where(
+                and(
+                  eq(locations.tenant_id, tenantId),
+                  eq(locations.id, id),
+                ),
+              )
+              .limit(1);
+            return rows.length > 0;
+          });
         });
 
       const create = (data: typeof locations.$inferInsert) =>
-        tryAsync('create location', async () => {
-          const rows = await db.insert(locations).values(data).returning();
-          return rows[0]!;
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('create location', async () => {
+            const rows = await db
+              .insert(locations)
+              .values({ ...data, tenant_id: tenantId })
+              .returning();
+            return rows[0]!;
+          });
         });
 
-      const update = (id: string, data: Partial<typeof locations.$inferInsert>) =>
-        tryAsync('update location', async () => {
-          const rows = await db
-            .update(locations)
-            .set({ ...data, updated_at: new Date() })
-            .where(eq(locations.id, id))
-            .returning({ id: locations.id });
-          return rows.length;
+      const update = (
+        id: string,
+        data: Partial<typeof locations.$inferInsert>,
+      ) =>
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('update location', async () => {
+            const rows = await db
+              .update(locations)
+              .set({ ...data, updated_at: new Date() })
+              .where(
+                and(
+                  eq(locations.tenant_id, tenantId),
+                  eq(locations.id, id),
+                ),
+              )
+              .returning({ id: locations.id });
+            return rows.length;
+          });
         });
 
       const remove = (id: string) =>
-        tryAsync('delete location', async () => {
-          await db.delete(locations).where(eq(locations.id, id));
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('delete location', async () => {
+            await db
+              .delete(locations)
+              .where(
+                and(
+                  eq(locations.tenant_id, tenantId),
+                  eq(locations.id, id),
+                ),
+              );
+          });
         });
 
       return {

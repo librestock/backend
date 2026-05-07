@@ -5,6 +5,7 @@ import { CategoriesRepository } from './repository';
 
 const makeCategoryEntity = (overrides: Record<string, any> = {}) => ({
   id: 'cat-1',
+  tenant_id: '00000000-0000-4000-8000-000000000001',
   name: 'Electronics',
   parent_id: null,
   description: 'Electronic goods',
@@ -13,9 +14,7 @@ const makeCategoryEntity = (overrides: Record<string, any> = {}) => ({
   ...overrides,
 });
 
-const makeMockRepository = (
-  overrides: Record<string, Mock> = {},
-) => ({
+const makeMockRepository = (overrides: Record<string, Mock> = {}) => ({
   findAll: vi.fn().mockReturnValue(Effect.succeed([makeCategoryEntity()])),
   findById: vi.fn().mockReturnValue(Effect.succeed(makeCategoryEntity())),
   existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
@@ -33,9 +32,7 @@ const buildService = (repo = makeMockRepository()) =>
     CategoriesService.pipe(
       Effect.provide(
         CategoriesService.DefaultWithoutDependencies.pipe(
-          Layer.provide(
-            Layer.succeed(CategoriesRepository, repo as any),
-          ),
+          Layer.provide(Layer.succeed(CategoriesRepository, repo as any)),
         ),
       ),
     ),
@@ -112,9 +109,7 @@ describe('Effect CategoriesService', () => {
       });
       const service = await buildService(repo);
 
-      const error = await fail(
-        service.create({ name: 'Electronics' } as any),
-      );
+      const error = await fail(service.create({ name: 'Electronics' } as any));
 
       expect(error).toMatchObject({ _tag: 'CategoryNameAlreadyExists' });
     });
@@ -126,13 +121,13 @@ describe('Effect CategoriesService', () => {
         findById: vi
           .fn()
           .mockReturnValueOnce(Effect.succeed(makeCategoryEntity()))
-          .mockReturnValueOnce(Effect.succeed(makeCategoryEntity({ name: 'Updated' }))),
+          .mockReturnValueOnce(
+            Effect.succeed(makeCategoryEntity({ name: 'Updated' })),
+          ),
       });
       const service = await buildService(repo);
 
-      const result = await run(
-        service.update('cat-1', { name: 'Updated' }),
-      );
+      const result = await run(service.update('cat-1', { name: 'Updated' }));
 
       expect(result).toMatchObject({ name: 'Updated' });
     });
@@ -140,9 +135,7 @@ describe('Effect CategoriesService', () => {
     it('rejects self-parent', async () => {
       const service = await buildService();
 
-      const error = await fail(
-        service.update('cat-1', { parent_id: 'cat-1' }),
-      );
+      const error = await fail(service.update('cat-1', { parent_id: 'cat-1' }));
 
       expect(error).toMatchObject({ _tag: 'CategorySelfParent' });
     });
@@ -156,9 +149,7 @@ describe('Effect CategoriesService', () => {
       });
       const service = await buildService(repo);
 
-      const error = await fail(
-        service.update('cat-1', { parent_id: 'cat-3' }),
-      );
+      const error = await fail(service.update('cat-1', { parent_id: 'cat-3' }));
 
       expect(error).toMatchObject({ _tag: 'CategoryCircularReference' });
     });

@@ -25,6 +25,7 @@ import type {
   InventoryQuerySchema,
   UpdateInventorySchema,
 } from './inventory.schema';
+import type { TenantNotResolved } from '../../platform/tenant-context';
 import { InventoryRepository } from './repository';
 import { toInventoryResponseDto, type Inventory } from './inventory.utils';
 
@@ -81,6 +82,7 @@ export class InventoryService extends Effect.Service<InventoryService>()(
         | InvalidInventoryArea
         | InventoryAreaLocationMismatch
         | InventoryInfrastructureError
+        | TenantNotResolved
       > =>
         Effect.flatMap(areasService.findById(areaId), (area) =>
           area.location_id === locationId

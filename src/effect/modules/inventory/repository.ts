@@ -1,5 +1,16 @@
 import { Effect } from 'effect';
-import { eq, and, ilike, or, gte, lte, desc, sql, isNull, type SQL } from 'drizzle-orm';
+import {
+  eq,
+  and,
+  ilike,
+  or,
+  gte,
+  lte,
+  desc,
+  sql,
+  isNull,
+  type SQL,
+} from 'drizzle-orm';
 import type {
   InventoryQueryDto,
   InventorySummaryDto,
@@ -13,7 +24,16 @@ import {
 } from '../../platform/drizzle-query.utils';
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
-import { inventory, products, locations, areas } from '../../platform/db/schema';
+import {
+  inventory,
+  products,
+  locations,
+  areas,
+} from '../../platform/db/schema';
+import {
+  requireRequestTenantId,
+  type TenantNotResolved,
+} from '../../platform/tenant-context';
 import { InventoryInfrastructureError } from './inventory.errors';
 
 type InventoryRow = typeof inventory.$inferSelect;
@@ -23,8 +43,13 @@ export type InventoryWithRelations = InventoryRow & {
   area: typeof areas.$inferSelect | null;
 };
 
-const tryAsync = makeTryAsync((action, cause) =>
-  new InventoryInfrastructureError({ action, cause, messageKey: 'inventory.infrastructureFailed' }),
+const tryAsync = makeTryAsync(
+  (action, cause) =>
+    new InventoryInfrastructureError({
+      action,
+      cause,
+      messageKey: 'inventory.infrastructureFailed',
+    }),
 );
 
 function buildInventoryFilters(query: InventoryQueryDto): SQL[] {
@@ -74,7 +99,10 @@ const inventorySortColumns = {
   [InventorySortField.UPDATED_AT]: inventory.updated_at,
 } as const;
 
-function getInventoryOrderBy(sortBy?: InventorySortField, sortOrder?: 'ASC' | 'DESC') {
+function getInventoryOrderBy(
+  sortBy?: InventorySortField,
+  sortOrder?: 'ASC' | 'DESC',
+) {
   return buildOrderBy(
     inventorySortColumns,
     sortBy ?? InventorySortField.UPDATED_AT,
@@ -122,82 +150,122 @@ export class InventoryRepository extends Effect.Service<InventoryRepository>()(
         query: InventoryQueryDto,
       ): Effect.Effect<
         RepositoryPaginatedResult<InventoryWithRelations>,
-        InventoryInfrastructureError
+        InventoryInfrastructureError | TenantNotResolved
       > =>
-        tryAsync('list inventory paginated', async () => {
-          const { page, limit, skip } = resolvePaginationWindow(query.page, query.limit);
-          const conditions = buildInventoryFilters(query);
-          const where = conditions.length > 0 ? and(...conditions) : undefined;
-          const orderBy = getInventoryOrderBy(query.sort_by, query.sort_order);
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('list inventory paginated', async () => {
+            const { page, limit, skip } = resolvePaginationWindow(
+              query.page,
+              query.limit,
+            );
+            const where = and(
+              eq(inventory.tenant_id, tenantId),
+              ...buildInventoryFilters(query),
+            );
+            const orderBy = getInventoryOrderBy(
+              query.sort_by,
+              query.sort_order,
+            );
 
-          const [countResult] = await selectInventoryWithJoins(db)
-            .where(where)
-            .then(async () => {
-              return db
-                .select({ count: sql<number>`count(*)::int` })
-                .from(inventory)
-                .leftJoin(products, eq(inventory.product_id, products.id))
-                .where(where);
-            });
+            const [countResult] = await db
+              .select({ count: sql<number>`count(*)::int` })
+              .from(inventory)
+              .leftJoin(products, eq(inventory.product_id, products.id))
+              .where(where);
 
-          const total = countResult?.count ?? 0;
+            const total = countResult?.count ?? 0;
 
-          const rows = await selectInventoryWithJoins(db)
-            .where(where)
-            .orderBy(orderBy)
-            .offset(skip)
-            .limit(limit);
+            const rows = await selectInventoryWithJoins(db)
+              .where(where)
+              .orderBy(orderBy)
+              .offset(skip)
+              .limit(limit);
 
-          return toRepositoryPaginatedResult(rows.map(mapInventoryRow), total, page, limit);
+            return toRepositoryPaginatedResult(
+              rows.map(mapInventoryRow),
+              total,
+              page,
+              limit,
+            );
+          });
         });
 
       const findAll = (): Effect.Effect<
         InventoryWithRelations[],
-        InventoryInfrastructureError
+        InventoryInfrastructureError | TenantNotResolved
       > =>
-        tryAsync('list all inventory', async () => {
-          const rows = await selectInventoryWithJoins(db)
-            .orderBy(desc(inventory.updated_at));
-          return rows.map(mapInventoryRow);
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('list all inventory', async () => {
+            const rows = await selectInventoryWithJoins(db)
+              .where(eq(inventory.tenant_id, tenantId))
+              .orderBy(desc(inventory.updated_at));
+            return rows.map(mapInventoryRow);
+          });
         });
 
       const findById = (
         id: string,
       ): Effect.Effect<
         InventoryWithRelations | null,
-        InventoryInfrastructureError
+        InventoryInfrastructureError | TenantNotResolved
       > =>
-        tryAsync('find inventory by id', async () => {
-          const rows = await selectInventoryWithJoins(db)
-            .where(eq(inventory.id, id))
-            .limit(1);
-          return rows[0] ? mapInventoryRow(rows[0]) : null;
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('find inventory by id', async () => {
+            const rows = await selectInventoryWithJoins(db)
+              .where(
+                and(
+                  eq(inventory.tenant_id, tenantId),
+                  eq(inventory.id, id),
+                ),
+              )
+              .limit(1);
+            return rows[0] ? mapInventoryRow(rows[0]) : null;
+          });
         });
 
       const findByProductId = (
         productId: string,
       ): Effect.Effect<
         InventoryWithRelations[],
-        InventoryInfrastructureError
+        InventoryInfrastructureError | TenantNotResolved
       > =>
-        tryAsync('find inventory by product', async () => {
-          const rows = await selectInventoryWithJoins(db)
-            .where(eq(inventory.product_id, productId))
-            .orderBy(desc(inventory.updated_at));
-          return rows.map(mapInventoryRow);
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('find inventory by product', async () => {
+            const rows = await selectInventoryWithJoins(db)
+              .where(
+                and(
+                  eq(inventory.tenant_id, tenantId),
+                  eq(inventory.product_id, productId),
+                ),
+              )
+              .orderBy(desc(inventory.updated_at));
+            return rows.map(mapInventoryRow);
+          });
         });
 
       const findByLocationId = (
         locationId: string,
       ): Effect.Effect<
         InventoryWithRelations[],
-        InventoryInfrastructureError
+        InventoryInfrastructureError | TenantNotResolved
       > =>
-        tryAsync('find inventory by location', async () => {
-          const rows = await selectInventoryWithJoins(db)
-            .where(eq(inventory.location_id, locationId))
-            .orderBy(desc(inventory.updated_at));
-          return rows.map(mapInventoryRow);
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('find inventory by location', async () => {
+            const rows = await selectInventoryWithJoins(db)
+              .where(
+                and(
+                  eq(inventory.tenant_id, tenantId),
+                  eq(inventory.location_id, locationId),
+                ),
+              )
+              .orderBy(desc(inventory.updated_at));
+            return rows.map(mapInventoryRow);
+          });
         });
 
       const findByProductAndLocation = (
@@ -206,92 +274,146 @@ export class InventoryRepository extends Effect.Service<InventoryRepository>()(
         areaId?: string | null,
       ): Effect.Effect<
         InventoryWithRelations | null,
-        InventoryInfrastructureError
+        InventoryInfrastructureError | TenantNotResolved
       > =>
-        tryAsync('find inventory by product and location', async () => {
-          const conditions: SQL[] = [
-            eq(inventory.product_id, productId),
-            eq(inventory.location_id, locationId),
-          ];
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync(
+            'find inventory by product and location',
+            async () => {
+              const conditions: SQL[] = [
+                eq(inventory.tenant_id, tenantId),
+                eq(inventory.product_id, productId),
+                eq(inventory.location_id, locationId),
+              ];
 
-          if (areaId) {
-            conditions.push(eq(inventory.area_id, areaId));
-          } else {
-            conditions.push(isNull(inventory.area_id));
-          }
+              if (areaId) {
+                conditions.push(eq(inventory.area_id, areaId));
+              } else {
+                conditions.push(isNull(inventory.area_id));
+              }
 
-          const rows = await selectInventoryWithJoins(db)
-            .where(and(...conditions))
-            .limit(1);
+              const rows = await selectInventoryWithJoins(db)
+                .where(and(...conditions))
+                .limit(1);
 
-          return rows[0] ? mapInventoryRow(rows[0]) : null;
+              return rows[0] ? mapInventoryRow(rows[0]) : null;
+            },
+          );
         });
 
       const create = (
         data: typeof inventory.$inferInsert,
-      ): Effect.Effect<InventoryRow, InventoryInfrastructureError> =>
-        tryAsync('create inventory', async () => {
-          const rows = await db.insert(inventory).values(data).returning();
-          return rows[0]!;
+      ): Effect.Effect<
+        InventoryRow,
+        InventoryInfrastructureError | TenantNotResolved
+      > =>
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('create inventory', async () => {
+            const rows = await db
+              .insert(inventory)
+              .values({ ...data, tenant_id: tenantId })
+              .returning();
+            return rows[0]!;
+          });
         });
 
       const update = (
         id: string,
         data: Partial<typeof inventory.$inferInsert>,
-      ): Effect.Effect<number, InventoryInfrastructureError> =>
-        tryAsync('update inventory', async () => {
-          const rows = await db
-            .update(inventory)
-            .set({ ...data, updated_at: new Date() })
-            .where(eq(inventory.id, id))
-            .returning({ id: inventory.id });
-          return rows.length;
+      ): Effect.Effect<
+        number,
+        InventoryInfrastructureError | TenantNotResolved
+      > =>
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('update inventory', async () => {
+            const rows = await db
+              .update(inventory)
+              .set({ ...data, updated_at: new Date() })
+              .where(
+                and(
+                  eq(inventory.tenant_id, tenantId),
+                  eq(inventory.id, id),
+                ),
+              )
+              .returning({ id: inventory.id });
+            return rows.length;
+          });
         });
 
       const adjustQuantity = (
         id: string,
         adjustment: number,
-      ): Effect.Effect<number, InventoryInfrastructureError> =>
-        tryAsync('adjust inventory quantity', async () => {
-          const rows = await db
-            .update(inventory)
-            .set({
-              quantity: sql`${inventory.quantity} + ${adjustment}`,
-              updated_at: new Date(),
-            })
-            .where(
-              and(
-                eq(inventory.id, id),
-                sql`${inventory.quantity} + ${adjustment} >= 0`,
-              ),
-            )
-            .returning({ id: inventory.id });
-          return rows.length;
+      ): Effect.Effect<
+        number,
+        InventoryInfrastructureError | TenantNotResolved
+      > =>
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('adjust inventory quantity', async () => {
+            const rows = await db
+              .update(inventory)
+              .set({
+                quantity: sql`${inventory.quantity} + ${adjustment}`,
+                updated_at: new Date(),
+              })
+              .where(
+                and(
+                  eq(inventory.tenant_id, tenantId),
+                  eq(inventory.id, id),
+                  sql`${inventory.quantity} + ${adjustment} >= 0`,
+                ),
+              )
+              .returning({ id: inventory.id });
+            return rows.length;
+          });
         });
 
       const remove = (
         id: string,
-      ): Effect.Effect<void, InventoryInfrastructureError> =>
-        tryAsync('delete inventory', async () => {
-          await db.delete(inventory).where(eq(inventory.id, id));
+      ): Effect.Effect<
+        void,
+        InventoryInfrastructureError | TenantNotResolved
+      > =>
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('delete inventory', async () => {
+            await db
+              .delete(inventory)
+              .where(
+                and(
+                  eq(inventory.tenant_id, tenantId),
+                  eq(inventory.id, id),
+                ),
+              );
+          });
         });
 
       const findSummary = (): Effect.Effect<
         InventorySummaryDto,
-        InventoryInfrastructureError
+        InventoryInfrastructureError | TenantNotResolved
       > =>
-        tryAsync('get inventory summary', async (): Promise<InventorySummaryDto> => {
-          const [row] = await db
-            .select({
-              low_stock_count: sql<number>`count(*) filter (where ${inventory.quantity} <= ${products.reorder_point})::int`,
-              expiring_soon_count: sql<number>`count(*) filter (where ${inventory.expiry_date} is not null and ${inventory.expiry_date} <= now() + interval '30 days')::int`,
-            })
-            .from(inventory)
-            .leftJoin(products, eq(inventory.product_id, products.id));
-          return {
-            low_stock_count: row?.low_stock_count ?? 0,
-            expiring_soon_count: row?.expiring_soon_count ?? 0,
-          };
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync(
+            'get inventory summary',
+            async (): Promise<InventorySummaryDto> => {
+              const [row] = await db
+                .select({
+                  low_stock_count: sql<number>`count(*) filter (where ${inventory.quantity} <= ${products.reorder_point})::int`,
+                  expiring_soon_count: sql<number>`count(*) filter (where ${inventory.expiry_date} is not null and ${inventory.expiry_date} <= now() + interval '30 days')::int`,
+                })
+                .from(inventory)
+                .leftJoin(products, eq(inventory.product_id, products.id))
+                .where(eq(inventory.tenant_id, tenantId));
+              return {
+                low_stock_count: row?.low_stock_count ?? 0,
+                expiring_soon_count: row?.expiring_soon_count ?? 0,
+              };
+            },
+          );
         });
 
       return {

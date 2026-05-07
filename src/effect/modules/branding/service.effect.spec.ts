@@ -30,7 +30,17 @@ import {
 import { BrandingService } from './service';
 import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
 import type { brandingSettings } from '../../platform/db/schema';
+import { CurrentRequestContext } from '../../platform/request-context';
 import { createChainableMock } from '../../testing/test-harness';
+
+const tenantRequestContext = {
+  requestId: '00000000-0000-4000-8000-000000000099',
+  path: '/api/v1/branding',
+  method: 'GET' as const,
+  ip: null,
+  locale: 'en' as const,
+  tenantId: '00000000-0000-4000-8000-000000000001',
+};
 
 type BrandingEntity = typeof brandingSettings.$inferSelect;
 
@@ -38,6 +48,7 @@ const makeBrandingEntity = (
   overrides: Partial<BrandingEntity> = {},
 ): BrandingEntity => ({
   id: BRANDING_SETTINGS_ID,
+  tenant_id: '00000000-0000-4000-8000-000000000001',
   app_name: 'TestApp',
   tagline: 'Test tagline',
   logo_url: null,
@@ -53,6 +64,11 @@ const serviceLayer = (mockDb: unknown) =>
     Layer.provide(Layer.succeed(DrizzleDatabase, mockDb as DrizzleDb)),
   );
 
+const requestContextLayer = Layer.succeed(
+  CurrentRequestContext,
+  tenantRequestContext,
+);
+
 describe('BrandingService (it.effect)', () => {
   it.effect('returns stored branding settings', () => {
     const mockDb = createChainableMock([makeBrandingEntity()]);
@@ -65,7 +81,10 @@ describe('BrandingService (it.effect)', () => {
         primary_color: '#ff0000',
         powered_by: POWERED_BY,
       });
-    }).pipe(Effect.provide(serviceLayer(mockDb)));
+    }).pipe(
+      Effect.provide(serviceLayer(mockDb)),
+      Effect.provide(requestContextLayer),
+    );
   });
 
   it.effect('returns default branding when no record exists', () => {
@@ -77,7 +96,10 @@ describe('BrandingService (it.effect)', () => {
         app_name: DEFAULT_BRANDING.app_name,
         powered_by: POWERED_BY,
       });
-    }).pipe(Effect.provide(serviceLayer(mockDb)));
+    }).pipe(
+      Effect.provide(serviceLayer(mockDb)),
+      Effect.provide(requestContextLayer),
+    );
   });
 
   it.effect('upserts and reloads on update', () => {
@@ -96,6 +118,9 @@ describe('BrandingService (it.effect)', () => {
       expect(insertChain.values).toHaveBeenCalled();
       expect(insertChain.onConflictDoUpdate).toHaveBeenCalled();
       expect(result).toMatchObject({ app_name: 'TestApp' });
-    }).pipe(Effect.provide(serviceLayer(mockDb)));
+    }).pipe(
+      Effect.provide(serviceLayer(mockDb)),
+      Effect.provide(requestContextLayer),
+    );
   });
 });
