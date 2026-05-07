@@ -38,6 +38,7 @@ import {
   seedBetterAuthUserRow,
   seedDefaultTenantMembership,
   seedRole,
+  seedTenantUserRow,
 } from './__fixtures__/seed-users';
 
 let db: DrizzleDb;
@@ -129,6 +130,14 @@ const withRaceRetry = async (
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 };
 
+const seedTenantUsers = async (
+  users: ReadonlyArray<Pick<FakeBetterAuthUser, 'id' | 'name' | 'email'>>,
+) => {
+  for (const user of users) {
+    await seedTenantUserRow(db, user);
+  }
+};
+
 describe('UsersService Integration', () => {
   describe('listUsers', () => {
     it('merges role names from user_roles into the Better Auth users list', () =>
@@ -147,14 +156,16 @@ describe('UsersService Integration', () => {
           sql`INSERT INTO user_roles (user_id, role_id) VALUES (${TEST_USER_ID}, ${adminRole.id}), (${TEST_USER_ID}, ${pickerRole.id})`,
         );
 
-        const layer = makeTestLayer([
+        const users = [
           makeFakeBetterAuthUser({ id: TEST_USER_ID, name: 'Admin User' }),
           makeFakeBetterAuthUser({
             id: TEST_USER_ID_2,
             name: 'No-Roles User',
             email: 'norole@example.com',
           }),
-        ]);
+        ];
+        await seedTenantUsers(users);
+        const layer = makeTestLayer(users);
 
         const result = await run(
           Effect.flatMap(UsersService, (s) => s.listUsers({})),
@@ -174,9 +185,11 @@ describe('UsersService Integration', () => {
 
     it('returns an empty roles array when the user exists in Better Auth but has no assignments', () =>
       withRaceRetry(async () => {
-        const layer = makeTestLayer([
+        const users = [
           makeFakeBetterAuthUser({ id: TEST_USER_ID, name: 'Unassigned' }),
-        ]);
+        ];
+        await seedTenantUsers(users);
+        const layer = makeTestLayer(users);
 
         const result = await run(
           Effect.flatMap(UsersService, (s) => s.listUsers({})),
@@ -196,6 +209,7 @@ describe('UsersService Integration', () => {
           makeFakeBetterAuthUser({ id: TEST_USER_ID, name: 'Alpha' }),
           makeFakeBetterAuthUser({ id: TEST_USER_ID_2, name: 'Bravo' }),
         ];
+        await seedTenantUsers(fakeUsers);
         const layer = makeTestLayer(fakeUsers);
 
         const page1 = await run(
@@ -221,13 +235,15 @@ describe('UsersService Integration', () => {
           sql`INSERT INTO user_roles (user_id, role_id) VALUES (${TEST_USER_ID}, ${sales.id}), (${TEST_USER_ID_2}, ${picker.id})`,
         );
 
-        const layer = makeTestLayer([
+        const users = [
           makeFakeBetterAuthUser({ id: TEST_USER_ID, name: 'Sales person' }),
           makeFakeBetterAuthUser({
             id: TEST_USER_ID_2,
             name: 'Picker person',
           }),
-        ]);
+        ];
+        await seedTenantUsers(users);
+        const layer = makeTestLayer(users);
 
         const result = await run(
           Effect.flatMap(UsersService, (s) => s.listUsers({ role: 'Sales' })),
@@ -381,9 +397,7 @@ describe('UsersService Integration', () => {
         ]);
 
         const result = await run(
-          Effect.flatMap(UsersService, (s) =>
-            s.updateRoles(TEST_USER_ID, []),
-          ),
+          Effect.flatMap(UsersService, (s) => s.updateRoles(TEST_USER_ID, [])),
           layer,
         );
 

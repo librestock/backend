@@ -1,6 +1,7 @@
 import { Effect } from 'effect';
 import { requireSession } from '../../platform/session';
 import { makeServiceTracer } from '../../platform/service-tracer';
+import { resolveTenantForSession } from '../../platform/tenant-context';
 import { RolesService } from '../roles/service';
 import {
   toCurrentUserResponse,
@@ -23,26 +24,31 @@ export class AuthService extends Effect.Service<AuthService>()(
       const me = trace.traced('me', () =>
         Effect.gen(function* () {
           const session = yield* requireSession;
+          const tenant = yield* resolveTenantForSession(session);
           yield* Effect.annotateCurrentSpan({ userId: session.user.id });
           const userPermissions = yield* rolesService.getPermissionsForUser(
             session.user.id,
+            tenant.tenantId,
           );
-          return toCurrentUserResponse(session, userPermissions);
-        }));
+          return toCurrentUserResponse(session, userPermissions, tenant);
+        }),
+      );
 
       const profile = trace.traced('profile', () =>
         Effect.gen(function* () {
           const session = yield* requireSession;
           yield* Effect.annotateCurrentSpan({ userId: session.user.id });
           return toProfileResponse(session);
-        }));
+        }),
+      );
 
       const sessionClaims = trace.traced('sessionClaims', () =>
         Effect.gen(function* () {
           const session = yield* requireSession;
           yield* Effect.annotateCurrentSpan({ userId: session.user.id });
           return toSessionClaimsResponse(session);
-        }));
+        }),
+      );
 
       return {
         me,

@@ -2,10 +2,20 @@ import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
 import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
+import { CurrentRequestContext } from '../../platform/request-context';
 import { createChainableMock } from '../../test/utils';
 import { RolesService } from './service';
 import { RolesRepository } from './repository';
 import { SystemRoleDeletionForbidden } from './roles.errors';
+
+const tenantRequestContext = {
+  requestId: '00000000-0000-4000-8000-000000000099',
+  path: '/api/v1/roles',
+  method: 'GET' as const,
+  ip: null,
+  locale: 'en' as const,
+  tenantId: '00000000-0000-4000-8000-000000000001',
+};
 
 describe('Effect RolesService', () => {
   const makeService = async (
@@ -30,9 +40,18 @@ describe('Effect RolesService', () => {
       ),
     );
 
-  const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runPromise(effect);
+  const run = <A, E>(effect: Effect.Effect<A, E>) =>
+    Effect.runPromise(
+      effect.pipe(
+        Effect.provideService(CurrentRequestContext, tenantRequestContext),
+      ),
+    );
   const fail = <A, E>(effect: Effect.Effect<A, E>) =>
-    Effect.runPromise(Effect.flip(effect));
+    Effect.runPromise(
+      Effect.flip(effect).pipe(
+        Effect.provideService(CurrentRequestContext, tenantRequestContext),
+      ),
+    );
 
   const roleEntity = {
     id: 'role-1',
@@ -90,6 +109,7 @@ describe('Effect RolesService', () => {
     );
 
     expect(repository.create).toHaveBeenCalledWith({
+      tenant_id: '00000000-0000-4000-8000-000000000001',
       name: 'Manager',
       description: 'Warehouse manager',
       is_system: false,
@@ -163,10 +183,14 @@ describe('Effect RolesService', () => {
       }),
     );
 
-    expect(repository.update).toHaveBeenCalledWith('role-2', {
-      name: 'Manager Updated',
-      description: 'New',
-    });
+    expect(repository.update).toHaveBeenCalledWith(
+      'role-2',
+      '00000000-0000-4000-8000-000000000001',
+      {
+        name: 'Manager Updated',
+        description: 'New',
+      },
+    );
     expect(repository.replacePermissions).toHaveBeenCalled();
     expect(result.name).toBe('Manager Updated');
   });

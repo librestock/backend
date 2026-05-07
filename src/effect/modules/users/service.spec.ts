@@ -1,5 +1,6 @@
 import { Effect, Layer } from 'effect';
 import { BetterAuth, BetterAuthHeaders } from '../../platform/better-auth';
+import { CurrentRequestContext } from '../../platform/request-context';
 import { RolesService } from '../roles/service';
 import { UsersService } from './service';
 import { UsersRepository } from './repository';
@@ -19,6 +20,15 @@ describe('Effect UsersService', () => {
   const headers = new Headers({
     authorization: 'Bearer test-token',
   });
+
+  const requestContext = {
+    requestId: '00000000-0000-4000-8000-000000000099',
+    path: '/api/v1/users',
+    method: 'GET' as const,
+    ip: null,
+    locale: 'en' as const,
+    tenantId: '00000000-0000-4000-8000-000000000001',
+  };
 
   const makeService = async ({
     betterAuth,
@@ -67,22 +77,27 @@ describe('Effect UsersService', () => {
     createdAt: '2026-03-01T00:00:00.000Z',
   };
 
-  it('lists users and merges role names', async () => {
+  it('paginates tenant users before merging roles', async () => {
     const betterAuth = {
       api: {
-        listUsers: vi.fn().mockReturnValue(Promise.resolve({
-          users: [betterAuthUser],
-          total: 1,
-        })),
+        listUsers: vi.fn(),
       },
     };
     const usersRepository = {
-      findRoleAssignments: vi.fn().mockReturnValue(Effect.succeed([
-        {
-          user_id: 'user-1',
-          role: { name: 'Admin' },
-        },
-      ])),
+      listTenantUsers: vi.fn().mockReturnValue(
+        Effect.succeed({
+          users: [betterAuthUser],
+          total: 50,
+        }),
+      ),
+      findRoleAssignments: vi.fn().mockReturnValue(
+        Effect.succeed([
+          {
+            user_id: 'user-1',
+            role: { name: 'Admin' },
+          },
+        ]),
+      ),
       findUserRoles: vi.fn().mockReturnValue(Effect.succeed([])),
       replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
       hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(false)),
@@ -99,30 +114,52 @@ describe('Effect UsersService', () => {
     });
 
     const result = await run(
-      service.listUsers({ page: 1, limit: 20 }).pipe(
+      service.listUsers({ page: 2, limit: 1 }).pipe(
         Effect.provideService(BetterAuthHeaders, headers),
+        Effect.provideService(CurrentRequestContext, {
+          requestId: '00000000-0000-4000-8000-000000000099',
+          path: '/api/v1/users',
+          method: 'GET',
+          ip: null,
+          locale: 'en',
+          tenantId: '00000000-0000-4000-8000-000000000001',
+        }),
       ),
     );
 
+    expect(result.total).toBe(50);
+    expect(result.total_pages).toBe(50);
+    expect(result.data).toHaveLength(1);
     expect(result.data[0]!.roles).toEqual(['Admin']);
-    expect(betterAuth.api.listUsers).toHaveBeenCalled();
+    expect(usersRepository.listTenantUsers).toHaveBeenCalledWith({
+      tenantId: '00000000-0000-4000-8000-000000000001',
+      offset: 1,
+      limit: 1,
+      search: undefined,
+      role: undefined,
+    });
+    expect(betterAuth.api.listUsers).not.toHaveBeenCalled();
   });
 
   it('gets a single user with roles', async () => {
     const betterAuth = {
       api: {
-        listUsers: vi.fn().mockReturnValue(Promise.resolve({
-          users: [betterAuthUser],
-        })),
+        listUsers: vi.fn().mockReturnValue(
+          Promise.resolve({
+            users: [betterAuthUser],
+          }),
+        ),
       },
     };
     const usersRepository = {
       findRoleAssignments: vi.fn().mockReturnValue(Effect.succeed([])),
-      findUserRoles: vi.fn().mockReturnValue(Effect.succeed([
-        {
-          role: { name: 'Admin' },
-        },
-      ])),
+      findUserRoles: vi.fn().mockReturnValue(
+        Effect.succeed([
+          {
+            role: { name: 'Admin' },
+          },
+        ]),
+      ),
       replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
       hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(false)),
       syncBetterAuthRole: vi.fn().mockReturnValue(Effect.void),
@@ -138,9 +175,12 @@ describe('Effect UsersService', () => {
     });
 
     const result = await run(
-      service.getUser('user-1').pipe(
-        Effect.provideService(BetterAuthHeaders, headers),
-      ),
+      service
+        .getUser('user-1')
+        .pipe(
+          Effect.provideService(BetterAuthHeaders, headers),
+          Effect.provideService(CurrentRequestContext, requestContext),
+        ),
     );
 
     expect(result.id).toBe('user-1');
@@ -158,11 +198,13 @@ describe('Effect UsersService', () => {
     };
     const usersRepository = {
       findRoleAssignments: vi.fn().mockReturnValue(Effect.succeed([])),
-      findUserRoles: vi.fn().mockReturnValue(Effect.succeed([
-        {
-          role: { name: 'Admin' },
-        },
-      ])),
+      findUserRoles: vi.fn().mockReturnValue(
+        Effect.succeed([
+          {
+            role: { name: 'Admin' },
+          },
+        ]),
+      ),
       replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
       hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(true)),
       syncBetterAuthRole: vi.fn().mockReturnValue(Effect.void),
@@ -178,14 +220,25 @@ describe('Effect UsersService', () => {
     });
 
     await run(
-      service.updateRoles('user-1', ['role-1']).pipe(
-        Effect.provideService(BetterAuthHeaders, headers),
-      ),
+      service
+        .updateRoles('user-1', ['role-1'])
+        .pipe(
+          Effect.provideService(BetterAuthHeaders, headers),
+          Effect.provideService(CurrentRequestContext, requestContext),
+        ),
     );
 
-    expect(usersRepository.replaceUserRoles).toHaveBeenCalledWith('user-1', [
-      'role-1',
-    ]);
+    expect(usersRepository.replaceUserRoles).toHaveBeenCalledWith(
+      'user-1',
+      ['role-1'],
+      '00000000-0000-4000-8000-000000000001',
+    );
+    expect(usersRepository.hasAdminRoleForUser).toHaveBeenCalledWith('user-1');
+    expect(
+      usersRepository.hasAdminRoleForUser.mock.invocationCallOrder[0],
+    ).toBeGreaterThan(
+      usersRepository.replaceUserRoles.mock.invocationCallOrder[0] ?? 0,
+    );
     expect(usersRepository.syncBetterAuthRole).toHaveBeenCalledWith(
       'user-1',
       'admin',
@@ -226,12 +279,18 @@ describe('Effect UsersService', () => {
           reason: 'abuse',
           expiresAt: '2026-04-01T00:00:00.000Z',
         })
-        .pipe(Effect.provideService(BetterAuthHeaders, headers)),
+        .pipe(
+          Effect.provideService(BetterAuthHeaders, headers),
+          Effect.provideService(CurrentRequestContext, requestContext),
+        ),
     );
     await run(
-      service.unbanUser('user-1').pipe(
-        Effect.provideService(BetterAuthHeaders, headers),
-      ),
+      service
+        .unbanUser('user-1')
+        .pipe(
+          Effect.provideService(BetterAuthHeaders, headers),
+          Effect.provideService(CurrentRequestContext, requestContext),
+        ),
     );
 
     expect(betterAuth.api.banUser).toHaveBeenCalled();
@@ -244,7 +303,9 @@ describe('Effect UsersService', () => {
   it('revokes user sessions', async () => {
     const betterAuth = {
       api: {
-        listUsers: vi.fn().mockReturnValue(Promise.resolve({ users: [betterAuthUser] })),
+        listUsers: vi
+          .fn()
+          .mockReturnValue(Promise.resolve({ users: [betterAuthUser] })),
         revokeUserSessions: vi.fn().mockReturnValue(Promise.resolve(undefined)),
       },
     };
@@ -266,9 +327,12 @@ describe('Effect UsersService', () => {
     });
 
     await run(
-      service.revokeSessions('user-1').pipe(
-        Effect.provideService(BetterAuthHeaders, headers),
-      ),
+      service
+        .revokeSessions('user-1')
+        .pipe(
+          Effect.provideService(BetterAuthHeaders, headers),
+          Effect.provideService(CurrentRequestContext, requestContext),
+        ),
     );
 
     expect(betterAuth.api.revokeUserSessions).toHaveBeenCalledWith({

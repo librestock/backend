@@ -38,7 +38,11 @@ import {
   withTestDb,
 } from '../../testing/test-harness';
 import { RolesService } from '../roles/service';
-import { seedRole, seedRoleForUser } from './__fixtures__/seed-role';
+import {
+  seedDefaultTenantMembership,
+  seedRole,
+  seedRoleForUser,
+} from './__fixtures__/seed-role';
 import { AuthService } from './service';
 
 withTestDb();
@@ -157,9 +161,9 @@ const runFlip = <A, E>(
   effect: Effect.Effect<A, E, any>,
   layer: Layer.Layer<any, never, never>,
 ): Promise<E> =>
-  Effect.runPromise(Effect.flip(effect.pipe(Effect.provide(layer)))) as Promise<
-    E
-  >;
+  Effect.runPromise(
+    Effect.flip(effect.pipe(Effect.provide(layer))),
+  ) as Promise<E>;
 
 /**
  * Retry a whole test body when the shared test DB gets truncated by a
@@ -268,6 +272,7 @@ describe('AuthService Integration', () => {
 
     it('returns empty roles/permissions for a user with no role assignments', () =>
       withRaceRetry(async () => {
+        await seedDefaultTenantMembership(db, TEST_USER_ID);
         const layer = buildAuthServiceLayer(TEST_USER_ID);
         const result = await run(
           Effect.flatMap(AuthService, (svc) => svc.me()),
@@ -290,6 +295,7 @@ describe('AuthService Integration', () => {
         });
 
         // TEST_USER_ID_2 gets nothing.
+        await seedDefaultTenantMembership(db, TEST_USER_ID_2);
         const layerForUser2 = buildAuthServiceLayer(TEST_USER_ID_2);
         const result2 = await run(
           Effect.flatMap(AuthService, (svc) => svc.me()),
@@ -339,6 +345,7 @@ describe('AuthService Integration', () => {
         const sharedLayer = AuthService.DefaultWithoutDependencies.pipe(
           Layer.provideMerge(
             Layer.mergeAll(
+              dbLayer,
               buildRolesServiceLayer(),
               buildBetterAuthLayer(TEST_USER_ID),
               makeRequestLayer(),
@@ -466,7 +473,10 @@ describe('AuthService Integration', () => {
           requestHeaders: { authorization: 'Bearer int-token' },
         });
 
-        await run(Effect.flatMap(AuthService, (svc) => svc.me()), layer);
+        await run(
+          Effect.flatMap(AuthService, (svc) => svc.me()),
+          layer,
+        );
 
         expect(getSessionSpy).toHaveBeenCalledTimes(1);
         const callArg = getSessionSpy.mock.calls[0]![0] as {

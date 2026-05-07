@@ -24,17 +24,28 @@ describe('auth mappers', () => {
 
   it('maps the current user response', () => {
     expect(
-      toCurrentUserResponse(session, {
-        roleNames: ['Admin'],
-        permissions: {
-          roles: ['read', 'write'],
-        } as any,
-      }),
+      toCurrentUserResponse(
+        session,
+        {
+          roleNames: ['Admin'],
+          permissions: {
+            roles: ['read', 'write'],
+          } as any,
+        },
+        {
+          tenantId: '00000000-0000-4000-8000-000000000001',
+          tenantName: 'LibreStock',
+          tenantSlug: 'librestock',
+        },
+      ),
     ).toEqual({
       id: 'user-1',
       name: 'Jane Doe',
       email: 'jane@example.com',
       image: 'https://example.com/avatar.png',
+      tenantId: '00000000-0000-4000-8000-000000000001',
+      tenantName: 'LibreStock',
+      tenantSlug: 'librestock',
       roles: ['Admin'],
       permissions: {
         roles: ['read', 'write'],

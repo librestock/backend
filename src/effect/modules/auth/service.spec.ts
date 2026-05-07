@@ -97,44 +97,56 @@ describe('AuthService', () => {
   });
 
   describe('me', () => {
-    it.effect('returns current user with roles + permissions from RolesService', () => {
-      mockRequireSession.mockReturnValue(Effect.succeed(makeSession()));
+    it.effect(
+      'returns current user with roles + permissions from RolesService',
+      () => {
+        mockRequireSession.mockReturnValue(Effect.succeed(makeSession()));
 
-      return withService((svc) =>
-        Effect.gen(function* () {
-          const result = yield* svc.me();
-          expect(result).toEqual({
-            id: 'user-1',
-            name: 'Jane Doe',
-            email: 'jane@example.com',
-            image: 'https://example.com/avatar.png',
-            roles: ['Admin'],
-            permissions: {
-              [Resource.ROLES]: [Permission.READ, Permission.WRITE],
-              [Resource.DASHBOARD]: [Permission.READ],
-            },
-          });
-        }),
-      );
-    });
-
-    it.effect('forwards session.user.id to RolesService.getPermissionsForUser', () => {
-      mockRequireSession.mockReturnValue(
-        Effect.succeed(makeSession({ user: { id: 'user-42' } })),
-      );
-      const getPermissionsForUser = vi
-        .fn()
-        .mockReturnValue(Effect.succeed(defaultUserPermissions));
-
-      return withService(
-        (svc) =>
+        return withService((svc) =>
           Effect.gen(function* () {
-            yield* svc.me();
-            expect(getPermissionsForUser).toHaveBeenCalledWith('user-42');
+            const result = yield* svc.me();
+            expect(result).toEqual({
+              id: 'user-1',
+              name: 'Jane Doe',
+              email: 'jane@example.com',
+              image: 'https://example.com/avatar.png',
+              tenantId: '00000000-0000-4000-8000-000000000001',
+              tenantName: 'LibreStock',
+              tenantSlug: 'librestock',
+              roles: ['Admin'],
+              permissions: {
+                [Resource.ROLES]: [Permission.READ, Permission.WRITE],
+                [Resource.DASHBOARD]: [Permission.READ],
+              },
+            });
           }),
-        { getPermissionsForUser },
-      );
-    });
+        );
+      },
+    );
+
+    it.effect(
+      'forwards session.user.id to RolesService.getPermissionsForUser',
+      () => {
+        mockRequireSession.mockReturnValue(
+          Effect.succeed(makeSession({ user: { id: 'user-42' } })),
+        );
+        const getPermissionsForUser = vi
+          .fn()
+          .mockReturnValue(Effect.succeed(defaultUserPermissions));
+
+        return withService(
+          (svc) =>
+            Effect.gen(function* () {
+              yield* svc.me();
+              expect(getPermissionsForUser).toHaveBeenCalledWith(
+                'user-42',
+                '00000000-0000-4000-8000-000000000001',
+              );
+            }),
+          { getPermissionsForUser },
+        );
+      },
+    );
 
     it.effect('maps missing image to undefined', () => {
       mockRequireSession.mockReturnValue(
@@ -149,49 +161,55 @@ describe('AuthService', () => {
       );
     });
 
-    it.effect('propagates SessionUnauthorized when requireSession fails', () => {
-      mockRequireSession.mockReturnValue(
-        Effect.fail({
-          _tag: 'SessionUnauthorized',
-          messageKey: 'auth.unauthorized',
-          message: 'Unauthorized',
-          statusCode: 401,
-        }),
-      );
-
-      return withService((svc) =>
-        Effect.gen(function* () {
-          const error = yield* Effect.flip(svc.me());
-          expect(error).toMatchObject({
+    it.effect(
+      'propagates SessionUnauthorized when requireSession fails',
+      () => {
+        mockRequireSession.mockReturnValue(
+          Effect.fail({
             _tag: 'SessionUnauthorized',
+            messageKey: 'auth.unauthorized',
+            message: 'Unauthorized',
             statusCode: 401,
-          });
-        }),
-      );
-    });
+          }),
+        );
 
-    it.effect('propagates errors from RolesService.getPermissionsForUser', () => {
-      mockRequireSession.mockReturnValue(Effect.succeed(makeSession()));
-
-      return withService(
-        (svc) =>
+        return withService((svc) =>
           Effect.gen(function* () {
             const error = yield* Effect.flip(svc.me());
             expect(error).toMatchObject({
-              _tag: 'RolesInfrastructureError',
+              _tag: 'SessionUnauthorized',
+              statusCode: 401,
             });
           }),
-        {
-          getPermissionsForUser: () =>
-            Effect.fail({
-              _tag: 'RolesInfrastructureError',
-              statusCode: 500,
-              message: 'boom',
-              messageKey: 'roles.loadPermissionsFailed',
-            } as any),
-        },
-      );
-    });
+        );
+      },
+    );
+
+    it.effect(
+      'propagates errors from RolesService.getPermissionsForUser',
+      () => {
+        mockRequireSession.mockReturnValue(Effect.succeed(makeSession()));
+
+        return withService(
+          (svc) =>
+            Effect.gen(function* () {
+              const error = yield* Effect.flip(svc.me());
+              expect(error).toMatchObject({
+                _tag: 'RolesInfrastructureError',
+              });
+            }),
+          {
+            getPermissionsForUser: () =>
+              Effect.fail({
+                _tag: 'RolesInfrastructureError',
+                statusCode: 500,
+                message: 'boom',
+                messageKey: 'roles.loadPermissionsFailed',
+              } as any),
+          },
+        );
+      },
+    );
   });
 
   describe('profile', () => {
@@ -240,23 +258,26 @@ describe('AuthService', () => {
       );
     });
 
-    it.effect('propagates SessionUnauthorized when requireSession fails', () => {
-      mockRequireSession.mockReturnValue(
-        Effect.fail({
-          _tag: 'SessionUnauthorized',
-          statusCode: 401,
-          message: 'Unauthorized',
-          messageKey: 'auth.unauthorized',
-        }),
-      );
+    it.effect(
+      'propagates SessionUnauthorized when requireSession fails',
+      () => {
+        mockRequireSession.mockReturnValue(
+          Effect.fail({
+            _tag: 'SessionUnauthorized',
+            statusCode: 401,
+            message: 'Unauthorized',
+            messageKey: 'auth.unauthorized',
+          }),
+        );
 
-      return withService((svc) =>
-        Effect.gen(function* () {
-          const error = yield* Effect.flip(svc.profile());
-          expect(error).toMatchObject({ _tag: 'SessionUnauthorized' });
-        }),
-      );
-    });
+        return withService((svc) =>
+          Effect.gen(function* () {
+            const error = yield* Effect.flip(svc.profile());
+            expect(error).toMatchObject({ _tag: 'SessionUnauthorized' });
+          }),
+        );
+      },
+    );
   });
 
   describe('sessionClaims', () => {
@@ -278,23 +299,26 @@ describe('AuthService', () => {
       );
     });
 
-    it.effect('propagates SessionUnauthorized when requireSession fails', () => {
-      mockRequireSession.mockReturnValue(
-        Effect.fail({
-          _tag: 'SessionUnauthorized',
-          statusCode: 401,
-          message: 'Unauthorized',
-          messageKey: 'auth.unauthorized',
-        }),
-      );
+    it.effect(
+      'propagates SessionUnauthorized when requireSession fails',
+      () => {
+        mockRequireSession.mockReturnValue(
+          Effect.fail({
+            _tag: 'SessionUnauthorized',
+            statusCode: 401,
+            message: 'Unauthorized',
+            messageKey: 'auth.unauthorized',
+          }),
+        );
 
-      return withService((svc) =>
-        Effect.gen(function* () {
-          const error = yield* Effect.flip(svc.sessionClaims());
-          expect(error).toMatchObject({ _tag: 'SessionUnauthorized' });
-        }),
-      );
-    });
+        return withService((svc) =>
+          Effect.gen(function* () {
+            const error = yield* Effect.flip(svc.sessionClaims());
+            expect(error).toMatchObject({ _tag: 'SessionUnauthorized' });
+          }),
+        );
+      },
+    );
 
     it.effect('does not call RolesService', () => {
       mockRequireSession.mockReturnValue(Effect.succeed(makeSession()));

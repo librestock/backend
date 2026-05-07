@@ -13,7 +13,12 @@
 import { sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import type { DrizzleDb } from '../../../platform/drizzle';
-import { roles } from '../../../platform/db/schema';
+import { members, organizations, roles } from '../../../platform/db/schema';
+import {
+  DEFAULT_TENANT_ID,
+  DEFAULT_TENANT_NAME,
+  DEFAULT_TENANT_SLUG,
+} from '../../../platform/tenant-constants';
 
 /**
  * Create a stand-in for Better Auth's `user` table if the schema push did not
@@ -26,7 +31,7 @@ import { roles } from '../../../platform/db/schema';
 export async function ensureBetterAuthUserTable(db: DrizzleDb): Promise<void> {
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS "user" (
-      id TEXT PRIMARY KEY,
+      id UUID PRIMARY KEY,
       name TEXT,
       email TEXT,
       email_verified BOOLEAN DEFAULT FALSE,
@@ -64,6 +69,63 @@ export async function seedBetterAuthUserRow(
     VALUES (${id}, ${name}, ${email}, ${role}, NOW(), NOW())
     ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role
   `);
+}
+
+export async function seedDefaultTenantMembership(
+  db: DrizzleDb,
+  userId: string,
+): Promise<void> {
+  await seedTenantMembership(db, userId, {
+    tenantId: DEFAULT_TENANT_ID,
+    name: DEFAULT_TENANT_NAME,
+    slug: DEFAULT_TENANT_SLUG,
+  });
+}
+
+export async function seedTenantMembership(
+  db: DrizzleDb,
+  userId: string,
+  tenant: {
+    tenantId: string;
+    name?: string;
+    slug?: string;
+  },
+): Promise<void> {
+  await db
+    .insert(organizations)
+    .values({
+      id: tenant.tenantId,
+      name: tenant.name ?? `Tenant ${tenant.tenantId}`,
+      slug: tenant.slug ?? `tenant-${tenant.tenantId}`,
+    })
+    .onConflictDoNothing();
+  await db
+    .insert(members)
+    .values({
+      id: randomUUID(),
+      organization_id: tenant.tenantId,
+      user_id: userId,
+      role: 'member',
+    })
+    .onConflictDoNothing();
+}
+
+export async function seedTenantUserRow(
+  db: DrizzleDb,
+  user: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    role?: 'admin' | 'user';
+  },
+): Promise<void> {
+  await seedBetterAuthUserRow(db, {
+    id: user.id,
+    name: user.name ?? 'Test User',
+    email: user.email ?? `${user.id}@example.com`,
+    role: user.role,
+  });
+  await seedDefaultTenantMembership(db, user.id);
 }
 
 export async function readBetterAuthUserRole(

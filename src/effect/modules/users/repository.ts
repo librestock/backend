@@ -5,9 +5,33 @@ import { DrizzleDatabase } from '../../platform/drizzle';
 import { userRoles, roles } from '../../platform/db/schema';
 import { UsersInfrastructureError } from './users.errors';
 
-const tryAsync = makeTryAsync((action, cause) =>
-  new UsersInfrastructureError({ action, cause, messageKey: 'users.repositoryFailed' }),
+const tryAsync = makeTryAsync(
+  (action, cause) =>
+    new UsersInfrastructureError({
+      action,
+      cause,
+      messageKey: 'users.repositoryFailed',
+    }),
 );
+
+export interface TenantUserRow {
+  readonly id: string;
+  readonly name: string | null;
+  readonly email: string | null;
+  readonly image: string | null;
+  readonly banned: boolean | null;
+  readonly banReason: string | null;
+  readonly banExpires: Date | null;
+  readonly createdAt: Date;
+}
+
+interface ListTenantUsersOptions {
+  readonly tenantId: string;
+  readonly offset: number;
+  readonly limit: number;
+  readonly search?: string;
+  readonly role?: string;
+}
 
 export class UsersRepository extends Effect.Service<UsersRepository>()(
   '@librestock/effect/users/UsersRepository',
@@ -15,7 +39,7 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;
 
-      const findRoleAssignments = (userIds: string[]) =>
+      const findRoleAssignments = (userIds: string[], tenantId: string) =>
         tryAsync('find role assignments', async () => {
           if (userIds.length === 0) return [];
 
@@ -28,12 +52,18 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
             })
             .from(userRoles)
             .innerJoin(roles, eq(userRoles.role_id, roles.id))
-            .where(inArray(userRoles.user_id, userIds));
+            .where(
+              and(
+                inArray(userRoles.user_id, userIds),
+                eq(userRoles.tenant_id, tenantId),
+                eq(roles.tenant_id, tenantId),
+              ),
+            );
 
           return rows;
         });
 
-      const findUserRoles = (userId: string) =>
+      const findUserRoles = (userId: string, tenantId: string) =>
         tryAsync('find user roles', async () => {
           const rows = await db
             .select({
@@ -44,14 +74,31 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
             })
             .from(userRoles)
             .innerJoin(roles, eq(userRoles.role_id, roles.id))
-            .where(eq(userRoles.user_id, userId));
+            .where(
+              and(
+                eq(userRoles.user_id, userId),
+                eq(userRoles.tenant_id, tenantId),
+                eq(roles.tenant_id, tenantId),
+              ),
+            );
 
           return rows;
         });
 
-      const replaceUserRoles = (userId: string, roleIds: string[]) =>
+      const replaceUserRoles = (
+        userId: string,
+        roleIds: string[],
+        tenantId: string,
+      ) =>
         tryAsync('replace user roles', async () => {
-          await db.delete(userRoles).where(eq(userRoles.user_id, userId));
+          await db
+            .delete(userRoles)
+            .where(
+              and(
+                eq(userRoles.user_id, userId),
+                eq(userRoles.tenant_id, tenantId),
+              ),
+            );
 
           if (roleIds.length === 0) {
             return;
@@ -60,12 +107,67 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
           await db.insert(userRoles).values(
             roleIds.map((roleId) => ({
               user_id: userId,
+              tenant_id: tenantId,
               role_id: roleId,
             })),
           );
         });
 
-      const hasAdminRole = (roleIds: string[]) =>
+      const listTenantUsers = ({
+        tenantId,
+        offset,
+        limit,
+        search,
+        role,
+      }: ListTenantUsersOptions) =>
+        tryAsync('list tenant users', async () => {
+          const searchTerm = search?.trim() ? `%${search.trim()}%` : null;
+          const roleName = role?.trim() || null;
+          const fromAndWhere = sql`
+	            FROM "member" m
+	            INNER JOIN "user" u ON u.id = m.user_id
+            LEFT JOIN user_roles ur
+              ON ur.user_id = u.id
+              AND ur.tenant_id = m.organization_id
+            LEFT JOIN roles r
+              ON r.id = ur.role_id
+              AND r.tenant_id = m.organization_id
+            WHERE m.organization_id = ${tenantId}
+              AND (${searchTerm}::text IS NULL OR u.name ILIKE ${searchTerm})
+              AND (${roleName}::text IS NULL OR LOWER(r.name) = LOWER(${roleName}))
+          `;
+
+          const countResult = await db.execute(sql`
+            SELECT COUNT(DISTINCT u.id)::int AS total
+            ${fromAndWhere}
+          `);
+          const total =
+            ((countResult as unknown as { rows?: { total: number }[] }).rows ??
+              (countResult as unknown as { total: number }[]))[0]?.total ?? 0;
+
+          const result = await db.execute(sql`
+            SELECT DISTINCT
+              u.id,
+              u.name,
+              u.email,
+              u.image,
+              u.banned,
+              u.ban_reason AS "banReason",
+              u.ban_expires AS "banExpires",
+              u.created_at AS "createdAt"
+            ${fromAndWhere}
+            ORDER BY u.created_at ASC, u.id ASC
+            LIMIT ${limit}
+            OFFSET ${offset}
+          `);
+          const users =
+            (result as unknown as { rows?: TenantUserRow[] }).rows ??
+            (result as unknown as TenantUserRow[]);
+
+          return { users, total };
+        });
+
+      const hasAdminRole = (roleIds: string[], tenantId: string) =>
         tryAsync('check admin role', async () => {
           if (roleIds.length === 0) return false;
 
@@ -75,6 +177,7 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
             .where(
               and(
                 inArray(roles.id, roleIds),
+                eq(roles.tenant_id, tenantId),
                 sql`LOWER(${roles.name}) = LOWER('Admin')`,
               ),
             )
@@ -90,9 +193,16 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
           );
         });
 
-      const deleteUserRoles = (userId: string) =>
+      const deleteUserRoles = (userId: string, tenantId: string) =>
         tryAsync('delete user roles', () =>
-          db.delete(userRoles).where(eq(userRoles.user_id, userId)),
+          db
+            .delete(userRoles)
+            .where(
+              and(
+                eq(userRoles.user_id, userId),
+                eq(userRoles.tenant_id, tenantId),
+              ),
+            ),
         );
 
       return {
@@ -100,6 +210,8 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
         findUserRoles,
         replaceUserRoles,
         hasAdminRole,
+        hasAdminRoleForUser,
+        listTenantUsers,
         syncBetterAuthRole,
         deleteUserRoles,
       };
