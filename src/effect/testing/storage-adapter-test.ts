@@ -59,7 +59,10 @@ export interface StorageAdapter {
   /** Check whether an object exists at `path`. */
   readonly exists: (path: string) => Effect.Effect<boolean, StorageError>;
 
-  /** Read the bytes at `path`. Fails with `StorageNotFound` if missing. */
+  /**
+   * Read the bytes at `path`.
+   * Fails with `StorageError` whose `cause` is `StorageNotFound` if missing.
+   */
   readonly read: (path: string) => Effect.Effect<Buffer, StorageError>;
 }
 

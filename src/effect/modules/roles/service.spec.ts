@@ -236,10 +236,16 @@ describe('Effect RolesService', () => {
 
     await run(service.getPermissionsForUser('user-1'));
     await run(service.getPermissionsForUser('user-1'));
+    await run(
+      service.getPermissionsForUser(
+        'user-1',
+        '00000000-0000-4000-8000-000000000002',
+      ),
+    );
     now += 61_000;
     await run(service.getPermissionsForUser('user-1'));
 
-    expect(mockDb.select).toHaveBeenCalledTimes(2);
+    expect(mockDb.select).toHaveBeenCalledTimes(3);
     nowSpy.mockRestore();
   });
 });

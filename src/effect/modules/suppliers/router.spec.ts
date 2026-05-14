@@ -433,7 +433,7 @@ describe('suppliersRouter', () => {
         }),
       );
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body).toHaveProperty('message');
       expect(del).toHaveBeenCalledWith(SUPPLIER_ID);
       expect(auditLog).toHaveBeenCalledWith({

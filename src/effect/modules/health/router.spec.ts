@@ -99,7 +99,7 @@ describe('HealthApiLive', () => {
         new Request('http://localhost/health-check/ready'),
       );
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body.status).toBe('ok');
       expect(body.details.database.status).toBe('up');
     });
@@ -119,7 +119,7 @@ describe('HealthApiLive', () => {
         new Request('http://localhost/health-check/ready'),
       );
       expect(response.status).toBe(503);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body.details.database.status).toBe('down');
     });
   });
@@ -141,7 +141,7 @@ describe('HealthApiLive', () => {
         new Request('http://localhost/health-check'),
       );
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body.status).toBe('ok');
       expect(body.details.database.status).toBe('up');
       expect(body.details['better-auth'].status).toBe('up');
@@ -166,7 +166,7 @@ describe('HealthApiLive', () => {
         new Request('http://localhost/health-check'),
       );
       expect(response.status).toBe(503);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body.details.database.status).toBe('down');
       expect(body.details['better-auth'].status).toBe('down');
     });
@@ -190,7 +190,7 @@ describe('HealthApiLive', () => {
         new Request('http://localhost/health-check'),
       );
       expect(response.status).toBe(503);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body.details.database.status).toBe('down');
       expect(body.details['better-auth'].status).toBe('up');
     });

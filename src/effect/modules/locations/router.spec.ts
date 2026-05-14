@@ -101,7 +101,7 @@ describe('locationsRouter', () => {
       );
 
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body).toHaveLength(1);
       expect(body[0]).toMatchObject({ id: LOC_ID, name: 'Warehouse A' });
       expect(findAll).toHaveBeenCalledTimes(1);
@@ -511,7 +511,7 @@ describe('locationsRouter', () => {
       );
 
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body).toHaveProperty('message');
       expect(del).toHaveBeenCalledWith(LOC_ID);
       expect(auditLog).toHaveBeenCalledWith({

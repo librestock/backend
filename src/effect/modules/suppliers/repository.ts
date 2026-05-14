@@ -113,14 +113,16 @@ export class SuppliersRepository extends Effect.Service<SuppliersRepository>()(
 
       const update = (
         id: string,
-        data: Partial<typeof suppliers.$inferInsert>,
+        data: Omit<Partial<typeof suppliers.$inferInsert>, 'tenant_id'>,
       ) =>
         Effect.gen(function* () {
           const tenantId = yield* requireRequestTenantId;
           return yield* tryAsync('update supplier', async () => {
+            const { tenant_id: _tenantId, ...updateData } =
+              data as Partial<typeof suppliers.$inferInsert>;
             const rows = await db
               .update(suppliers)
-              .set({ ...data, updated_at: new Date() })
+              .set({ ...updateData, updated_at: new Date() })
               .where(
                 and(eq(suppliers.tenant_id, tenantId), eq(suppliers.id, id)),
               )

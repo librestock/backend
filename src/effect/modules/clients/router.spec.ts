@@ -132,7 +132,7 @@ describe('clientsRouter', () => {
 
       const response = await handler(new Request('http://localhost/clients'));
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body.data).toHaveLength(1);
       expect(body.data[0].id).toBe(TEST_CLIENT_ID);
       expect(body.meta.total).toBe(1);

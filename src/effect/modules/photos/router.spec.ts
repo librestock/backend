@@ -291,9 +291,10 @@ describe('photos routers', () => {
         Effect.succeed({ file: makePersistedFile() }),
       );
       mockReadFile.mockRejectedValueOnce(new Error('ENOENT'));
+      const uploadPhoto = vi.fn(() => Effect.succeed(makePhotoResponse()));
       const { handler } = makePhotosRouterHarness({
         service: {
-          uploadPhoto: () => Effect.die('service should not be called'),
+          uploadPhoto,
         },
         permissions: writeAll,
       });
@@ -305,6 +306,7 @@ describe('photos routers', () => {
         }),
       );
       expect(response.status).toBe(500);
+      expect(uploadPhoto).not.toHaveBeenCalled();
     });
   });
 
@@ -350,7 +352,7 @@ describe('photos routers', () => {
       );
 
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body).toHaveLength(1);
       expect(body[0]).toMatchObject({ id: PHOTO_ID });
       expect(findByProductId).toHaveBeenCalledWith(PRODUCT_ID);
@@ -497,7 +499,7 @@ describe('photos routers', () => {
       );
 
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body).toHaveProperty('message');
       expect(deletePhoto).toHaveBeenCalledWith(PHOTO_ID);
     });

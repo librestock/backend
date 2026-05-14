@@ -104,7 +104,9 @@ describe('BrandingService (it.effect)', () => {
 
   it.effect('upserts and reloads on update', () => {
     // Service calls insert(...).onConflictDoUpdate(...) then select(...).limit().
-    const selectChain = createChainableMock([makeBrandingEntity()]);
+    const selectChain = createChainableMock([
+      makeBrandingEntity({ app_name: 'NewName' }),
+    ]);
     const insertChain = createChainableMock(undefined);
     const mockDb = {
       select: vi.fn().mockReturnValue(selectChain),
@@ -117,7 +119,7 @@ describe('BrandingService (it.effect)', () => {
       expect(mockDb.insert).toHaveBeenCalled();
       expect(insertChain.values).toHaveBeenCalled();
       expect(insertChain.onConflictDoUpdate).toHaveBeenCalled();
-      expect(result).toMatchObject({ app_name: 'TestApp' });
+      expect(result).toMatchObject({ app_name: 'NewName' });
     }).pipe(
       Effect.provide(serviceLayer(mockDb)),
       Effect.provide(requestContextLayer),

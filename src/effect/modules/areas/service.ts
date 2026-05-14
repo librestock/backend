@@ -142,6 +142,7 @@ export class AreasService extends Effect.Service<AreasService>()(
       ): Effect.Effect<
         AreaResponseDto,
         | AreaCircularReference
+        | AreaLocationNotFound
         | AreaNotFound
         | AreaParentLocationMismatch
         | AreasInfrastructureError

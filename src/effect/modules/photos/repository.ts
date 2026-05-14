@@ -2,7 +2,7 @@ import { Effect } from 'effect';
 import { eq, asc, sql, and } from 'drizzle-orm';
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
-import { photos } from '../../platform/db/schema';
+import { photos, products } from '../../platform/db/schema';
 import { requireRequestTenantId } from '../../platform/tenant-context';
 import { PhotosInfrastructureError } from './photos.errors';
 
@@ -55,8 +55,22 @@ export class PhotosRepository extends Effect.Service<PhotosRepository>()(
 
       const create = (data: typeof photos.$inferInsert) =>
         Effect.gen(function* () {
-          yield* requireRequestTenantId;
+          const tenantId = yield* requireRequestTenantId;
           return yield* tryAsync('create photo', async () => {
+            const productRows = await db
+              .select({ id: products.id })
+              .from(products)
+              .where(
+                and(
+                  eq(products.tenant_id, tenantId),
+                  eq(products.id, data.product_id),
+                ),
+              )
+              .limit(1);
+            if (productRows.length === 0) {
+              throw new Error('Photo product does not belong to tenant');
+            }
+
             const rows = await db.insert(photos).values(data).returning();
             return rows[0]!;
           });

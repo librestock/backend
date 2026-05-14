@@ -113,7 +113,7 @@ describe('rolesRouter', () => {
       const response = await handler(new Request('http://localhost/roles'));
 
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body).toHaveLength(1);
       expect(body[0]).toMatchObject({ id: ROLE_ID, name: 'Admin' });
       expect(findAll).toHaveBeenCalledTimes(1);

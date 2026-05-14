@@ -46,10 +46,13 @@ vi.mock('../../platform/session', async () => {
   };
 });
 
-vi.mock('uuid', () => ({
-  v4: () => '00000000-0000-4000-8000-000000000000',
-  validate: () => true,
-}));
+vi.mock('uuid', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('uuid')>();
+  return {
+    ...actual,
+    v4: () => '00000000-0000-4000-8000-000000000000',
+  };
+});
 
 const TEST_INVENTORY_ID = '00000000-0000-4000-b000-000000000001';
 const TEST_PRODUCT_ID = '00000000-0000-4000-b000-000000000002';
@@ -127,7 +130,7 @@ describe('inventoryRouter', () => {
 
       const response = await handler(new Request('http://localhost/inventory'));
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body.data).toHaveLength(1);
       expect(body.data[0].id).toBe(TEST_INVENTORY_ID);
     });
@@ -172,7 +175,7 @@ describe('inventoryRouter', () => {
         new Request(`http://localhost/inventory/product/${TEST_PRODUCT_ID}`),
       );
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body).toHaveLength(1);
       expect(body[0].product_id).toBe(TEST_PRODUCT_ID);
     });

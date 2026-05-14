@@ -123,7 +123,7 @@ describe('categoriesRouter', () => {
       );
 
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body[0]).toMatchObject({ id: CATEGORY_ID });
     });
 

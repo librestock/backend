@@ -74,25 +74,27 @@ BEGIN
     'branding_settings'
   ]
   LOOP
-    EXECUTE format(
-      'ALTER TABLE %I ADD COLUMN IF NOT EXISTS tenant_id uuid DEFAULT %L',
-      table_name,
-      '00000000-0000-4000-8000-000000000001'
-    );
-    EXECUTE format(
-      'UPDATE %I SET tenant_id = %L WHERE tenant_id IS NULL',
-      table_name,
-      '00000000-0000-4000-8000-000000000001'
-    );
-    EXECUTE format(
-      'ALTER TABLE %I ALTER COLUMN tenant_id SET DEFAULT %L',
-      table_name,
-      '00000000-0000-4000-8000-000000000001'
-    );
-    EXECUTE format(
-      'ALTER TABLE %I ALTER COLUMN tenant_id SET NOT NULL',
-      table_name
-    );
+    IF to_regclass(format('public.%I', table_name)) IS NOT NULL THEN
+      EXECUTE format(
+        'ALTER TABLE %I ADD COLUMN IF NOT EXISTS tenant_id uuid DEFAULT %L',
+        table_name,
+        '00000000-0000-4000-8000-000000000001'
+      );
+      EXECUTE format(
+        'UPDATE %I SET tenant_id = %L WHERE tenant_id IS NULL',
+        table_name,
+        '00000000-0000-4000-8000-000000000001'
+      );
+      EXECUTE format(
+        'ALTER TABLE %I ALTER COLUMN tenant_id SET DEFAULT %L',
+        table_name,
+        '00000000-0000-4000-8000-000000000001'
+      );
+      EXECUTE format(
+        'ALTER TABLE %I ALTER COLUMN tenant_id SET NOT NULL',
+        table_name
+      );
+    END IF;
   END LOOP;
 END $$;
 
@@ -106,71 +108,122 @@ BEGIN
   END IF;
 END $$;
 
-ALTER TABLE roles DROP CONSTRAINT IF EXISTS roles_name_unique;
-DROP INDEX IF EXISTS roles_name_unique;
-CREATE UNIQUE INDEX IF NOT EXISTS roles_tenant_name_unique
-  ON roles (tenant_id, name);
-CREATE INDEX IF NOT EXISTS roles_tenant_id_idx ON roles (tenant_id);
+DO $$
+BEGIN
+  IF to_regclass('public.member') IS NOT NULL
+     AND to_regclass('public.organization') IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM pg_constraint WHERE conname = 'member_organization_id_fk'
+     ) THEN
+    ALTER TABLE "member"
+      ADD CONSTRAINT member_organization_id_fk
+      FOREIGN KEY (organization_id)
+      REFERENCES "organization"(id)
+      ON DELETE CASCADE;
+  END IF;
 
-DROP INDEX IF EXISTS user_roles_user_role_unique;
-CREATE UNIQUE INDEX IF NOT EXISTS user_roles_tenant_user_role_unique
-  ON user_roles (tenant_id, user_id, role_id);
-CREATE INDEX IF NOT EXISTS user_roles_tenant_user_id_idx
-  ON user_roles (tenant_id, user_id);
+  IF to_regclass('public.member') IS NOT NULL
+     AND to_regclass('public.user') IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM pg_constraint WHERE conname = 'member_user_id_fk'
+     ) THEN
+    ALTER TABLE "member"
+      ADD CONSTRAINT member_user_id_fk
+      FOREIGN KEY (user_id)
+      REFERENCES "user"(id)
+      ON DELETE CASCADE;
+  END IF;
+END $$;
 
-ALTER TABLE products DROP CONSTRAINT IF EXISTS products_sku_unique;
-DROP INDEX IF EXISTS products_sku_unique;
-CREATE UNIQUE INDEX IF NOT EXISTS products_tenant_sku_unique
-  ON products (tenant_id, sku);
-CREATE INDEX IF NOT EXISTS products_tenant_id_idx ON products (tenant_id);
+DO $$
+BEGIN
+  IF to_regclass('public.roles') IS NOT NULL THEN
+    ALTER TABLE roles DROP CONSTRAINT IF EXISTS roles_name_unique;
+    DROP INDEX IF EXISTS roles_name_unique;
+    CREATE UNIQUE INDEX IF NOT EXISTS roles_tenant_name_unique
+      ON roles (tenant_id, name);
+    CREATE INDEX IF NOT EXISTS roles_tenant_id_idx ON roles (tenant_id);
+  END IF;
 
-CREATE INDEX IF NOT EXISTS clients_tenant_id_idx ON clients (tenant_id);
+  IF to_regclass('public.user_roles') IS NOT NULL THEN
+    DROP INDEX IF EXISTS user_roles_user_role_unique;
+    CREATE UNIQUE INDEX IF NOT EXISTS user_roles_tenant_user_role_unique
+      ON user_roles (tenant_id, user_id, role_id);
+    CREATE INDEX IF NOT EXISTS user_roles_tenant_user_id_idx
+      ON user_roles (tenant_id, user_id);
+  END IF;
 
-ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_order_number_unique;
-DROP INDEX IF EXISTS orders_order_number_unique;
-CREATE UNIQUE INDEX IF NOT EXISTS orders_tenant_order_number_unique
-  ON orders (tenant_id, order_number);
-CREATE INDEX IF NOT EXISTS orders_tenant_id_idx ON orders (tenant_id);
+  IF to_regclass('public.products') IS NOT NULL THEN
+    ALTER TABLE products DROP CONSTRAINT IF EXISTS products_sku_unique;
+    DROP INDEX IF EXISTS products_sku_unique;
+    CREATE UNIQUE INDEX IF NOT EXISTS products_tenant_sku_unique
+      ON products (tenant_id, sku);
+    CREATE INDEX IF NOT EXISTS products_tenant_id_idx ON products (tenant_id);
+  END IF;
 
-CREATE INDEX IF NOT EXISTS inventory_tenant_id_idx ON inventory (tenant_id);
-CREATE INDEX IF NOT EXISTS stock_movements_tenant_id_idx ON stock_movements (tenant_id);
-CREATE INDEX IF NOT EXISTS audit_logs_tenant_id_idx ON audit_logs (tenant_id);
+  IF to_regclass('public.clients') IS NOT NULL THEN
+    CREATE INDEX IF NOT EXISTS clients_tenant_id_idx ON clients (tenant_id);
+  END IF;
+
+  IF to_regclass('public.orders') IS NOT NULL THEN
+    ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_order_number_unique;
+    DROP INDEX IF EXISTS orders_order_number_unique;
+    CREATE UNIQUE INDEX IF NOT EXISTS orders_tenant_order_number_unique
+      ON orders (tenant_id, order_number);
+    CREATE INDEX IF NOT EXISTS orders_tenant_id_idx ON orders (tenant_id);
+  END IF;
+
+  IF to_regclass('public.inventory') IS NOT NULL THEN
+    CREATE INDEX IF NOT EXISTS inventory_tenant_id_idx ON inventory (tenant_id);
+  END IF;
+
+  IF to_regclass('public.stock_movements') IS NOT NULL THEN
+    CREATE INDEX IF NOT EXISTS stock_movements_tenant_id_idx
+      ON stock_movements (tenant_id);
+  END IF;
+
+  IF to_regclass('public.audit_logs') IS NOT NULL THEN
+    CREATE INDEX IF NOT EXISTS audit_logs_tenant_id_idx ON audit_logs (tenant_id);
+  END IF;
+END $$;
 
 DO $$
 DECLARE
   existing_primary_key_name text;
 BEGIN
-  SELECT con.conname
-  INTO existing_primary_key_name
-  FROM pg_constraint con
-  JOIN pg_class rel ON rel.oid = con.conrelid
-  JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
-  WHERE nsp.nspname = 'public'
-    AND rel.relname = 'branding_settings'
-    AND con.contype = 'p'
-  LIMIT 1;
-
-  IF existing_primary_key_name IS NOT NULL
-     AND existing_primary_key_name <> 'branding_settings_tenant_id_id_pk' THEN
-    EXECUTE format(
-      'ALTER TABLE %I.%I DROP CONSTRAINT %I',
-      'public',
-      'branding_settings',
-      existing_primary_key_name
-    );
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1
+  IF to_regclass('public.branding_settings') IS NOT NULL THEN
+    SELECT con.conname
+    INTO existing_primary_key_name
     FROM pg_constraint con
     JOIN pg_class rel ON rel.oid = con.conrelid
     JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
     WHERE nsp.nspname = 'public'
       AND rel.relname = 'branding_settings'
-      AND con.conname = 'branding_settings_tenant_id_id_pk'
       AND con.contype = 'p'
-  ) THEN
-    ALTER TABLE branding_settings
-      ADD CONSTRAINT branding_settings_tenant_id_id_pk PRIMARY KEY (tenant_id, id);
+    LIMIT 1;
+
+    IF existing_primary_key_name IS NOT NULL
+       AND existing_primary_key_name <> 'branding_settings_tenant_id_id_pk' THEN
+      EXECUTE format(
+        'ALTER TABLE %I.%I DROP CONSTRAINT %I',
+        'public',
+        'branding_settings',
+        existing_primary_key_name
+      );
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM pg_constraint con
+      JOIN pg_class rel ON rel.oid = con.conrelid
+      JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+      WHERE nsp.nspname = 'public'
+        AND rel.relname = 'branding_settings'
+        AND con.conname = 'branding_settings_tenant_id_id_pk'
+        AND con.contype = 'p'
+    ) THEN
+      ALTER TABLE branding_settings
+        ADD CONSTRAINT branding_settings_tenant_id_id_pk PRIMARY KEY (tenant_id, id);
+    END IF;
   END IF;
 END $$;

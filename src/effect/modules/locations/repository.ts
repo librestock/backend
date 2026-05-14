@@ -153,14 +153,16 @@ export class LocationsRepository extends Effect.Service<LocationsRepository>()(
 
       const update = (
         id: string,
-        data: Partial<typeof locations.$inferInsert>,
+        data: Omit<Partial<typeof locations.$inferInsert>, 'tenant_id'>,
       ) =>
         Effect.gen(function* () {
           const tenantId = yield* requireRequestTenantId;
           return yield* tryAsync('update location', async () => {
+            const { tenant_id: _tenantId, ...updateData } =
+              data as Partial<typeof locations.$inferInsert>;
             const rows = await db
               .update(locations)
-              .set({ ...data, updated_at: new Date() })
+              .set({ ...updateData, updated_at: new Date() })
               .where(
                 and(
                   eq(locations.tenant_id, tenantId),

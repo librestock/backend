@@ -13,7 +13,7 @@ export class PermissionProvider extends Context.Tag(
   {
     readonly getPermissionsForUser: (
       userId: string,
-      tenantId: string,
+      tenantId?: string,
     ) => Effect.Effect<UserPermissions, unknown>;
   }
 >() {}

@@ -13,7 +13,7 @@ Use this skill for questions or changes involving Effect APIs, layers, services,
 2. For framework API uncertainty, verify against the Effect source before answering from memory.
 3. If `effect-code/effect` exists, treat it as a read-only Effect reference checkout.
 4. If no local Effect checkout exists and source verification matters, clone `https://github.com/Effect-TS/effect` into `.opencode/references/effect`.
-5. Keep final guidance aligned with root `AGENTS.md` and any closer scoped AGENTS.md files.
+5. Keep final guidance aligned with root `AGENTS.md` and any closer-scoped AGENTS.md files.
 
 ## LibreStock Guardrails
 

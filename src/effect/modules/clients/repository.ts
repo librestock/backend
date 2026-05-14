@@ -136,13 +136,18 @@ export class ClientsRepository extends Effect.Service<ClientsRepository>()(
           });
         });
 
-      const update = (id: string, data: Partial<typeof clients.$inferInsert>) =>
+      const update = (
+        id: string,
+        data: Omit<Partial<typeof clients.$inferInsert>, 'tenant_id'>,
+      ) =>
         Effect.gen(function* () {
           const tenantId = yield* requireRequestTenantId;
           return yield* tryAsync('update client', async () => {
+            const { tenant_id: _tenantId, ...updateData } =
+              data as Partial<typeof clients.$inferInsert>;
             const rows = await db
               .update(clients)
-              .set({ ...data, updated_at: new Date() })
+              .set({ ...updateData, updated_at: new Date() })
               .where(and(eq(clients.tenant_id, tenantId), eq(clients.id, id)))
               .returning({ id: clients.id });
             return rows.length;

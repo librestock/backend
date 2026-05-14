@@ -2,7 +2,7 @@ import { Effect } from 'effect';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
-import { userRoles, roles } from '../../platform/db/schema';
+import { userRoles, roles, members } from '../../platform/db/schema';
 import { UsersInfrastructureError } from './users.errors';
 
 const tryAsync = makeTryAsync(
@@ -91,26 +91,46 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
         tenantId: string,
       ) =>
         tryAsync('replace user roles', async () => {
-          await db
-            .delete(userRoles)
-            .where(
-              and(
-                eq(userRoles.user_id, userId),
-                eq(userRoles.tenant_id, tenantId),
-              ),
+          const uniqueRoleIds = [...new Set(roleIds)];
+
+          await db.transaction(async (tx) => {
+            if (uniqueRoleIds.length > 0) {
+              const tenantRoles = await tx
+                .select({ id: roles.id })
+                .from(roles)
+                .where(
+                  and(
+                    inArray(roles.id, uniqueRoleIds),
+                    eq(roles.tenant_id, tenantId),
+                  ),
+                );
+
+              if (tenantRoles.length !== uniqueRoleIds.length) {
+                throw new Error('One or more roles do not belong to tenant');
+              }
+            }
+
+            await tx
+              .delete(userRoles)
+              .where(
+                and(
+                  eq(userRoles.user_id, userId),
+                  eq(userRoles.tenant_id, tenantId),
+                ),
+              );
+
+            if (uniqueRoleIds.length === 0) {
+              return;
+            }
+
+            await tx.insert(userRoles).values(
+              uniqueRoleIds.map((roleId) => ({
+                user_id: userId,
+                tenant_id: tenantId,
+                role_id: roleId,
+              })),
             );
-
-          if (roleIds.length === 0) {
-            return;
-          }
-
-          await db.insert(userRoles).values(
-            roleIds.map((roleId) => ({
-              user_id: userId,
-              tenant_id: tenantId,
-              role_id: roleId,
-            })),
-          );
+          });
         });
 
       const listTenantUsers = ({
@@ -205,6 +225,45 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
             ),
         );
 
+      const deleteTenantMembership = (userId: string, tenantId: string) =>
+        tryAsync('delete tenant membership', () =>
+          db
+            .delete(members)
+            .where(
+              and(
+                eq(members.user_id, userId),
+                eq(members.organization_id, tenantId),
+              ),
+            ),
+        );
+
+      const hasTenantMemberships = (userId: string) =>
+        tryAsync('check tenant memberships', async () => {
+          const rows = await db
+            .select({ id: members.id })
+            .from(members)
+            .where(eq(members.user_id, userId))
+            .limit(1);
+
+          return rows.length > 0;
+        });
+
+      const hasTenantMembership = (userId: string, tenantId: string) =>
+        tryAsync('check tenant membership', async () => {
+          const rows = await db
+            .select({ id: members.id })
+            .from(members)
+            .where(
+              and(
+                eq(members.user_id, userId),
+                eq(members.organization_id, tenantId),
+              ),
+            )
+            .limit(1);
+
+          return rows.length > 0;
+        });
+
       return {
         findRoleAssignments,
         findUserRoles,
@@ -214,6 +273,9 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
         listTenantUsers,
         syncBetterAuthRole,
         deleteUserRoles,
+        deleteTenantMembership,
+        hasTenantMembership,
+        hasTenantMemberships,
       };
     }),
   },

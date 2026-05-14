@@ -1,6 +1,17 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
-import { eq, and, ilike, or, gte, lte, desc, sql, type SQL } from 'drizzle-orm';
+import {
+  eq,
+  and,
+  ilike,
+  or,
+  gte,
+  lte,
+  desc,
+  inArray,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import { type OrderQuerySchema } from '@librestock/types/orders';
 import {
   resolvePaginationWindow,
@@ -273,10 +284,29 @@ export class OrderItemsRepository extends Effect.Service<OrderItemsRepository>()
 
       const createMany = (items: (typeof orderItems.$inferInsert)[]) =>
         Effect.gen(function* () {
-          yield* requireRequestTenantId;
-          return yield* tryAsync('create order items', () =>
-            db.insert(orderItems).values(items).returning(),
-          );
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('create order items', async () => {
+            if (items.length === 0) return [];
+
+            const orderIds = [
+              ...new Set(items.map((item) => item.order_id)),
+            ];
+            const tenantOrders = await db
+              .select({ id: orders.id })
+              .from(orders)
+              .where(
+                and(
+                  eq(orders.tenant_id, tenantId),
+                  inArray(orders.id, orderIds),
+                ),
+              );
+
+            if (tenantOrders.length !== orderIds.length) {
+              throw new Error('Order item references an order outside tenant');
+            }
+
+            return db.insert(orderItems).values(items).returning();
+          });
         });
 
       const incrementPicked = (orderItemId: string, quantity: number) =>

@@ -12,7 +12,7 @@ or reach into the individual modules when you want to compose by hand.
 | Integration tests that hit Postgres                                | `withTestDb()` + `testPlatformLayer` + `runTest` / `runTestFailure`     |
 | Router tests (`HttpApp.toWebHandler`)                              | `vi.mock('./service', ...)` like `modules/auth/router.spec.ts`          |
 | Anything touching `UsersService` / `BetterAuth.api`                | `makeBetterAuthTestLayer({ users: [...] })`                             |
-| Photos tests once LIB-176 lands (forward-looking)                  | `makeInMemoryStorageAdapter()` / `makeInMemoryStorageAdapterLayer()`    |
+| Photo tests once LIB-176 lands (forward-looking)                   | `makeInMemoryStorageAdapter()` / `makeInMemoryStorageAdapterLayer()`    |
 
 ### `it.effect` vs `it` + `Effect.runPromise`
 

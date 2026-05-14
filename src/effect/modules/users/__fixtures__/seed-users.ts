@@ -67,7 +67,11 @@ export async function seedBetterAuthUserRow(
   await db.execute(sql`
     INSERT INTO "user" (id, name, email, role, created_at, updated_at)
     VALUES (${id}, ${name}, ${email}, ${role}, NOW(), NOW())
-    ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role
+    ON CONFLICT (id) DO UPDATE SET
+      name = EXCLUDED.name,
+      email = EXCLUDED.email,
+      role = EXCLUDED.role,
+      updated_at = EXCLUDED.updated_at
   `);
 }
 
@@ -152,6 +156,7 @@ export async function seedRole(
     .values({
       id: overrides.id ?? randomUUID(),
       name: overrides.name ?? `Role-${randomUUID().slice(0, 8)}`,
+      tenant_id: overrides.tenant_id ?? DEFAULT_TENANT_ID,
       description: overrides.description ?? null,
       is_system: overrides.is_system ?? false,
     })

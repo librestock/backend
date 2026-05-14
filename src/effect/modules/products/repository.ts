@@ -229,6 +229,8 @@ export class ProductsRepository extends Effect.Service<ProductsRepository>()(
         Effect.gen(function* () {
           const tenantId = yield* requireRequestTenantId;
           return yield* tryAsync('find products by categories', async () => {
+            if (categoryIds.length === 0) return [];
+
             const rows = await selectProductWithJoins(db)
               .where(
                 and(

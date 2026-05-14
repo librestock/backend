@@ -183,10 +183,7 @@ export class RolesService extends Effect.Service<RolesService>()(
         timeToLive: Duration.minutes(1),
         lookup: (cacheKey: string) => {
           const [tenantId, userId] = cacheKey.split(':', 2);
-          return fetchPermissionsFromDb(
-            userId ?? '',
-            tenantId ?? DEFAULT_TENANT_ID,
-          );
+          return fetchPermissionsFromDb(userId ?? '', tenantId ?? '');
         },
       });
 
@@ -294,10 +291,13 @@ export class RolesService extends Effect.Service<RolesService>()(
           }).pipe(
             Effect.withSpan('RolesService.delete', { attributes: { id } }),
           ),
-        getPermissionsForUser: (userId: string, tenantId = DEFAULT_TENANT_ID) =>
-          getPermissionsForUser(userId, tenantId).pipe(
+        getPermissionsForUser: (userId: string, tenantId?: string) =>
+          Effect.gen(function* () {
+            const effectiveTenantId = tenantId ?? (yield* currentTenantId);
+            return yield* getPermissionsForUser(userId, effectiveTenantId);
+          }).pipe(
             Effect.withSpan('RolesService.getPermissionsForUser', {
-              attributes: { userId },
+              attributes: { userId, tenantId },
             }),
           ),
         clearCacheForUser: (userId: string) =>

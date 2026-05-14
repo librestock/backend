@@ -200,7 +200,7 @@ describe('areasRouter', () => {
       const response = await handler(new Request('http://localhost/areas'));
 
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(Array.isArray(body)).toBe(true);
       expect(body[0]).toMatchObject({ id: AREA_ID });
     });

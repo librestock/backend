@@ -103,14 +103,24 @@ export class CategoriesRepository extends Effect.Service<CategoriesRepository>()
 
       const update = (
         id: string,
-        data: Partial<typeof categories.$inferInsert>,
+        data: Omit<
+          Partial<typeof categories.$inferInsert>,
+          'id' | 'tenant_id' | 'created_at' | 'updated_at'
+        >,
       ) =>
         Effect.gen(function* () {
           const tenantId = yield* requireRequestTenantId;
           return yield* tryAsync('update category', async () => {
+            const {
+              id: _id,
+              tenant_id: _tenantId,
+              created_at: _createdAt,
+              updated_at: _updatedAt,
+              ...updateData
+            } = data as Partial<typeof categories.$inferInsert>;
             const rows = await db
               .update(categories)
-              .set({ ...data, updated_at: new Date() })
+              .set({ ...updateData, updated_at: new Date() })
               .where(
                 and(
                   eq(categories.tenant_id, tenantId),

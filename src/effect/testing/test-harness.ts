@@ -8,7 +8,7 @@
  *                                  with the test platform pre-merged.
  *   - `runTest` / `runTestFailure` — `Effect.runPromise` wrappers that always
  *                                  provide the test platform.
- *   - `withTestDb({ before, after, each })` — idempotent hook registration for
+ *   - `withTestDb()` — idempotent hook registration for
  *                                  integration specs (uses Vitest globals).
  *
  * DB strategy: one PostgreSQL schema pushed via drizzle-kit at global-setup

@@ -276,12 +276,18 @@ export class UsersService extends Effect.Service<UsersService>()(
             const headers = yield* BetterAuthHeaders;
             yield* getBetterAuthUserOrFail(betterAuth.api, userId);
             yield* usersRepository.deleteUserRoles(userId, tenantId);
-            yield* tryAsync('remove user from auth provider', () =>
-              betterAuth.api.removeUser({
-                headers,
-                body: { userId } satisfies BetterAuthUserActionBody,
-              }),
-            );
+            yield* usersRepository.deleteTenantMembership(userId, tenantId);
+            const hasRemainingTenantMemberships =
+              yield* usersRepository.hasTenantMemberships(userId);
+
+            if (!hasRemainingTenantMemberships) {
+              yield* tryAsync('remove user from auth provider', () =>
+                betterAuth.api.removeUser({
+                  headers,
+                  body: { userId } satisfies BetterAuthUserActionBody,
+                }),
+              );
+            }
           }),
         (userId) => ({ attributes: { userId } }),
       );

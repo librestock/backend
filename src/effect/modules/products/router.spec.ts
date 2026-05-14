@@ -9,7 +9,8 @@
  *   1. Permission guard rejects insufficient role → 403
  *   2. Decode failure on malformed body / params → 400
  *   3. Service success → correct status + payload shape
- *   4. Service tagged error → mapped HTTP status (404, 409, 400, 500)
+ *   4. Service tagged error → mapped HTTP status (404, 400, 500).
+ *      SkuAlreadyExists and PriceBelowCost currently map to 400.
  *
  * Mutations are `@Auditable`. The audit writer is fire-and-forget, so we
  * verify it's *called* via a spy — we do not couple to whether its
@@ -148,7 +149,7 @@ describe('productsRouter', () => {
         new Request('http://localhost/products/all'),
       );
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body).toHaveLength(1);
       expect(body[0]).toMatchObject({ id: PRODUCT_ID });
       expect(findAll).toHaveBeenCalledTimes(1);
@@ -1127,7 +1128,7 @@ describe('productsRouter', () => {
       );
 
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body).toHaveProperty('message');
       expect(del).toHaveBeenCalledWith(PRODUCT_ID, expect.any(String), false);
       expect(auditLog).toHaveBeenCalledWith({

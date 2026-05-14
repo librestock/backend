@@ -53,7 +53,12 @@ export class AuditLogsService extends Effect.Service<AuditLogsService>()(
           toPaginatedResponse(result, toAuditLogResponseDto),
         ).pipe(Effect.withSpan('AuditLogsService.query'));
 
-      const findById = (id: string) =>
+      const findById = (
+        id: string,
+      ): Effect.Effect<
+        AuditLogResponseDto,
+        AuditLogsInfrastructureError | AuditLogNotFound | TenantNotResolved
+      > =>
         getAuditLogOrFail(id).pipe(
           Effect.withSpan('AuditLogsService.findById', { attributes: { id } }),
         );

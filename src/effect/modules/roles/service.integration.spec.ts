@@ -159,6 +159,13 @@ describe('RolesService Integration', () => {
                 new Error('duplicate create unexpectedly succeeded — retrying'),
               );
             }
+            if (dup.left._tag !== 'RoleNameAlreadyExists') {
+              return yield* Effect.fail(
+                new Error(
+                  `Expected RoleNameAlreadyExists, got ${dup.left._tag} — retrying`,
+                ),
+              );
+            }
             return dup.left._tag;
           }),
         ),
@@ -331,6 +338,13 @@ describe('RolesService Integration', () => {
             if (result._tag === 'Right') {
               return yield* Effect.fail(
                 new Error('duplicate rename unexpectedly succeeded — retrying'),
+              );
+            }
+            if (result.left._tag !== 'RoleNameAlreadyExists') {
+              return yield* Effect.fail(
+                new Error(
+                  `Expected RoleNameAlreadyExists, got ${result.left._tag} — retrying`,
+                ),
               );
             }
             return result.left._tag;

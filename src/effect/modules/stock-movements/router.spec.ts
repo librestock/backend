@@ -199,7 +199,7 @@ describe('stockMovementsRouter', () => {
         new Request(`http://localhost/stock-movements/product/${PRODUCT_ID}`),
       );
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as any;
       expect(body).toHaveLength(1);
       expect(findByProduct).toHaveBeenCalledWith(PRODUCT_ID);
     });
