@@ -1,0 +1,10 @@
+.git
+.jj
+.direnv
+node_modules
+artifact
+coverage
+dist
+backend-release.tgz
+uploads
+.env

@@ -14,6 +14,7 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
       contents: read
+      packages: write
     defaults:
       run:
         working-directory: backend
@@ -21,49 +22,31 @@ jobs:
       DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
       DEPLOY_USER: ${{ vars.DEPLOY_USER || 'deploy' }}
       DEPLOY_API_HEALTH_URL: ${{ vars.DEPLOY_API_HEALTH_URL }}
+      IMAGE_NAME: ghcr.io/${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
         with:
           path: backend
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
         with:
-          bun-version: latest
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: actions/setup-node@v4
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
         with:
-          node-version: 22
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build backend
-        run: pnpm run build
-
-      - name: Prune to production dependencies
-        run: pnpm prune --prod
-
-      - name: Stage release artifact
-        working-directory: .
-        run: |
-          mkdir -p artifact/backend
-          cp -R backend/dist artifact/backend/dist
-          cp -R backend/node_modules artifact/backend/node_modules
-          cp backend/package.json artifact/backend/package.json
-          cp backend/drizzle.config.ts artifact/backend/drizzle.config.ts
-          if [ -d backend/drizzle ]; then
-            cp -R backend/drizzle artifact/backend/drizzle
-          else
-            mkdir -p artifact/backend/drizzle
-          fi
-
-      - name: Create release archive
-        working-directory: .
-        run: tar -czf backend-release.tgz -C artifact backend
+          context: backend
+          file: backend/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:latest
 
       - name: Configure SSH
         uses: webfactory/ssh-agent@v0.9.0
@@ -82,12 +65,8 @@ jobs:
           echo "ssh-keyscan failed after 10 attempts" >&2
           exit 1
 
-      - name: Upload release archive
-        working-directory: .
-        run: scp backend-release.tgz "$DEPLOY_USER@$DEPLOY_HOST:/tmp/backend-release.tgz"
-
       - name: Deploy on server
-        run: ssh "$DEPLOY_USER@$DEPLOY_HOST" "sudo /usr/local/bin/librestock-deploy backend /tmp/backend-release.tgz"
+        run: ssh "$DEPLOY_USER@$DEPLOY_HOST" "sudo /usr/local/bin/librestock-deploy backend '${IMAGE_NAME}:${GITHUB_SHA}'"
 
       - name: Verify API health
         if: ${{ env.DEPLOY_API_HEALTH_URL != '' }}

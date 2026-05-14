@@ -17,6 +17,8 @@ lerna-debug.log*
 
 # Tests
 /coverage
+artifact/
+backend-release.tgz
 /.nyc_output
 
 # IDEs and editors
