@@ -65,6 +65,8 @@ describe('Effect UsersService', () => {
     );
 
   const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runPromise(effect);
+  const fail = <A, E>(effect: Effect.Effect<A, E>) =>
+    Effect.runPromise(Effect.flip(effect));
 
   const betterAuthUser = {
     id: 'user-1',
@@ -101,6 +103,7 @@ describe('Effect UsersService', () => {
       findUserRoles: vi.fn().mockReturnValue(Effect.succeed([])),
       replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
       hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(false)),
+      hasAdminRoleForUser: vi.fn().mockReturnValue(Effect.succeed(false)),
       syncBetterAuthRole: vi.fn().mockReturnValue(Effect.void),
       deleteUserRoles: vi.fn().mockReturnValue(Effect.void),
     };
@@ -162,6 +165,8 @@ describe('Effect UsersService', () => {
       ),
       replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
       hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(false)),
+      hasAdminRoleForUser: vi.fn().mockReturnValue(Effect.succeed(false)),
+      hasTenantMembership: vi.fn().mockReturnValue(Effect.succeed(true)),
       syncBetterAuthRole: vi.fn().mockReturnValue(Effect.void),
       deleteUserRoles: vi.fn().mockReturnValue(Effect.void),
     };
@@ -187,7 +192,49 @@ describe('Effect UsersService', () => {
     expect(result.roles).toEqual(['Admin']);
   });
 
-  it('updates roles, syncs auth role column, and clears cached permissions', async () => {
+  it('returns UserNotFound without loading Better Auth when getUser targets a non-member', async () => {
+    const betterAuth = {
+      api: {
+        listUsers: vi.fn(),
+      },
+    };
+    const usersRepository = {
+      findRoleAssignments: vi.fn().mockReturnValue(Effect.succeed([])),
+      findUserRoles: vi.fn().mockReturnValue(Effect.succeed([])),
+      replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
+      hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(false)),
+      hasAdminRoleForUser: vi.fn().mockReturnValue(Effect.succeed(false)),
+      hasTenantMembership: vi.fn().mockReturnValue(Effect.succeed(false)),
+      syncBetterAuthRole: vi.fn().mockReturnValue(Effect.void),
+      deleteUserRoles: vi.fn().mockReturnValue(Effect.void),
+    };
+    const rolesService = {
+      clearCacheForUser: vi.fn().mockReturnValue(Effect.void),
+    };
+    const service = await makeService({
+      betterAuth,
+      usersRepository,
+      rolesService,
+    });
+
+    const error = await fail(
+      service
+        .getUser('user-1')
+        .pipe(
+          Effect.provideService(BetterAuthHeaders, headers),
+          Effect.provideService(CurrentRequestContext, requestContext),
+        ),
+    );
+
+    expect(error._tag).toBe('UserNotFound');
+    expect(usersRepository.hasTenantMembership).toHaveBeenCalledWith(
+      'user-1',
+      '00000000-0000-4000-8000-000000000001',
+    );
+    expect(betterAuth.api.listUsers).not.toHaveBeenCalled();
+  });
+
+  it('updates roles, syncs aggregate auth role column, and clears cached permissions', async () => {
     const betterAuth = {
       api: {
         listUsers: vi
@@ -207,6 +254,8 @@ describe('Effect UsersService', () => {
       ),
       replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
       hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(true)),
+      hasAdminRoleForUser: vi.fn().mockReturnValue(Effect.succeed(true)),
+      hasTenantMembership: vi.fn().mockReturnValue(Effect.succeed(true)),
       syncBetterAuthRole: vi.fn().mockReturnValue(Effect.void),
       deleteUserRoles: vi.fn().mockReturnValue(Effect.void),
     };
@@ -246,6 +295,50 @@ describe('Effect UsersService', () => {
     expect(rolesService.clearCacheForUser).toHaveBeenCalledWith('user-1');
   });
 
+  it('returns UserNotFound without mutating roles when updateRoles targets a non-member', async () => {
+    const betterAuth = {
+      api: {
+        listUsers: vi.fn(),
+      },
+    };
+    const usersRepository = {
+      findRoleAssignments: vi.fn().mockReturnValue(Effect.succeed([])),
+      findUserRoles: vi.fn().mockReturnValue(Effect.succeed([])),
+      replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
+      hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(false)),
+      hasAdminRoleForUser: vi.fn().mockReturnValue(Effect.succeed(false)),
+      hasTenantMembership: vi.fn().mockReturnValue(Effect.succeed(false)),
+      syncBetterAuthRole: vi.fn().mockReturnValue(Effect.void),
+      deleteUserRoles: vi.fn().mockReturnValue(Effect.void),
+    };
+    const rolesService = {
+      clearCacheForUser: vi.fn().mockReturnValue(Effect.void),
+    };
+    const service = await makeService({
+      betterAuth,
+      usersRepository,
+      rolesService,
+    });
+
+    const error = await fail(
+      service
+        .updateRoles('user-1', ['role-1'])
+        .pipe(
+          Effect.provideService(BetterAuthHeaders, headers),
+          Effect.provideService(CurrentRequestContext, requestContext),
+        ),
+    );
+
+    expect(error._tag).toBe('UserNotFound');
+    expect(usersRepository.hasTenantMembership).toHaveBeenCalledWith(
+      'user-1',
+      '00000000-0000-4000-8000-000000000001',
+    );
+    expect(betterAuth.api.listUsers).not.toHaveBeenCalled();
+    expect(usersRepository.replaceUserRoles).not.toHaveBeenCalled();
+    expect(usersRepository.syncBetterAuthRole).not.toHaveBeenCalled();
+  });
+
   it('bans and unbans a user through Better Auth', async () => {
     const betterAuth = {
       api: {
@@ -261,6 +354,8 @@ describe('Effect UsersService', () => {
       findUserRoles: vi.fn().mockReturnValue(Effect.succeed([])),
       replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
       hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(false)),
+      hasAdminRoleForUser: vi.fn().mockReturnValue(Effect.succeed(false)),
+      hasTenantMembership: vi.fn().mockReturnValue(Effect.succeed(true)),
       syncBetterAuthRole: vi.fn().mockReturnValue(Effect.void),
       deleteUserRoles: vi.fn().mockReturnValue(Effect.void),
     };
@@ -314,6 +409,7 @@ describe('Effect UsersService', () => {
       findUserRoles: vi.fn().mockReturnValue(Effect.succeed([])),
       replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
       hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(false)),
+      hasAdminRoleForUser: vi.fn().mockReturnValue(Effect.succeed(false)),
       syncBetterAuthRole: vi.fn().mockReturnValue(Effect.void),
       deleteUserRoles: vi.fn().mockReturnValue(Effect.void),
     };

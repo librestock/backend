@@ -38,6 +38,7 @@ import {
   seedBetterAuthUserRow,
   seedDefaultTenantMembership,
   seedRole,
+  seedTenantMembership,
   seedTenantUserRow,
 } from './__fixtures__/seed-users';
 

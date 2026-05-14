@@ -206,6 +206,29 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
           return rows.length > 0;
         });
 
+      const hasAdminRoleForUser = (userId: string) =>
+        tryAsync('check user admin role', async () => {
+          const rows = await db
+            .select({ id: userRoles.id })
+            .from(userRoles)
+            .innerJoin(
+              roles,
+              and(
+                eq(userRoles.role_id, roles.id),
+                eq(userRoles.tenant_id, roles.tenant_id),
+              ),
+            )
+            .where(
+              and(
+                eq(userRoles.user_id, userId),
+                sql`LOWER(${roles.name}) = LOWER('Admin')`,
+              ),
+            )
+            .limit(1);
+
+          return rows.length > 0;
+        });
+
       const syncBetterAuthRole = (userId: string, role: 'admin' | 'user') =>
         tryAsync('sync better auth role', async () => {
           await db.execute(
