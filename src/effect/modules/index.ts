@@ -38,7 +38,7 @@ const migrationRouter = HttpRouter.empty.pipe(
   HttpRouter.get(
     '/_migration',
     HttpServerResponse.unsafeJson({
-      runtime: 'effect-bun',
+      runtime: 'effect-node',
       modules: moduleCounterparts,
     }),
   ),

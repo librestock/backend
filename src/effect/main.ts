@@ -1,5 +1,6 @@
 import { HttpServer } from '@effect/platform';
-import { BunHttpServer, BunRuntime } from '@effect/platform-bun';
+import { NodeHttpServer, NodeRuntime } from '@effect/platform-node';
+import { createServer } from 'node:http';
 import 'dotenv/config';
 import { Effect, Layer } from 'effect';
 import { sql } from 'drizzle-orm';
@@ -185,12 +186,14 @@ const applicationLayer = Layer.mergeAll(
 const serverLayer = Layer.unwrapEffect(
   buildHttpApp.pipe(
     Effect.map((app) =>
-      HttpServer.serve(app).pipe(Layer.provide(BunHttpServer.layer({ port }))),
+      HttpServer.serve(app).pipe(
+        Layer.provide(NodeHttpServer.layer(createServer, { port })),
+      ),
     ),
   ),
 );
 
-BunRuntime.runMain(
+NodeRuntime.runMain(
   Layer.launch(serverLayer).pipe(
     Effect.provide(applicationLayer),
     Effect.provide(runtimeLoggingLayer),

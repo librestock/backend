@@ -2,8 +2,8 @@
 
 ## Tooling
 
-- Use **pnpm** from the workspace root for dependencies; do not use `bun install`.
-- **Bun** runs the API: `bun run src/effect/main.ts`.
+- Use **pnpm** from the workspace root for dependencies and script execution.
+- **pnpm** runs the API: `pnpm start`.
 - `pnpm-lock.yaml` at the workspace root is the lockfile.
 
 ## Boundaries
