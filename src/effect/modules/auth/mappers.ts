@@ -1,4 +1,8 @@
-import type { CurrentUserResponseDto, ProfileResponseDto, SessionClaimsResponseDto } from '@librestock/types/auth';
+import type {
+  CurrentUserResponseDto,
+  ProfileResponseDto,
+  SessionClaimsResponseDto,
+} from '@librestock/types/auth';
 import type { UserSession } from '../../platform/auth/user-session';
 import {
   getSessionIdFromSession,
@@ -6,10 +10,12 @@ import {
   getUserIdFromSession,
 } from '../../platform/auth/session';
 import type { UserPermissions } from '../roles/service';
+import type { TenantContext } from '../../platform/tenant-context';
 
 export const toCurrentUserResponse = (
   session: UserSession,
   userPermissions: UserPermissions,
+  tenant: TenantContext,
 ): CurrentUserResponseDto => {
   const { id, name, email, image } = session.user;
 
@@ -18,14 +24,15 @@ export const toCurrentUserResponse = (
     name,
     email,
     image: image ?? undefined,
+    tenantId: tenant.tenantId,
+    tenantName: tenant.tenantName,
+    tenantSlug: tenant.tenantSlug,
     roles: userPermissions.roleNames,
     permissions: userPermissions.permissions,
   };
 };
 
-export const toProfileResponse = (
-  session: UserSession,
-): ProfileResponseDto => {
+export const toProfileResponse = (session: UserSession): ProfileResponseDto => {
   const { id, name, email, image, createdAt, updatedAt } = session.user;
 
   return {

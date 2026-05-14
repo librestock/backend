@@ -6,6 +6,7 @@ import { ProductsRepository } from './repository';
 
 const makeProductEntity = (overrides: Record<string, any> = {}) => ({
   id: 'prod-1',
+  tenant_id: '00000000-0000-4000-8000-000000000001',
   sku: 'SKU-001',
   name: 'Widget',
   description: null,
@@ -30,7 +31,15 @@ const makeProductEntity = (overrides: Record<string, any> = {}) => ({
   created_by: null,
   updated_by: null,
   deleted_by: null,
-  category: { id: 'cat-1', name: 'Electronics', parent_id: null },
+  category: {
+    id: 'cat-1',
+    tenant_id: '00000000-0000-4000-8000-000000000001',
+    name: 'Electronics',
+    parent_id: null,
+    description: null,
+    created_at: new Date('2026-01-01'),
+    updated_at: new Date('2026-01-01'),
+  },
   primary_supplier: null,
   ...overrides,
 });
@@ -52,12 +61,18 @@ const makeMockRepository = (
   findAll: vi.fn().mockReturnValue(Effect.succeed([makeProductEntity()])),
   findById: vi.fn().mockReturnValue(Effect.succeed(makeProductEntity())),
   findBySku: vi.fn().mockReturnValue(Effect.succeed(null)),
-  findByCategoryId: vi.fn().mockReturnValue(Effect.succeed([makeProductEntity()])),
-  findByCategoryIds: vi.fn().mockReturnValue(Effect.succeed([makeProductEntity()])),
+  findByCategoryId: vi
+    .fn()
+    .mockReturnValue(Effect.succeed([makeProductEntity()])),
+  findByCategoryIds: vi
+    .fn()
+    .mockReturnValue(Effect.succeed([makeProductEntity()])),
   findByIds: vi.fn().mockReturnValue(Effect.succeed([makeProductEntity()])),
   findDeletedByIds: vi
     .fn()
-    .mockReturnValue(Effect.succeed([makeProductEntity({ deleted_at: new Date() })])),
+    .mockReturnValue(
+      Effect.succeed([makeProductEntity({ deleted_at: new Date() })]),
+    ),
   existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
   create: vi.fn().mockReturnValue(Effect.succeed(makeProductEntity())),
   update: vi.fn().mockReturnValue(Effect.succeed(1)),
@@ -284,7 +299,9 @@ describe('Effect ProductsService', () => {
       const repo = makeMockRepository({
         findById: vi
           .fn()
-          .mockReturnValue(Effect.succeed(makeProductEntity({ deleted_at: new Date() }))),
+          .mockReturnValue(
+            Effect.succeed(makeProductEntity({ deleted_at: new Date() })),
+          ),
       });
       const service = await buildService(repo);
       const result = await run(service.restore('prod-1'));
@@ -301,21 +318,23 @@ describe('Effect ProductsService', () => {
   describe('bulkCreate', () => {
     it('creates products in bulk', async () => {
       const service = await buildService();
-      const result = await run(service.bulkCreate(
-        {
-          products: [
-            {
-              sku: 'SKU-A',
-              name: 'A',
-              category_id: 'cat-1',
-              reorder_point: 1,
-              is_active: true,
-              is_perishable: false,
-            } as any,
-          ],
-        },
-        undefined,
-      ));
+      const result = await run(
+        service.bulkCreate(
+          {
+            products: [
+              {
+                sku: 'SKU-A',
+                name: 'A',
+                category_id: 'cat-1',
+                reorder_point: 1,
+                is_active: true,
+                is_perishable: false,
+              } as any,
+            ],
+          },
+          undefined,
+        ),
+      );
       expect(result.success_count).toBe(1);
     });
 
@@ -325,49 +344,53 @@ describe('Effect ProductsService', () => {
         findAllDescendantIds: vi.fn(),
       } as any;
       const service = await buildService(undefined, catService);
-      const result = await run(service.bulkCreate(
-        {
-          products: [
-            {
-              sku: 'SKU-A',
-              name: 'A',
-              category_id: 'missing',
-              reorder_point: 1,
-              is_active: true,
-              is_perishable: false,
-            } as any,
-          ],
-        },
-        undefined,
-      ));
+      const result = await run(
+        service.bulkCreate(
+          {
+            products: [
+              {
+                sku: 'SKU-A',
+                name: 'A',
+                category_id: 'missing',
+                reorder_point: 1,
+                is_active: true,
+                is_perishable: false,
+              } as any,
+            ],
+          },
+          undefined,
+        ),
+      );
       expect(result.failure_count).toBe(1);
     });
 
     it('rejects duplicate SKUs in request', async () => {
       const service = await buildService();
-      const result = await run(service.bulkCreate(
-        {
-          products: [
-            {
-              sku: 'DUP',
-              name: 'A',
-              category_id: 'cat-1',
-              reorder_point: 1,
-              is_active: true,
-              is_perishable: false,
-            } as any,
-            {
-              sku: 'DUP',
-              name: 'B',
-              category_id: 'cat-1',
-              reorder_point: 1,
-              is_active: true,
-              is_perishable: false,
-            } as any,
-          ],
-        },
-        undefined,
-      ));
+      const result = await run(
+        service.bulkCreate(
+          {
+            products: [
+              {
+                sku: 'DUP',
+                name: 'A',
+                category_id: 'cat-1',
+                reorder_point: 1,
+                is_active: true,
+                is_perishable: false,
+              } as any,
+              {
+                sku: 'DUP',
+                name: 'B',
+                category_id: 'cat-1',
+                reorder_point: 1,
+                is_active: true,
+                is_perishable: false,
+              } as any,
+            ],
+          },
+          undefined,
+        ),
+      );
       expect(result.failure_count).toBe(2);
     });
   });
@@ -375,10 +398,12 @@ describe('Effect ProductsService', () => {
   describe('bulkUpdateStatus', () => {
     it('updates status in bulk', async () => {
       const service = await buildService();
-      const result = await run(service.bulkUpdateStatus(
-        { ids: ['prod-1'], is_active: false },
-        undefined,
-      ));
+      const result = await run(
+        service.bulkUpdateStatus(
+          { ids: ['prod-1'], is_active: false },
+          undefined,
+        ),
+      );
       expect(result.success_count).toBe(1);
     });
 
@@ -387,10 +412,12 @@ describe('Effect ProductsService', () => {
         findByIds: vi.fn().mockReturnValue(Effect.succeed([])),
       });
       const service = await buildService(repo);
-      const result = await run(service.bulkUpdateStatus(
-        { ids: ['missing'], is_active: false },
-        undefined,
-      ));
+      const result = await run(
+        service.bulkUpdateStatus(
+          { ids: ['missing'], is_active: false },
+          undefined,
+        ),
+      );
       expect(result.failure_count).toBe(1);
     });
   });
@@ -399,10 +426,9 @@ describe('Effect ProductsService', () => {
     it('soft deletes in bulk', async () => {
       const repo = makeMockRepository();
       const service = await buildService(repo);
-      const result = await run(service.bulkDelete(
-        { ids: ['prod-1'], permanent: false },
-        undefined,
-      ));
+      const result = await run(
+        service.bulkDelete({ ids: ['prod-1'], permanent: false }, undefined),
+      );
       expect(result.success_count).toBe(1);
       expect(repo.softDeleteMany).toHaveBeenCalled();
     });
@@ -410,10 +436,9 @@ describe('Effect ProductsService', () => {
     it('hard deletes in bulk when permanent', async () => {
       const repo = makeMockRepository();
       const service = await buildService(repo);
-      const result = await run(service.bulkDelete(
-        { ids: ['prod-1'], permanent: true },
-        undefined,
-      ));
+      const result = await run(
+        service.bulkDelete({ ids: ['prod-1'], permanent: true }, undefined),
+      );
       expect(result.success_count).toBe(1);
       expect(repo.hardDeleteMany).toHaveBeenCalled();
     });

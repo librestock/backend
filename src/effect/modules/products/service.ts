@@ -29,6 +29,7 @@ import {
   ProductsInfrastructureError,
   SkuAlreadyExists,
 } from './products.errors';
+import type { TenantNotResolved } from '../../platform/tenant-context';
 import { ProductsRepository } from './repository';
 
 type ProductQueryDto = Schema.Schema.Type<typeof ProductQuerySchema>;
@@ -68,7 +69,10 @@ export class ProductsService extends Effect.Service<ProductsService>()(
 
       const ensureSkuAvailable = (
         sku: string,
-      ): Effect.Effect<void, ProductsInfrastructureError | SkuAlreadyExists> =>
+      ): Effect.Effect<
+        void,
+        ProductsInfrastructureError | SkuAlreadyExists | TenantNotResolved
+      > =>
         repository.findBySku(sku).pipe(
           Effect.filterOrFail(
             (existing) => existing === null,

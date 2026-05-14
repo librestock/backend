@@ -1,12 +1,17 @@
 import { Effect } from 'effect';
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, and, inArray } from 'drizzle-orm';
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { roles, rolePermissions } from '../../platform/db/schema';
 import { RolesInfrastructureError } from './roles.errors';
 
-const tryAsync = makeTryAsync((action, cause) =>
-  new RolesInfrastructureError({ action, cause, messageKey: 'roles.repositoryFailed' }),
+const tryAsync = makeTryAsync(
+  (action, cause) =>
+    new RolesInfrastructureError({
+      action,
+      cause,
+      messageKey: 'roles.repositoryFailed',
+    }),
 );
 
 export class RolesRepository extends Effect.Service<RolesRepository>()(
@@ -15,27 +20,42 @@ export class RolesRepository extends Effect.Service<RolesRepository>()(
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;
 
-      const findAll = () =>
+      const findAll = (tenantId: string) =>
         tryAsync('list roles', async () => {
           const allRoles = await db
             .select()
             .from(roles)
+            .where(eq(roles.tenant_id, tenantId))
             .orderBy(asc(roles.name));
 
-          const allPermissions = await db.select().from(rolePermissions);
+          const allPermissions =
+            allRoles.length > 0
+              ? await db
+                  .select()
+                  .from(rolePermissions)
+                  .where(
+                    inArray(
+                      rolePermissions.role_id,
+                      allRoles.map((role) => role.id),
+                    ),
+                  )
+              : [];
+          const allRoleIds = new Set(allRoles.map((role) => role.id));
 
           return allRoles.map((role) => ({
             ...role,
-            permissions: allPermissions.filter((p) => p.role_id === role.id),
+            permissions: allPermissions.filter(
+              (p) => p.role_id === role.id && allRoleIds.has(p.role_id),
+            ),
           }));
         });
 
-      const findById = (id: string) =>
+      const findById = (id: string, tenantId: string) =>
         tryAsync('load role', async () => {
           const rows = await db
             .select()
             .from(roles)
-            .where(eq(roles.id, id))
+            .where(and(eq(roles.id, id), eq(roles.tenant_id, tenantId)))
             .limit(1);
           if (!rows[0]) return null;
 
@@ -47,12 +67,12 @@ export class RolesRepository extends Effect.Service<RolesRepository>()(
           return { ...rows[0], permissions: perms };
         });
 
-      const findByName = (name: string) =>
+      const findByName = (name: string, tenantId: string) =>
         tryAsync('load role by name', async () => {
           const rows = await db
             .select()
             .from(roles)
-            .where(eq(roles.name, name))
+            .where(and(eq(roles.name, name), eq(roles.tenant_id, tenantId)))
             .limit(1);
           if (!rows[0]) return null;
 
@@ -70,17 +90,23 @@ export class RolesRepository extends Effect.Service<RolesRepository>()(
           return { ...rows[0]!, permissions: [] };
         });
 
-      const update = (id: string, data: Partial<typeof roles.$inferInsert>) =>
+      const update = (
+        id: string,
+        tenantId: string,
+        data: Partial<typeof roles.$inferInsert>,
+      ) =>
         tryAsync('update role', async () => {
           await db
             .update(roles)
             .set({ ...data, updated_at: new Date() })
-            .where(eq(roles.id, id));
+            .where(and(eq(roles.id, id), eq(roles.tenant_id, tenantId)));
         });
 
-      const remove = (id: string) =>
+      const remove = (id: string, tenantId: string) =>
         tryAsync('delete role', async () => {
-          await db.delete(roles).where(eq(roles.id, id));
+          await db
+            .delete(roles)
+            .where(and(eq(roles.id, id), eq(roles.tenant_id, tenantId)));
         });
 
       const replacePermissions = (

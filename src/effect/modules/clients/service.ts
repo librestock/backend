@@ -16,6 +16,7 @@ import {
   ClientNotFound,
   type ClientsInfrastructureError,
 } from './clients.errors';
+import type { TenantNotResolved } from '../../platform/tenant-context';
 import { ClientsRepository } from './repository';
 
 type CreateClientDto = Schema.Schema.Type<typeof CreateClientSchema>;
@@ -36,7 +37,7 @@ export class ClientsService extends Effect.Service<ClientsService>()(
         query: ClientQueryDto,
       ): Effect.Effect<
         { data: ClientResponseDto[]; meta: PaginationMeta },
-        ClientsInfrastructureError
+        ClientsInfrastructureError | TenantNotResolved
       > =>
         Effect.map(repository.findAllPaginated(query), (result) =>
           toPaginatedResponse(result, toClientResponseDto),
@@ -44,7 +45,10 @@ export class ClientsService extends Effect.Service<ClientsService>()(
 
       const findOne = (
         id: string,
-      ): Effect.Effect<ClientResponseDto, ClientNotFound | ClientsInfrastructureError> =>
+      ): Effect.Effect<
+        ClientResponseDto,
+        ClientNotFound | ClientsInfrastructureError | TenantNotResolved
+      > =>
         Effect.map(getClientOrFail(id), toClientResponseDto).pipe(
           Effect.withSpan('ClientsService.findOne', { attributes: { id } }),
         );
@@ -53,7 +57,7 @@ export class ClientsService extends Effect.Service<ClientsService>()(
         dto: CreateClientDto,
       ): Effect.Effect<
         ClientResponseDto,
-        ClientEmailAlreadyExists | ClientsInfrastructureError
+        ClientEmailAlreadyExists | ClientsInfrastructureError | TenantNotResolved
       > =>
         Effect.gen(function* () {
           const existing = yield* repository.findByEmail(dto.email);
@@ -88,7 +92,10 @@ export class ClientsService extends Effect.Service<ClientsService>()(
         dto: UpdateClientDto,
       ): Effect.Effect<
         ClientResponseDto,
-        ClientEmailAlreadyExists | ClientNotFound | ClientsInfrastructureError
+        | ClientEmailAlreadyExists
+        | ClientNotFound
+        | ClientsInfrastructureError
+        | TenantNotResolved
       > =>
         Effect.gen(function* () {
           const client = yield* getClientOrFail(id);
@@ -117,7 +124,10 @@ export class ClientsService extends Effect.Service<ClientsService>()(
 
       const remove = (
         id: string,
-      ): Effect.Effect<void, ClientNotFound | ClientsInfrastructureError> =>
+      ): Effect.Effect<
+        void,
+        ClientNotFound | ClientsInfrastructureError | TenantNotResolved
+      > =>
         Effect.gen(function* () {
           yield* getClientOrFail(id);
           yield* repository.delete(id);

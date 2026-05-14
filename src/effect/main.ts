@@ -2,6 +2,7 @@ import { HttpServer } from '@effect/platform';
 import { BunHttpServer, BunRuntime } from '@effect/platform-bun';
 import 'dotenv/config';
 import { Effect, Layer } from 'effect';
+import { sql } from 'drizzle-orm';
 import { buildHttpApp } from './http/app';
 import { AuditLogsService } from './modules/audit-logs/service';
 import { AreasService } from './modules/areas/service';
@@ -29,6 +30,7 @@ import {
   DrizzleInitializationError,
   drizzleLayer,
 } from './platform/drizzle';
+import { getCommittedSqlMigrations } from './platform/db/committed-sql-migrations';
 import { TracingLive } from './platform/tracing';
 
 const VALID_NODE_ENVS = ['development', 'staging', 'production'] as const;
@@ -50,7 +52,9 @@ const withPlatform = <A, E, R>(layer: Layer.Layer<A, E, R>) =>
 const rolesApplicationLayer = withPlatform(RolesService.Default);
 const permissionProviderLayer = Layer.effect(
   PermissionProvider,
-  Effect.map(RolesService, ({ getPermissionsForUser }) => ({ getPermissionsForUser })),
+  Effect.map(RolesService, ({ getPermissionsForUser }) => ({
+    getPermissionsForUser,
+  })),
 ).pipe(Layer.provide(rolesApplicationLayer));
 const authApplicationLayer = AuthService.Default.pipe(
   Layer.provide(rolesApplicationLayer),
@@ -58,33 +62,49 @@ const authApplicationLayer = AuthService.Default.pipe(
 const usersApplicationLayer = UsersService.Default.pipe(
   Layer.provide(Layer.mergeAll(platformLayer, rolesApplicationLayer)),
 );
-const rolesSeedLayer = Layer.effectDiscard(
-  Effect.flatMap(RolesService, (rolesService) => rolesService.seed()),
-).pipe(Layer.provide(rolesApplicationLayer));
-const betterAuthMigrationLayer = Layer.effectDiscard(
-  Effect.gen(function* () {
-    const runMigrations =
-      !isProduction || process.env.RUN_BETTER_AUTH_MIGRATIONS === 'true';
 
-    if (!runMigrations) {
-      return;
-    }
+const shouldRunStartupMigrations = () =>
+  !isProduction || process.env.RUN_BETTER_AUTH_MIGRATIONS === 'true';
 
-    yield* DrizzleDatabase;
-    const betterAuth = yield* BetterAuth;
-    yield* Effect.tryPromise({
-      try: async () => {
-        const ctx = await betterAuth.auth.$context;
-        await ctx.runMigrations();
-      },
-      catch: (cause) =>
-        new DrizzleInitializationError({
-          messageKey: 'drizzle.migrationsFailed',
-          cause,
-        }),
-    });
-  }),
-).pipe(Layer.provide(platformLayer));
+const runCommittedSqlMigrations = Effect.gen(function* () {
+  const db = yield* DrizzleDatabase;
+  yield* Effect.tryPromise({
+    try: async () => {
+      for (const migration of getCommittedSqlMigrations()) {
+        await db.execute(sql.raw(migration.sql));
+      }
+    },
+    catch: (cause) =>
+      new DrizzleInitializationError({
+        messageKey: 'drizzle.migrationsFailed',
+        cause,
+      }),
+  });
+});
+
+const runBetterAuthMigrations = Effect.gen(function* () {
+  const betterAuth = yield* BetterAuth;
+  yield* Effect.tryPromise({
+    try: async () => {
+      const ctx = await betterAuth.auth.$context;
+      await ctx.runMigrations();
+    },
+    catch: (cause) =>
+      new DrizzleInitializationError({
+        messageKey: 'drizzle.migrationsFailed',
+        cause,
+      }),
+  });
+});
+
+const startupMigrations = Effect.gen(function* () {
+  if (!shouldRunStartupMigrations()) {
+    return;
+  }
+
+  yield* runCommittedSqlMigrations;
+  yield* runBetterAuthMigrations;
+});
 
 const foundationalServicesLayer = Layer.mergeAll(
   withPlatform(HealthService.Default),
@@ -139,8 +159,13 @@ const workflowServicesLayer = Layer.mergeAll(
 
 const startupLayer = Layer.mergeAll(
   auditLayer.pipe(Layer.provide(platformLayer)),
-  rolesSeedLayer,
-  betterAuthMigrationLayer,
+  Layer.effectDiscard(
+    Effect.gen(function* () {
+      yield* startupMigrations;
+      const rolesService = yield* RolesService;
+      yield* rolesService.seed();
+    }),
+  ).pipe(Layer.provide(Layer.mergeAll(platformLayer, rolesApplicationLayer))),
 );
 
 const applicationLayer = Layer.mergeAll(

@@ -16,6 +16,10 @@ export const frCatalog: Record<MessageKey, string> = {
   'auditLogs.repositoryFailed': "L'operation sur le journal d'audit a echoue.",
   'auth.permissionDenied': 'Permissions insuffisantes.',
   'auth.unauthorized': 'Non autorise.',
+  'tenant.membershipRejected':
+    "Le tenant actif n'est pas disponible pour cet utilisateur.",
+  'tenant.notResolved':
+    'Aucun tenant actif na pu etre resolu pour cette requete.',
   'branding.repositoryFailed': "L'operation de branding a echoue.",
   'branding.sessionUserUnavailable':
     "L'utilisateur de session n'est pas disponible.",

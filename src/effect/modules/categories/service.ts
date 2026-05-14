@@ -10,6 +10,7 @@ import {
   CategorySelfParent,
   ParentCategoryNotFound,
 } from './categories.errors';
+import type { TenantNotResolved } from '../../platform/tenant-context';
 import { CategoriesRepository } from './repository';
 
 type Category = typeof categories.$inferSelect;
@@ -58,7 +59,10 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
       const checkForCycle = (
         categoryId: string,
         newParentId: string,
-      ): Effect.Effect<boolean, CategoriesInfrastructureError> =>
+      ): Effect.Effect<
+        boolean,
+        CategoriesInfrastructureError | TenantNotResolved
+      > =>
         Effect.gen(function* () {
           let currentId: string | null = newParentId;
 
@@ -87,7 +91,10 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
         dto: CreateCategoryDto,
       ): Effect.Effect<
         Category,
-        CategoriesInfrastructureError | CategoryNameAlreadyExists | ParentCategoryNotFound
+        | CategoriesInfrastructureError
+        | CategoryNameAlreadyExists
+        | ParentCategoryNotFound
+        | TenantNotResolved
       > =>
         Effect.gen(function* () {
           if (dto.parent_id) {
@@ -131,6 +138,7 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
         | CategoryNotFound
         | CategorySelfParent
         | ParentCategoryNotFound
+        | TenantNotResolved
       > =>
         Effect.gen(function* () {
           const category = yield* getCategoryOrFail(id);
@@ -206,7 +214,10 @@ export class CategoriesService extends Effect.Service<CategoriesService>()(
 
       const remove = (
         id: string,
-      ): Effect.Effect<void, CategoriesInfrastructureError | CategoryNotFound> =>
+      ): Effect.Effect<
+        void,
+        CategoriesInfrastructureError | CategoryNotFound | TenantNotResolved
+      > =>
         Effect.gen(function* () {
           yield* getCategoryOrFail(id);
           yield* repository.delete(id);

@@ -12,6 +12,7 @@ import {
   PhotoTooLarge,
   PhotosInfrastructureError,
 } from './photos.errors';
+import type { TenantNotResolved } from '../../platform/tenant-context';
 import { PhotosRepository } from './repository';
 
 const ALLOWED_MIMETYPES = [
@@ -95,7 +96,10 @@ export class PhotosService extends Effect.Service<PhotosService>()(
         userId?: string,
       ): Effect.Effect<
         PhotoResponseDto,
-        InvalidPhotoMimeType | PhotoTooLarge | PhotosInfrastructureError
+        | InvalidPhotoMimeType
+        | PhotoTooLarge
+        | PhotosInfrastructureError
+        | TenantNotResolved
       > => {
         if (!ALLOWED_MIMETYPES.includes(file.mimetype)) {
           return Effect.fail(
@@ -170,7 +174,10 @@ export class PhotosService extends Effect.Service<PhotosService>()(
 
       const findByProductId = (
         productId: string,
-      ): Effect.Effect<PhotoResponseDto[], PhotosInfrastructureError> =>
+      ): Effect.Effect<
+        PhotoResponseDto[],
+        PhotosInfrastructureError | TenantNotResolved
+      > =>
         Effect.map(repository.findByProductId(productId), (photos) =>
           photos.map(toPhotoResponseDto),
         ).pipe(
@@ -183,7 +190,10 @@ export class PhotosService extends Effect.Service<PhotosService>()(
         id: string,
       ): Effect.Effect<
         { filePath: string; mimetype: string; filename: string },
-        PhotoFileNotFound | PhotoNotFound | PhotosInfrastructureError
+        | PhotoFileNotFound
+        | PhotoNotFound
+        | PhotosInfrastructureError
+        | TenantNotResolved
       > =>
         Effect.gen(function* () {
           const photo = yield* findPhotoOrFail(id);
@@ -223,7 +233,10 @@ export class PhotosService extends Effect.Service<PhotosService>()(
 
       const deletePhoto = (
         id: string,
-      ): Effect.Effect<void, PhotoNotFound | PhotosInfrastructureError> =>
+      ): Effect.Effect<
+        void,
+        PhotoNotFound | PhotosInfrastructureError | TenantNotResolved
+      > =>
         Effect.gen(function* () {
           const photo = yield* findPhotoOrFail(id);
           yield* safeUnlink(photo.storage_path).pipe(

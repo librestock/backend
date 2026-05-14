@@ -7,6 +7,10 @@ import type {
 import { makeTryAsync } from '../../platform/try-async';
 import { BetterAuth, BetterAuthHeaders } from '../../platform/better-auth';
 import { makeServiceTracer } from '../../platform/service-tracer';
+import {
+  requireRequestTenantId,
+  type TenantNotResolved,
+} from '../../platform/tenant-context';
 import { RolesService } from '../roles/service';
 import { UserNotFound, UsersInfrastructureError } from './users.errors';
 import { UsersRepository } from './repository';
@@ -69,7 +73,6 @@ export class UsersService extends Effect.Service<UsersService>()(
         layer: 'service',
         entityType: 'user',
       });
-
       const getBetterAuthUserOrFail = (
         api: typeof import('../../../auth').auth.api,
         id: string,
@@ -109,12 +112,29 @@ export class UsersService extends Effect.Service<UsersService>()(
           id: string,
         ): Effect.Effect<
           UserResponseDto,
-          UserNotFound | UsersInfrastructureError,
+          UserNotFound | UsersInfrastructureError | TenantNotResolved,
           globalThis.Headers
         > =>
           Effect.gen(function* () {
+            const tenantId = yield* requireRequestTenantId;
+            const hasTenantMembership =
+              yield* usersRepository.hasTenantMembership(id, tenantId);
+
+            yield* Effect.filterOrFail(
+              Effect.succeed(hasTenantMembership),
+              Boolean,
+              () =>
+                new UserNotFound({
+                  id,
+                  messageKey: 'users.notFound',
+                }),
+            );
+
             const user = yield* getBetterAuthUserOrFail(betterAuth.api, id);
-            const roleEntities = yield* usersRepository.findUserRoles(id);
+            const roleEntities = yield* usersRepository.findUserRoles(
+              id,
+              tenantId,
+            );
 
             return toUserResponse(
               user,
@@ -126,33 +146,21 @@ export class UsersService extends Effect.Service<UsersService>()(
 
       const listUsers = trace.traced('listUsers', (query: UserQueryDto) =>
         Effect.gen(function* () {
-          const headers = yield* BetterAuthHeaders;
+          const tenantId = yield* requireRequestTenantId;
           const page = query.page ?? 1;
           const limit = query.limit ?? 20;
           const offset = (page - 1) * limit;
 
-          const searchQuery: Record<string, string> = {};
-          if (query.search) {
-            searchQuery.searchField = 'name';
-            searchQuery.searchValue = query.search;
-            searchQuery.searchOperator = 'contains';
-          }
-
-          const result = yield* tryAsync('list users from auth provider', () =>
-            betterAuth.api.listUsers({
-              headers,
-              query: {
-                limit,
-                offset,
-                ...searchQuery,
-              },
-            }),
-          );
-
-          const users = (result.users ?? []) as BetterAuthUser[];
-          const total = result.total ?? users.length;
+          const { users, total } = yield* usersRepository.listTenantUsers({
+            tenantId,
+            offset,
+            limit,
+            search: query.search,
+            role: query.role,
+          });
           const assignments = yield* usersRepository.findRoleAssignments(
             users.map((user) => user.id),
+            tenantId,
           );
 
           const rolesByUserId = new Map<string, string[]>();
@@ -162,22 +170,14 @@ export class UsersService extends Effect.Service<UsersService>()(
             rolesByUserId.set(assignment.user_id, roleNames);
           }
 
-          let data = users.map((user) =>
-            toUserResponse(user, rolesByUserId.get(user.id) ?? []),
-          );
-
-          if (query.role) {
-            data = data.filter((user) => user.roles.includes(query.role!));
-          }
-
-          const filteredTotal = query.role ? data.length : total;
-
           return {
-            data,
-            total: filteredTotal,
+            data: users.map((user) =>
+              toUserResponse(user, rolesByUserId.get(user.id) ?? []),
+            ),
+            total,
             page,
             limit,
-            total_pages: Math.ceil(filteredTotal / limit),
+            total_pages: Math.ceil(total / limit),
           };
         }),
       );
@@ -186,10 +186,25 @@ export class UsersService extends Effect.Service<UsersService>()(
         'updateRoles',
         (userId: string, roleIds: string[]) =>
           Effect.gen(function* () {
-            yield* getBetterAuthUserOrFail(betterAuth.api, userId);
-            yield* usersRepository.replaceUserRoles(userId, roleIds);
+            const tenantId = yield* requireRequestTenantId;
+            const hasTenantMembership =
+              yield* usersRepository.hasTenantMembership(userId, tenantId);
 
-            const hasAdminRole = yield* usersRepository.hasAdminRole(roleIds);
+            yield* Effect.filterOrFail(
+              Effect.succeed(hasTenantMembership),
+              Boolean,
+              () =>
+                new UserNotFound({
+                  id: userId,
+                  messageKey: 'users.notFound',
+                }),
+            );
+
+            yield* getBetterAuthUserOrFail(betterAuth.api, userId);
+            yield* usersRepository.replaceUserRoles(userId, roleIds, tenantId);
+
+            const hasAdminRole =
+              yield* usersRepository.hasAdminRoleForUser(userId);
 
             yield* usersRepository.syncBetterAuthRole(
               userId,
@@ -257,15 +272,22 @@ export class UsersService extends Effect.Service<UsersService>()(
         'deleteUser',
         (userId: string) =>
           Effect.gen(function* () {
+            const tenantId = yield* requireRequestTenantId;
             const headers = yield* BetterAuthHeaders;
             yield* getBetterAuthUserOrFail(betterAuth.api, userId);
-            yield* usersRepository.deleteUserRoles(userId);
-            yield* tryAsync('remove user from auth provider', () =>
-              betterAuth.api.removeUser({
-                headers,
-                body: { userId } satisfies BetterAuthUserActionBody,
-              }),
-            );
+            yield* usersRepository.deleteUserRoles(userId, tenantId);
+            yield* usersRepository.deleteTenantMembership(userId, tenantId);
+            const hasRemainingTenantMemberships =
+              yield* usersRepository.hasTenantMemberships(userId);
+
+            if (!hasRemainingTenantMemberships) {
+              yield* tryAsync('remove user from auth provider', () =>
+                betterAuth.api.removeUser({
+                  headers,
+                  body: { userId } satisfies BetterAuthUserActionBody,
+                }),
+              );
+            }
           }),
         (userId) => ({ attributes: { userId } }),
       );

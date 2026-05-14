@@ -10,6 +10,7 @@ export interface UserSession {
     userId: string;
     expiresAt: Date;
     token: string;
+    activeOrganizationId?: string | null;
     ipAddress?: string | null;
     userAgent?: string | null;
   };

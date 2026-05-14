@@ -11,6 +11,7 @@ import {
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { auditLogs } from '../../platform/db/schema';
+import { requireRequestTenantId } from '../../platform/tenant-context';
 import { AuditLogsInfrastructureError } from './audit-logs.errors';
 
 export interface AuditLogQueryOptions {
@@ -63,64 +64,89 @@ export class AuditLogsRepository extends Effect.Service<AuditLogsRepository>()(
       const db = yield* DrizzleDatabase;
 
       const findPaginated = (options: AuditLogQueryOptions) =>
-        tryAsync('query audit logs', async () => {
-          const { page, limit, skip } = resolvePaginationWindow(
-            options.page,
-            options.limit,
-          );
-          const conditions = buildAuditFilters(options);
-          const where = conditions.length > 0 ? and(...conditions) : undefined;
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('query audit logs', async () => {
+            const { page, limit, skip } = resolvePaginationWindow(
+              options.page,
+              options.limit,
+            );
+            const where = and(
+              eq(auditLogs.tenant_id, tenantId),
+              ...buildAuditFilters(options),
+            );
 
-          const [countResult, data] = await Promise.all([
-            db
-              .select({ count: sql<number>`count(*)::int` })
-              .from(auditLogs)
-              .where(where),
-            db
-              .select()
-              .from(auditLogs)
-              .where(where)
-              .orderBy(desc(auditLogs.created_at))
-              .offset(skip)
-              .limit(limit),
-          ]);
+            const [countResult, data] = await Promise.all([
+              db
+                .select({ count: sql<number>`count(*)::int` })
+                .from(auditLogs)
+                .where(where),
+              db
+                .select()
+                .from(auditLogs)
+                .where(where)
+                .orderBy(desc(auditLogs.created_at))
+                .offset(skip)
+                .limit(limit),
+            ]);
 
-          const total = countResult[0]?.count ?? 0;
-          return toRepositoryPaginatedResult(data, total, page, limit);
+            const total = countResult[0]?.count ?? 0;
+            return toRepositoryPaginatedResult(data, total, page, limit);
+          });
         });
 
       const findById = (id: string) =>
-        tryAsync('load audit log', async () => {
-          const rows = await db
-            .select()
-            .from(auditLogs)
-            .where(eq(auditLogs.id, id))
-            .limit(1);
-          return rows[0] ?? null;
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('load audit log', async () => {
+            const rows = await db
+              .select()
+              .from(auditLogs)
+              .where(
+                and(
+                  eq(auditLogs.tenant_id, tenantId),
+                  eq(auditLogs.id, id),
+                ),
+              )
+              .limit(1);
+            return rows[0] ?? null;
+          });
         });
 
       const findByEntityId = (entityType: AuditEntityType, entityId: string) =>
-        tryAsync('load entity audit history', () =>
-          db
-            .select()
-            .from(auditLogs)
-            .where(
-              and(
-                eq(auditLogs.entity_type, entityType),
-                eq(auditLogs.entity_id, entityId),
-              ),
-            )
-            .orderBy(desc(auditLogs.created_at)),
-        );
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('load entity audit history', () =>
+            db
+              .select()
+              .from(auditLogs)
+              .where(
+                and(
+                  eq(auditLogs.tenant_id, tenantId),
+                  eq(auditLogs.entity_type, entityType),
+                  eq(auditLogs.entity_id, entityId),
+                ),
+              )
+              .orderBy(desc(auditLogs.created_at)),
+          );
+        });
 
       const findByUserId = (userId: string) =>
-        tryAsync('load user audit history', () =>
-          db
-            .select()
-            .from(auditLogs)
-            .where(eq(auditLogs.user_id, userId))
-            .orderBy(desc(auditLogs.created_at)),
-        );
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          return yield* tryAsync('load user audit history', () =>
+            db
+              .select()
+              .from(auditLogs)
+              .where(
+                and(
+                  eq(auditLogs.tenant_id, tenantId),
+                  eq(auditLogs.user_id, userId),
+                ),
+              )
+              .orderBy(desc(auditLogs.created_at)),
+          );
+        });
 
       return { findPaginated, findById, findByEntityId, findByUserId };
     }),

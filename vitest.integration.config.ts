@@ -14,6 +14,7 @@ export default defineConfig({
     testTimeout: 15_000,
     hookTimeout: 30_000,
     globalSetup: './src/effect/test/integration-global-setup.ts',
+    setupFiles: ['./test/setup-env.ts'],
     fileParallelism: false,
     sequence: { concurrent: false },
   },

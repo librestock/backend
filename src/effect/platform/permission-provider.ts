@@ -11,6 +11,9 @@ export class PermissionProvider extends Context.Tag(
 )<
   PermissionProvider,
   {
-    readonly getPermissionsForUser: (userId: string) => Effect.Effect<UserPermissions, unknown>;
+    readonly getPermissionsForUser: (
+      userId: string,
+      tenantId?: string,
+    ) => Effect.Effect<UserPermissions, unknown>;
   }
 >() {}

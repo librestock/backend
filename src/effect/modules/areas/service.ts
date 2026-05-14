@@ -18,6 +18,7 @@ import {
   AreaSelfParent,
   ParentAreaNotFound,
 } from './areas.errors';
+import type { TenantNotResolved } from '../../platform/tenant-context';
 import { AreasRepository } from './repository';
 
 type AreaRow = typeof areas.$inferSelect;
@@ -40,7 +41,7 @@ export class AreasService extends Effect.Service<AreasService>()(
       const wouldCreateCircularReference = (
         areaId: string,
         newParentId: string,
-      ): Effect.Effect<boolean, AreasInfrastructureError> =>
+      ): Effect.Effect<boolean, AreasInfrastructureError | TenantNotResolved> =>
         Effect.gen(function* () {
           let currentId: string | null = newParentId;
 
@@ -96,7 +97,10 @@ export class AreasService extends Effect.Service<AreasService>()(
 
       const findAll = (
         query: AreaQueryDto,
-      ): Effect.Effect<AreaResponseDto[], AreasInfrastructureError> =>
+      ): Effect.Effect<
+        AreaResponseDto[],
+        AreasInfrastructureError | TenantNotResolved
+      > =>
         Effect.gen(function* () {
           const areas =
             query.include_children && query.location_id
@@ -109,7 +113,7 @@ export class AreasService extends Effect.Service<AreasService>()(
         id: string,
       ): Effect.Effect<
         AreaResponseDto,
-        AreaNotFound | AreasInfrastructureError
+        AreaNotFound | AreasInfrastructureError | TenantNotResolved
       > =>
         Effect.map(getAreaOrFail(id), toAreaResponseDto).pipe(
           Effect.withSpan('AreasService.findById', { attributes: { id } }),
@@ -119,7 +123,7 @@ export class AreasService extends Effect.Service<AreasService>()(
         id: string,
       ): Effect.Effect<
         AreaResponseDto,
-        AreaNotFound | AreasInfrastructureError
+        AreaNotFound | AreasInfrastructureError | TenantNotResolved
       > =>
         Effect.flatMap(repository.findByIdWithChildren(id), (area) =>
           area
@@ -138,11 +142,13 @@ export class AreasService extends Effect.Service<AreasService>()(
       ): Effect.Effect<
         AreaResponseDto,
         | AreaCircularReference
+        | AreaLocationNotFound
         | AreaNotFound
         | AreaParentLocationMismatch
         | AreasInfrastructureError
         | AreaSelfParent
         | ParentAreaNotFound
+        | TenantNotResolved
       > =>
         Effect.gen(function* () {
           const existingArea = yield* getAreaOrFail(id);
@@ -205,7 +211,10 @@ export class AreasService extends Effect.Service<AreasService>()(
 
       const remove = (
         id: string,
-      ): Effect.Effect<void, AreaNotFound | AreasInfrastructureError> =>
+      ): Effect.Effect<
+        void,
+        AreaNotFound | AreasInfrastructureError | TenantNotResolved
+      > =>
         Effect.gen(function* () {
           const deleted = yield* repository.delete(id);
           if (!deleted) {

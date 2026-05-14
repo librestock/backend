@@ -1,5 +1,5 @@
 import { Cache, Duration, Effect } from 'effect';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { Permission, Resource } from '@librestock/types/auth';
 import type { CreateRoleDto, UpdateRoleDto } from '@librestock/types/roles';
 import { makeGetOrFail } from '../../platform/from-null-or';
@@ -7,6 +7,10 @@ import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { userRoles, roles, rolePermissions } from '../../platform/db/schema';
 import type { UserPermissions } from '../../platform/permission-provider';
+import {
+  DEFAULT_TENANT_ID,
+  requireRequestTenantId,
+} from '../../platform/tenant-context';
 import { toRoleResponseDto } from './roles.utils';
 import {
   RoleNameAlreadyExists,
@@ -110,7 +114,10 @@ export class RolesService extends Effect.Service<RolesService>()(
       const db = yield* DrizzleDatabase;
 
       const getRoleOrFail = makeGetOrFail(
-        (id: string) => repository.findById(id),
+        (id: string) =>
+          Effect.flatMap(currentTenantId, (tenantId) =>
+            repository.findById(id, tenantId),
+          ),
         (id) => new RoleNotFound({ id, messageKey: 'roles.notFound' }),
       );
 
@@ -123,8 +130,11 @@ export class RolesService extends Effect.Service<RolesService>()(
           }),
       );
 
+      const currentTenantId = requireRequestTenantId;
+
       const fetchPermissionsFromDb = (
         userId: string,
+        tenantId: string,
       ): Effect.Effect<UserPermissions, RolesInfrastructureError> =>
         tryAsync('load user permissions', async () => {
           const rows = await db
@@ -135,20 +145,34 @@ export class RolesService extends Effect.Service<RolesService>()(
             })
             .from(userRoles)
             .innerJoin(roles, eq(roles.id, userRoles.role_id))
-            .innerJoin(rolePermissions, eq(rolePermissions.role_id, userRoles.role_id))
-            .where(eq(userRoles.user_id, userId));
+            .innerJoin(
+              rolePermissions,
+              eq(rolePermissions.role_id, userRoles.role_id),
+            )
+            .where(
+              and(
+                eq(userRoles.user_id, userId),
+                eq(userRoles.tenant_id, tenantId),
+                eq(roles.tenant_id, tenantId),
+              ),
+            );
 
           const roleNames = [...new Set(rows.map((row) => row.role_name))];
           const permissionMap: Record<string, Set<string>> = {};
 
           for (const row of rows) {
-            const resourcePermissions = (permissionMap[row.resource] ??= new Set());
+            const resourcePermissions = (permissionMap[row.resource] ??=
+              new Set());
             resourcePermissions.add(row.permission);
           }
 
           const permissions: Partial<Record<Resource, Permission[]>> = {};
-          for (const [resource, permissionSet] of Object.entries(permissionMap)) {
-            permissions[resource as Resource] = [...permissionSet] as Permission[];
+          for (const [resource, permissionSet] of Object.entries(
+            permissionMap,
+          )) {
+            permissions[resource as Resource] = [
+              ...permissionSet,
+            ] as Permission[];
           }
 
           return { roleNames, permissions };
@@ -157,29 +181,38 @@ export class RolesService extends Effect.Service<RolesService>()(
       const permissionCache = yield* Cache.make({
         capacity: 1000,
         timeToLive: Duration.minutes(1),
-        lookup: (userId: string) => fetchPermissionsFromDb(userId),
+        lookup: (cacheKey: string) => {
+          const [tenantId, userId] = cacheKey.split(':', 2);
+          return fetchPermissionsFromDb(userId ?? '', tenantId ?? '');
+        },
       });
 
-      const clearCacheForUser = (userId: string) =>
-        permissionCache.invalidate(userId);
+      const clearCacheForUser = (_userId: string) =>
+        permissionCache.invalidateAll;
 
       const clearAllCache = () => permissionCache.invalidateAll;
 
-      const getPermissionsForUser = (userId: string) =>
-        permissionCache.get(userId);
+      const getPermissionsForUser = (userId: string, tenantId: string) =>
+        permissionCache.get(`${tenantId}:${userId}`);
 
       return {
         findAll: () =>
-          Effect.map(repository.findAll(), (roles) =>
-            roles.map(toRoleResponseDto),
-          ).pipe(Effect.withSpan('RolesService.findAll')),
+          Effect.gen(function* () {
+            const tenantId = yield* currentTenantId;
+            const roles = yield* repository.findAll(tenantId);
+            return roles.map(toRoleResponseDto);
+          }).pipe(Effect.withSpan('RolesService.findAll')),
         findById: (id: string) =>
-          Effect.map(getRoleOrFail(id), toRoleResponseDto).pipe(
+          Effect.gen(function* () {
+            const role = yield* getRoleOrFail(id);
+            return toRoleResponseDto(role);
+          }).pipe(
             Effect.withSpan('RolesService.findById', { attributes: { id } }),
           ),
         create: (dto: CreateRoleDto) =>
           Effect.gen(function* () {
-            const existing = yield* repository.findByName(dto.name);
+            const tenantId = yield* currentTenantId;
+            const existing = yield* repository.findByName(dto.name, tenantId);
             if (existing) {
               return yield* Effect.fail(
                 new RoleNameAlreadyExists({
@@ -190,6 +223,7 @@ export class RolesService extends Effect.Service<RolesService>()(
             }
 
             const role = yield* repository.create({
+              tenant_id: tenantId,
               name: dto.name,
               description: dto.description ?? null,
               is_system: false,
@@ -202,11 +236,12 @@ export class RolesService extends Effect.Service<RolesService>()(
           }).pipe(Effect.withSpan('RolesService.create')),
         update: (id: string, dto: UpdateRoleDto) =>
           Effect.gen(function* () {
+            const tenantId = yield* currentTenantId;
             const role = yield* getRoleOrFail(id);
 
             const nextName = dto.name;
             if (nextName && nextName !== role.name) {
-              const existing = yield* repository.findByName(nextName);
+              const existing = yield* repository.findByName(nextName, tenantId);
               if (existing) {
                 return yield* Effect.fail(
                   new RoleNameAlreadyExists({
@@ -224,20 +259,23 @@ export class RolesService extends Effect.Service<RolesService>()(
             }
 
             if (Object.keys(updateData).length > 0) {
-              yield* repository.update(id, updateData);
+              yield* repository.update(id, tenantId, updateData);
             }
 
             if (dto.permissions !== undefined) {
-              const {permissions} = dto;
+              const { permissions } = dto;
               yield* repository.replacePermissions(id, permissions);
               yield* clearAllCache();
             }
 
             const updated = yield* getRoleOrFail(id);
             return toRoleResponseDto(updated);
-          }).pipe(Effect.withSpan('RolesService.update', { attributes: { id } })),
+          }).pipe(
+            Effect.withSpan('RolesService.update', { attributes: { id } }),
+          ),
         delete: (id: string) =>
           Effect.gen(function* () {
+            const tenantId = yield* currentTenantId;
             const role = yield* getRoleOrFail(id);
             if (role.is_system) {
               return yield* Effect.fail(
@@ -248,28 +286,41 @@ export class RolesService extends Effect.Service<RolesService>()(
               );
             }
 
-            yield* repository.delete(id);
+            yield* repository.delete(id, tenantId);
             yield* clearAllCache();
-          }).pipe(Effect.withSpan('RolesService.delete', { attributes: { id } })),
-        getPermissionsForUser: (userId: string) =>
-          getPermissionsForUser(userId).pipe(
-            Effect.withSpan('RolesService.getPermissionsForUser', { attributes: { userId } }),
+          }).pipe(
+            Effect.withSpan('RolesService.delete', { attributes: { id } }),
+          ),
+        getPermissionsForUser: (userId: string, tenantId?: string) =>
+          Effect.gen(function* () {
+            const effectiveTenantId = tenantId ?? (yield* currentTenantId);
+            return yield* getPermissionsForUser(userId, effectiveTenantId);
+          }).pipe(
+            Effect.withSpan('RolesService.getPermissionsForUser', {
+              attributes: { userId, tenantId },
+            }),
           ),
         clearCacheForUser: (userId: string) =>
           clearCacheForUser(userId).pipe(
-            Effect.withSpan('RolesService.clearCacheForUser', { attributes: { userId } }),
+            Effect.withSpan('RolesService.clearCacheForUser', {
+              attributes: { userId },
+            }),
           ),
         clearAllCache: () =>
           clearAllCache().pipe(Effect.withSpan('RolesService.clearAllCache')),
         seed: () =>
           Effect.forEach(seedDefinitions, (seed) =>
             Effect.gen(function* () {
-              const existing = yield* repository.findByName(seed.name);
+              const existing = yield* repository.findByName(
+                seed.name,
+                DEFAULT_TENANT_ID,
+              );
               if (existing) {
                 return;
               }
 
               const role = yield* repository.create({
+                tenant_id: DEFAULT_TENANT_ID,
                 name: seed.name,
                 description: seed.description,
                 is_system: true,

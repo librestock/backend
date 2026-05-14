@@ -20,6 +20,7 @@ export const requestLoggingMiddleware = <E, R>(
           const payload: LogPayload = {
             messageKey: 'http.request',
             requestId: requestContext.requestId,
+            tenantId: requestContext.tenantId ?? '-',
             method: requestContext.method,
             path: requestContext.path,
             statusCode: response.status,

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "edit": {
+      ".env*": "deny",
+      "dist/**": "deny",
+      "node_modules/**": "deny",
+      "uploads/**": "deny",
+      "effect-code/**": "deny",
+    },
+    "*": {
+      "*": "allow",
+    },
+  },
+  "mcp": {
+    "linear": {
+      "type": "remote",
+      "url": "https://mcp.linear.app/mcp",
+      "enabled": true,
+      "oauth": {},
+    },
+  },
+  "provider": {},
+  "tools": {},
+}

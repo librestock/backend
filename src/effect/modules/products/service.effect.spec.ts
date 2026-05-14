@@ -29,6 +29,7 @@ import { ProductsService } from './service';
 
 const makeProductEntity = (overrides: Record<string, any> = {}) => ({
   id: 'prod-1',
+  tenant_id: '00000000-0000-4000-8000-000000000001',
   sku: 'SKU-001',
   name: 'Widget',
   description: null,
@@ -55,6 +56,7 @@ const makeProductEntity = (overrides: Record<string, any> = {}) => ({
   deleted_by: null,
   category: {
     id: 'cat-1',
+    tenant_id: '00000000-0000-4000-8000-000000000001',
     name: 'Electronics',
     description: null,
     parent_id: null,
@@ -114,10 +116,7 @@ const repoLayer = (overrides: Partial<ProductsRepository> = {}) =>
 const catLayer = (overrides: Partial<CategoriesService> = {}) =>
   makeTestLayer(CategoriesService)({ ...defaultCatMethods, ...overrides });
 
-const serviceLayer = (
-  repo = repoLayer(),
-  cat = catLayer(),
-) =>
+const serviceLayer = (repo = repoLayer(), cat = catLayer()) =>
   ProductsService.DefaultWithoutDependencies.pipe(
     Layer.provide(Layer.mergeAll(repo, cat)),
   );
@@ -141,7 +140,10 @@ describe('ProductsService', () => {
     it.effect('returns paginated products', () =>
       withService((svc) =>
         Effect.gen(function* () {
-          const result = yield* svc.findAllPaginated({ page: 1, limit: 20 } as any);
+          const result = yield* svc.findAllPaginated({
+            page: 1,
+            limit: 20,
+          } as any);
           expect(result.data).toHaveLength(1);
           expect(result.meta).toMatchObject({ page: 1, total: 1 });
         }),
@@ -279,7 +281,11 @@ describe('ProductsService', () => {
     it.effect('updates a product', () =>
       withService((svc) =>
         Effect.gen(function* () {
-          const result = yield* svc.update('prod-1', { name: 'Updated' } as any, undefined);
+          const result = yield* svc.update(
+            'prod-1',
+            { name: 'Updated' } as any,
+            undefined,
+          );
           expect(result).toMatchObject({ id: 'prod-1' });
         }),
       ),
@@ -347,7 +353,10 @@ describe('ProductsService', () => {
             const result = yield* svc.restore('prod-1');
             expect(result).toMatchObject({ id: 'prod-1' });
           }),
-        { findById: () => Effect.succeed(makeProductEntity({ deleted_at: new Date() })) },
+        {
+          findById: () =>
+            Effect.succeed(makeProductEntity({ deleted_at: new Date() })),
+        },
       ),
     );
 
@@ -374,7 +383,10 @@ describe('ProductsService', () => {
     it.effect('creates products in bulk', () =>
       withService((svc) =>
         Effect.gen(function* () {
-          const result = yield* svc.bulkCreate({ products: [singleProduct] }, undefined);
+          const result = yield* svc.bulkCreate(
+            { products: [singleProduct] },
+            undefined,
+          );
           expect(result.success_count).toBe(1);
         }),
       ),

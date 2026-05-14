@@ -1,6 +1,7 @@
 import { Effect, Layer } from 'effect';
 import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
 import type { brandingSettings } from '../../platform/db/schema';
+import { CurrentRequestContext } from '../../platform/request-context';
 import { createChainableMock } from '../../test/utils';
 import { BrandingService } from './service';
 import {
@@ -9,12 +10,22 @@ import {
   POWERED_BY,
 } from './branding.constants';
 
+const tenantRequestContext = {
+  requestId: '00000000-0000-4000-8000-000000000099',
+  path: '/api/v1/branding',
+  method: 'GET' as const,
+  ip: null,
+  locale: 'en' as const,
+  tenantId: '00000000-0000-4000-8000-000000000001',
+};
+
 type BrandingEntity = typeof brandingSettings.$inferSelect;
 
 const makeBrandingEntity = (
   overrides: Partial<BrandingEntity> = {},
 ): BrandingEntity => ({
   id: BRANDING_SETTINGS_ID,
+  tenant_id: '00000000-0000-4000-8000-000000000001',
   app_name: 'TestApp',
   tagline: 'Test tagline',
   logo_url: null,
@@ -36,7 +47,12 @@ const buildService = (mockDb: unknown) =>
     ),
   );
 
-const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runPromise(effect);
+const run = <A, E>(effect: Effect.Effect<A, E>) =>
+  Effect.runPromise(
+    effect.pipe(
+      Effect.provideService(CurrentRequestContext, tenantRequestContext),
+    ),
+  );
 
 describe('Effect BrandingService', () => {
   it('returns stored branding settings', async () => {
@@ -76,9 +92,7 @@ describe('Effect BrandingService', () => {
     };
 
     const service = await buildService(mockDb);
-    const result = await run(
-      service.update({ app_name: 'NewName' }, 'user-1'),
-    );
+    const result = await run(service.update({ app_name: 'NewName' }, 'user-1'));
 
     expect(mockDb.insert).toHaveBeenCalled();
     expect(insertChain.values).toHaveBeenCalled();

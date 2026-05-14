@@ -78,7 +78,10 @@ const stringifyValue = (value: unknown): string => {
     }
 
     if (typeof value === 'function') {
-      return truncate(`[function ${value.name || 'anonymous'}]`, MAX_FIELD_LENGTH);
+      return truncate(
+        `[function ${value.name || 'anonymous'}]`,
+        MAX_FIELD_LENGTH,
+      );
     }
 
     if (typeof value === 'bigint') {
@@ -188,6 +191,7 @@ const formatHttpRequest = (record: LogRecord) => {
     stringifyValue(record.statusCode),
     formatDuration(record.durationMs ?? record.duration),
     `rid=${formatRequestId(record.requestId)}`,
+    `tid=${stringifyValue(record.tenantId)}`,
   ];
 
   const userAgent = formatUserAgent(record.userAgent);
@@ -267,9 +271,7 @@ const formatCause = (cause: Cause.Cause<unknown>) => {
   return rendered ? `cause=${truncate(rendered, MAX_FIELD_LENGTH)}` : undefined;
 };
 
-const formatAnnotations = (
-  annotations: HashMap.HashMap<string, unknown>,
-) => {
+const formatAnnotations = (annotations: HashMap.HashMap<string, unknown>) => {
   const parts: string[] = [];
   for (const [key, value] of annotations) {
     parts.push(`${key}=${stringifyValue(value)}`);

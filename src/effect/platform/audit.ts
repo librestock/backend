@@ -8,6 +8,7 @@ import { auditLogs } from './db/schema';
 import type { LogPayload } from './messages';
 import { getOptionalSession } from './session';
 import { getRequestContext } from './request-context';
+import { DEFAULT_TENANT_ID } from './tenant-constants';
 
 export interface AuditWriteParams {
   readonly action: AuditAction;
@@ -36,6 +37,7 @@ export const makeAuditLogWriter = Effect.gen(function* () {
       yield* Effect.tryPromise({
         try: () =>
           db.insert(auditLogs).values({
+            tenant_id: requestContext.tenantId ?? DEFAULT_TENANT_ID,
             user_id: session?.user.id ?? null,
             action: params.action,
             entity_type: params.entityType,

@@ -12,6 +12,7 @@ import {
   AuditLogNotFound,
   type AuditLogsInfrastructureError,
 } from './audit-logs.errors';
+import type { TenantNotResolved } from '../../platform/tenant-context';
 import { AuditLogsRepository } from './repository';
 
 type AuditLog = typeof auditLogs.$inferSelect;
@@ -46,13 +47,18 @@ export class AuditLogsService extends Effect.Service<AuditLogsService>()(
         queryOptions: AuditLogQueryOptions,
       ): Effect.Effect<
         PaginatedAuditLogsResponseDto,
-        AuditLogsInfrastructureError
+        AuditLogsInfrastructureError | TenantNotResolved
       > =>
         Effect.map(repository.findPaginated(queryOptions), (result) =>
           toPaginatedResponse(result, toAuditLogResponseDto),
         ).pipe(Effect.withSpan('AuditLogsService.query'));
 
-      const findById = (id: string) =>
+      const findById = (
+        id: string,
+      ): Effect.Effect<
+        AuditLogResponseDto,
+        AuditLogsInfrastructureError | AuditLogNotFound | TenantNotResolved
+      > =>
         getAuditLogOrFail(id).pipe(
           Effect.withSpan('AuditLogsService.findById', { attributes: { id } }),
         );
@@ -60,7 +66,10 @@ export class AuditLogsService extends Effect.Service<AuditLogsService>()(
       const getEntityHistory = (
         entityType: AuditEntityType,
         entityId: string,
-      ): Effect.Effect<AuditLogResponseDto[], AuditLogsInfrastructureError> =>
+      ): Effect.Effect<
+        AuditLogResponseDto[],
+        AuditLogsInfrastructureError | TenantNotResolved
+      > =>
         Effect.map(
           repository.findByEntityId(entityType, entityId),
           (auditLogs) => auditLogs.map(toAuditLogResponseDto),
@@ -72,7 +81,10 @@ export class AuditLogsService extends Effect.Service<AuditLogsService>()(
 
       const getUserHistory = (
         userId: string,
-      ): Effect.Effect<AuditLogResponseDto[], AuditLogsInfrastructureError> =>
+      ): Effect.Effect<
+        AuditLogResponseDto[],
+        AuditLogsInfrastructureError | TenantNotResolved
+      > =>
         Effect.map(repository.findByUserId(userId), (auditLogs) =>
           auditLogs.map(toAuditLogResponseDto),
         ).pipe(

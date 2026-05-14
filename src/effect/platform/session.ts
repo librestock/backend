@@ -4,7 +4,9 @@ import type { UserSession } from './auth/user-session';
 import { BetterAuth } from './better-auth';
 import { InternalError, UnauthorizedError } from './domain-errors';
 
-export class SessionUnauthorized extends UnauthorizedError('SessionUnauthorized') {}
+export class SessionUnauthorized extends UnauthorizedError(
+  'SessionUnauthorized',
+) {}
 
 export class SessionInfrastructureError extends InternalError(
   'SessionInfrastructureError',
@@ -40,6 +42,15 @@ export const getOptionalSession = Effect.gen(function* () {
 
   return {
     ...session,
+    session: {
+      ...session.session,
+      activeOrganizationId:
+        (
+          session.session as typeof session.session & {
+            activeOrganizationId?: string | null;
+          }
+        ).activeOrganizationId ?? null,
+    },
     user: {
       ...session.user,
       role: session.user.role ?? undefined,
