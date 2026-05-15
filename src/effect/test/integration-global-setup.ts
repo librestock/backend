@@ -1,17 +1,14 @@
-import { execFileSync } from 'node:child_process';
 import path from 'node:path';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
-import { getCommittedSqlMigrations } from '../platform/db/committed-sql-migrations';
+import { applyCommittedSqlMigrations } from '../platform/db/committed-sql-migrations';
+import type { DrizzleDb } from '../platform/drizzle';
+import * as relations from '../platform/db/relations';
+import * as schema from '../platform/db/schema';
 
 const TEST_DB_NAME = 'librestock_inventory_test';
 
 const PROJECT_ROOT = path.resolve(import.meta.dirname, '..', '..', '..');
-const DRIZZLE_KIT_BIN = path.join(
-  PROJECT_ROOT,
-  'node_modules',
-  '.bin',
-  'drizzle-kit',
-);
 const MIGRATIONS_DIR = path.join(PROJECT_ROOT, 'drizzle');
 
 function getAdminUrl(): string {
@@ -50,33 +47,13 @@ export async function setup(): Promise<void> {
     await adminPool.end();
   }
 
-  // 2. Push schema via drizzle-kit (idempotent, --force skips confirmations)
-  execFileSync(
-    DRIZZLE_KIT_BIN,
-    [
-      'push',
-      '--force',
-      '--dialect',
-      'postgresql',
-      '--schema',
-      './src/effect/platform/db/schema.ts',
-      '--url',
-      testUrl,
-    ],
-    { cwd: PROJECT_ROOT, stdio: 'pipe' },
-  );
-
-  // 3. Apply committed SQL migrations for developer test DBs that predate them.
+  // 2. Apply the same committed SQL migrations used at application startup.
   const testPool = new pg.Pool({ connectionString: testUrl });
   try {
-    for (const migration of getCommittedSqlMigrations(MIGRATIONS_DIR)) {
-      await testPool.query(migration.sql);
-    }
-
-    // 4. Create custom sequences not managed by Drizzle
-    await testPool.query(
-      `CREATE SEQUENCE IF NOT EXISTS order_number_seq START 1`,
-    );
+    const testDb = drizzle(testPool, {
+      schema: { ...schema, ...relations },
+    }) as unknown as DrizzleDb;
+    await applyCommittedSqlMigrations(testDb, MIGRATIONS_DIR);
   } finally {
     await testPool.end();
   }

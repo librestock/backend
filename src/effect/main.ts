@@ -3,7 +3,6 @@ import { NodeHttpServer, NodeRuntime } from '@effect/platform-node';
 import { createServer } from 'node:http';
 import 'dotenv/config';
 import { Effect, Layer } from 'effect';
-import { sql } from 'drizzle-orm';
 import { buildHttpApp } from './http/app';
 import { AuditLogsService } from './modules/audit-logs/service';
 import { AreasService } from './modules/areas/service';
@@ -31,7 +30,7 @@ import {
   DrizzleInitializationError,
   drizzleLayer,
 } from './platform/drizzle';
-import { getCommittedSqlMigrations } from './platform/db/committed-sql-migrations';
+import { applyCommittedSqlMigrations } from './platform/db/committed-sql-migrations';
 import { TracingLive } from './platform/tracing';
 
 const VALID_NODE_ENVS = ['development', 'staging', 'production'] as const;
@@ -71,9 +70,7 @@ const runCommittedSqlMigrations = Effect.gen(function* () {
   const db = yield* DrizzleDatabase;
   yield* Effect.tryPromise({
     try: async () => {
-      for (const migration of getCommittedSqlMigrations()) {
-        await db.execute(sql.raw(migration.sql));
-      }
+      await applyCommittedSqlMigrations(db);
     },
     catch: (cause) =>
       new DrizzleInitializationError({

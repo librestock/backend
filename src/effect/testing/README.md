@@ -31,8 +31,7 @@ or reach into the individual modules when you want to compose by hand.
 1. `vitest.integration.config.ts` runs `src/effect/test/integration-global-setup.ts`
    **once per run**. That script:
    - creates `librestock_inventory_test` if absent,
-   - pushes the Drizzle schema with `drizzle-kit push --force`,
-   - creates the `order_number_seq` sequence.
+   - applies the committed SQL migrations used by application startup.
 2. The harness opens **one shared `pg.Pool`** on first `getTestDb()` call.
 3. Before every test, `truncateAll()` wipes every domain table with
    `TRUNCATE ... CASCADE` and resets `order_number_seq`.
