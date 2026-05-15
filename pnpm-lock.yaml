@@ -62,6 +62,9 @@ importers:
       effect:
         specifier: ^3.21.0
         version: 3.21.0
+      fast-check:
+        specifier: ^3.23.2
+        version: 3.23.2
       pg:
         specifier: ^8.20.0
         version: 8.20.0
