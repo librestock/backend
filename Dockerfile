@@ -39,4 +39,4 @@ EXPOSE 4000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/health-check/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 
-CMD ["node", "dist/effect/main.mjs"]
+CMD ["node", "dist/effect/main.cjs"]

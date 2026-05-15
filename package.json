@@ -6,10 +6,10 @@
   "private": true,
   "packageManager": "pnpm@10.28.0",
   "scripts": {
-    "build": "esbuild src/effect/main.ts --bundle --platform=node --format=esm --target=node22 --packages=external --outfile=dist/effect/main.mjs",
+    "build": "esbuild src/effect/main.ts --bundle --platform=node --format=cjs --target=node22 --packages=external --outfile=dist/effect/main.cjs",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "tsx src/effect/main.ts",
-    "start:prod": "NODE_ENV=production node dist/effect/main.mjs",
+    "start:prod": "NODE_ENV=production node dist/effect/main.cjs",
     "lint": "oxlint src test",
     "lint:fix": "oxlint --fix src test",
     "test": "vitest run",
