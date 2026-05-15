@@ -74,13 +74,14 @@ const makeHandler = (mock: HealthServiceMock) => {
   return handler;
 };
 
+// These tests bypass HttpRouter.mountApp('/health-check', ...) and exercise
+// the group directly, so request paths are relative to the group (e.g. /live)
+// rather than the public URL (/health-check/live).
 describe('HealthApiLive', () => {
-  describe('GET /health-check/live', () => {
+  describe('GET /live (public: /health-check/live)', () => {
     it('returns 200 with status ok', async () => {
       const handler = makeHandler({ live: Effect.succeed(okResponse()) });
-      const response = await handler(
-        new Request('http://localhost/health-check/live'),
-      );
+      const response = await handler(new Request('http://localhost/live'));
       expect(response.status).toBe(200);
       await expect(response.json()).resolves.toMatchObject({
         status: 'ok',
@@ -88,16 +89,14 @@ describe('HealthApiLive', () => {
     });
   });
 
-  describe('GET /health-check/ready', () => {
+  describe('GET /ready (public: /health-check/ready)', () => {
     it('returns 200 when the service reports ok', async () => {
       const handler = makeHandler({
         ready: Effect.succeed(
           okResponse({ database: { status: 'up' } }),
         ),
       });
-      const response = await handler(
-        new Request('http://localhost/health-check/ready'),
-      );
+      const response = await handler(new Request('http://localhost/ready'));
       expect(response.status).toBe(200);
       const body = (await response.json()) as any;
       expect(body.status).toBe('ok');
@@ -115,16 +114,14 @@ describe('HealthApiLive', () => {
           }),
         ),
       });
-      const response = await handler(
-        new Request('http://localhost/health-check/ready'),
-      );
+      const response = await handler(new Request('http://localhost/ready'));
       expect(response.status).toBe(503);
       const body = (await response.json()) as any;
       expect(body.details.database.status).toBe('down');
     });
   });
 
-  describe('GET /health-check', () => {
+  describe('GET / (public: /health-check)', () => {
     it('returns 200 with combined details when everything is up', async () => {
       const handler = makeHandler({
         healthCheck: Effect.succeed(
@@ -137,9 +134,7 @@ describe('HealthApiLive', () => {
           }),
         ),
       });
-      const response = await handler(
-        new Request('http://localhost/health-check'),
-      );
+      const response = await handler(new Request('http://localhost/'));
       expect(response.status).toBe(200);
       const body = (await response.json()) as any;
       expect(body.status).toBe('ok');
@@ -162,9 +157,7 @@ describe('HealthApiLive', () => {
           }),
         ),
       });
-      const response = await handler(
-        new Request('http://localhost/health-check'),
-      );
+      const response = await handler(new Request('http://localhost/'));
       expect(response.status).toBe(503);
       const body = (await response.json()) as any;
       expect(body.details.database.status).toBe('down');
@@ -186,9 +179,7 @@ describe('HealthApiLive', () => {
           }),
         ),
       });
-      const response = await handler(
-        new Request('http://localhost/health-check'),
-      );
+      const response = await handler(new Request('http://localhost/'));
       expect(response.status).toBe(503);
       const body = (await response.json()) as any;
       expect(body.details.database.status).toBe('down');
@@ -200,7 +191,7 @@ describe('HealthApiLive', () => {
     it('returns 404 for an unknown path', async () => {
       const handler = makeHandler({});
       const response = await handler(
-        new Request('http://localhost/health-check/does-not-exist'),
+        new Request('http://localhost/does-not-exist'),
       );
       expect(response.status).toBe(404);
     });

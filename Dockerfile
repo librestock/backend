@@ -33,9 +33,10 @@ COPY --from=build /tmp/librestock-api ./
 
 EXPOSE 4000
 
-# Node-based healthcheck so we don't have to add curl. Exit 0 only on 2xx/3xx
-# from /health. `compose up --wait` on the droplet blocks on this signal.
+# Node-based healthcheck so we don't have to add curl. Probes the liveness
+# endpoint (not /ready) — DB hiccups shouldn't restart the container, that's
+# a separate concern. `compose up --wait` on the droplet blocks on this.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/health-check/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 
 CMD ["node", "dist/effect/main.mjs"]

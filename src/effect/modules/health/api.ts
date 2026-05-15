@@ -21,19 +21,21 @@ export class ServiceDown extends Schema.TaggedError<ServiceDown>()(
   HttpApiSchema.annotations({ status: 503 }),
 ) {}
 
+// The group is mounted under `/health-check` in src/effect/http/app.ts with
+// `includePrefix: true`, so endpoint paths here must be relative to that
+// prefix. Don't repeat `/health-check` or routes resolve to
+// `/health-check/health-check/...`.
 export class HealthApi extends HttpApiGroup.make('health')
   .add(
-    HttpApiEndpoint.get('live', '/health-check/live').addSuccess(
-      HealthCheckResponseSchema,
-    ),
+    HttpApiEndpoint.get('live', '/live').addSuccess(HealthCheckResponseSchema),
   )
   .add(
-    HttpApiEndpoint.get('ready', '/health-check/ready')
+    HttpApiEndpoint.get('ready', '/ready')
       .addSuccess(HealthCheckResponseSchema)
       .addError(ServiceDown),
   )
   .add(
-    HttpApiEndpoint.get('check', '/health-check')
+    HttpApiEndpoint.get('check', '/')
       .addSuccess(HealthCheckResponseSchema)
       .addError(ServiceDown),
   ) {}
