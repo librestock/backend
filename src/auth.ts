@@ -3,6 +3,7 @@ import { admin, organization } from 'better-auth/plugins';
 import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
 import type { PoolClient } from 'pg';
+import { getCrossSubDomainCookieConfig } from './auth-cookie-domain';
 import {
   getSSLConfig,
   getPoolMax,
@@ -53,6 +54,11 @@ const pool =
       });
 
 const trustedOrigins = parseOrigins(process.env.FRONTEND_URL);
+const crossSubDomainCookies = getCrossSubDomainCookieConfig({
+  authBaseUrl: process.env.BETTER_AUTH_URL,
+  frontendOrigins: trustedOrigins,
+  cookieDomain: process.env.BETTER_AUTH_COOKIE_DOMAIN,
+});
 
 const coreAuthSchema = {
   user: {
@@ -244,6 +250,7 @@ export const auth = betterAuth({
     database: {
       generateId: 'uuid',
     },
+    ...(crossSubDomainCookies ? { crossSubDomainCookies } : {}),
   },
   databaseHooks: {
     user: {
