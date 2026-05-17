@@ -102,6 +102,17 @@ const apiBuilderApp = HttpApiBuilder.httpApp.pipe(
   ),
 );
 
+const betterAuthHandler = (request: Request): Promise<Response> => {
+  const url = new URL(request.url);
+
+  if (url.pathname.startsWith('/api/auth')) {
+    return auth.handler(request);
+  }
+
+  url.pathname = `/api/auth${url.pathname}`;
+  return auth.handler(new Request(url, request));
+};
+
 export const buildHttpApp = Effect.gen(function* () {
   // Build the HttpApiBuilder app once. HealthService is in scope from the
   // applicationLayer provided in main.ts. The resulting HttpApp serves both
@@ -114,9 +125,13 @@ export const buildHttpApp = Effect.gen(function* () {
     // Swagger UI served from the same HttpApi builder app
     HttpRouter.mountApp('/docs', builderApp, { includePrefix: true }),
     // Legacy routes remain on HttpRouter until migrated
-    HttpRouter.mountApp('/api/auth', HttpApp.fromWebHandler(auth.handler), {
-      includePrefix: true,
-    }),
+    HttpRouter.mountApp(
+      '/api/auth',
+      HttpApp.fromWebHandler(betterAuthHandler),
+      {
+        includePrefix: true,
+      },
+    ),
     HttpRouter.concat(apiRouter),
     HttpRouter.catchAllCause(respondCause),
   );
