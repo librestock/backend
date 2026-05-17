@@ -1,5 +1,6 @@
 import { Effect } from 'effect';
 import type {
+  CreateUserDto,
   UserQueryDto,
   UserResponseDto,
   BanUserDto,
@@ -39,6 +40,17 @@ interface BetterAuthBanUserBody {
   readonly userId: string;
   banReason?: string;
   banExpiresIn?: number;
+}
+
+interface BetterAuthCreateUserBody {
+  readonly email: string;
+  readonly name: string;
+  readonly password: string;
+  readonly role: 'admin' | 'user';
+}
+
+interface BetterAuthCreateUserResponse {
+  readonly user: BetterAuthUser;
 }
 
 interface BetterAuthUserActionBody {
@@ -182,6 +194,36 @@ export class UsersService extends Effect.Service<UsersService>()(
         }),
       );
 
+      const createUser = trace.traced('createUser', (dto: CreateUserDto) =>
+        Effect.gen(function* () {
+          const hasAdminRole = yield* usersRepository.hasAdminRole(dto.roles);
+          const result = yield* tryAsync(
+            'create user in auth provider',
+            () =>
+              betterAuth.api.createUser({
+                body: {
+                  email: dto.email,
+                  name: dto.name,
+                  password: dto.password,
+                  role: hasAdminRole ? 'admin' : 'user',
+                } satisfies BetterAuthCreateUserBody,
+              }) as Promise<BetterAuthCreateUserResponse>,
+          );
+
+          yield* usersRepository.replaceUserRoles(result.user.id, dto.roles);
+          yield* rolesService.clearCacheForUser(result.user.id);
+
+          const roleEntities = yield* usersRepository.findUserRoles(
+            result.user.id,
+          );
+
+          return toUserResponse(
+            result.user,
+            roleEntities.map((roleEntity) => roleEntity.role.name),
+          );
+        }),
+      );
+
       const updateRoles = trace.traced(
         'updateRoles',
         (userId: string, roleIds: string[]) =>
@@ -311,6 +353,7 @@ export class UsersService extends Effect.Service<UsersService>()(
       return {
         listUsers,
         getUser,
+        createUser,
         updateRoles,
         banUser,
         unbanUser,

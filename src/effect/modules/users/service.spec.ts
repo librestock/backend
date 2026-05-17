@@ -79,6 +79,69 @@ describe('Effect UsersService', () => {
     createdAt: '2026-03-01T00:00:00.000Z',
   };
 
+  it('creates a user, assigns roles, and uses the admin auth role when needed', async () => {
+    const createdUser = {
+      ...betterAuthUser,
+      id: 'user-2',
+      name: 'New Admin',
+      email: 'new-admin@example.com',
+    };
+    const betterAuth = {
+      api: {
+        createUser: vi.fn().mockReturnValue(
+          Promise.resolve({
+            user: createdUser,
+          }),
+        ),
+      },
+    };
+    const usersRepository = {
+      findRoleAssignments: vi.fn().mockReturnValue(Effect.succeed([])),
+      findUserRoles: vi.fn().mockReturnValue(
+        Effect.succeed([
+          {
+            role: { name: 'Admin' },
+          },
+        ]),
+      ),
+      replaceUserRoles: vi.fn().mockReturnValue(Effect.void),
+      hasAdminRole: vi.fn().mockReturnValue(Effect.succeed(true)),
+      syncBetterAuthRole: vi.fn().mockReturnValue(Effect.void),
+      deleteUserRoles: vi.fn().mockReturnValue(Effect.void),
+    };
+    const rolesService = {
+      clearCacheForUser: vi.fn().mockReturnValue(Effect.void),
+    };
+    const service = await makeService({
+      betterAuth,
+      usersRepository,
+      rolesService,
+    });
+
+    const result = await run(
+      service.createUser({
+        name: 'New Admin',
+        email: 'new-admin@example.com',
+        password: 'password123',
+        roles: ['role-1'],
+      }),
+    );
+
+    expect(betterAuth.api.createUser).toHaveBeenCalledWith({
+      body: {
+        email: 'new-admin@example.com',
+        name: 'New Admin',
+        password: 'password123',
+        role: 'admin',
+      },
+    });
+    expect(usersRepository.replaceUserRoles).toHaveBeenCalledWith('user-2', [
+      'role-1',
+    ]);
+    expect(rolesService.clearCacheForUser).toHaveBeenCalledWith('user-2');
+    expect(result.roles).toEqual(['Admin']);
+  });
+
   it('paginates tenant users before merging roles', async () => {
     const betterAuth = {
       api: {
@@ -117,17 +180,12 @@ describe('Effect UsersService', () => {
     });
 
     const result = await run(
-      service.listUsers({ page: 2, limit: 1 }).pipe(
-        Effect.provideService(BetterAuthHeaders, headers),
-        Effect.provideService(CurrentRequestContext, {
-          requestId: '00000000-0000-4000-8000-000000000099',
-          path: '/api/v1/users',
-          method: 'GET',
-          ip: null,
-          locale: 'en',
-          tenantId: '00000000-0000-4000-8000-000000000001',
-        }),
-      ),
+      service
+        .listUsers({ page: 2, limit: 1 })
+        .pipe(
+          Effect.provideService(BetterAuthHeaders, headers),
+          Effect.provideService(CurrentRequestContext, requestContext),
+        ),
     );
 
     expect(result.total).toBe(50);
