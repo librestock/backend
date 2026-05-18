@@ -7,11 +7,4 @@ export const CreateUserSchema = Schema.Struct({
   roles: Schema.Array(Schema.UUID),
 }).annotations({ identifier: 'CreateUser' });
 
-export const UpdateUserRolesSchema = Schema.Struct({
-  roles: Schema.Array(Schema.UUID),
-}).annotations({ identifier: 'UpdateUserRoles' });
-
-export const BanUserSchema = Schema.Struct({
-  reason: Schema.optional(Schema.String),
-  expiresAt: Schema.optional(Schema.DateFromString),
-}).annotations({ identifier: 'BanUser' });
+export type CreateUser = Schema.Schema.Type<typeof CreateUserSchema>;

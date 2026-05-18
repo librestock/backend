@@ -1,6 +1,6 @@
 {
   "name": "@librestock/types",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "type": "module",
   "description": "Shared TypeScript interfaces and enums for LibreStock",
   "license": "AGPL-3.0",
