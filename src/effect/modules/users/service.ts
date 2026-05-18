@@ -42,11 +42,18 @@ interface BetterAuthBanUserBody {
   banExpiresIn?: number;
 }
 
+const BETTER_AUTH_ROLE = {
+  Admin: 'admin',
+  User: 'user',
+} as const;
+
+type BetterAuthRole = (typeof BETTER_AUTH_ROLE)[keyof typeof BETTER_AUTH_ROLE];
+
 interface BetterAuthCreateUserBody {
   readonly email: string;
   readonly name: string;
   readonly password: string;
-  readonly role: 'admin' | 'user';
+  readonly role: BetterAuthRole;
 }
 
 interface BetterAuthCreateUserResponse {
@@ -213,7 +220,9 @@ export class UsersService extends Effect.Service<UsersService>()(
                   email: dto.email,
                   name: dto.name,
                   password: dto.password,
-                  role: hasAdminRole ? 'admin' : 'user',
+                  role: hasAdminRole
+                    ? BETTER_AUTH_ROLE.Admin
+                    : BETTER_AUTH_ROLE.User,
                 } satisfies BetterAuthCreateUserBody,
               }) as Promise<BetterAuthCreateUserResponse>,
           );
@@ -283,7 +292,7 @@ export class UsersService extends Effect.Service<UsersService>()(
 
             yield* usersRepository.syncBetterAuthRole(
               userId,
-              hasAdminRole ? 'admin' : 'user',
+              hasAdminRole ? BETTER_AUTH_ROLE.Admin : BETTER_AUTH_ROLE.User,
             );
 
             yield* rolesService.clearCacheForUser(userId);
