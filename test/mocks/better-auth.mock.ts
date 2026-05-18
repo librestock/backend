@@ -1,5 +1,7 @@
 interface BetterAuthApi {
-  listUsers: (...args: unknown[]) => Promise<{ users: unknown[]; total: number }>;
+  listUsers: (
+    ...args: unknown[]
+  ) => Promise<{ users: unknown[]; total: number }>;
   banUser: (...args: unknown[]) => Promise<void>;
   unbanUser: (...args: unknown[]) => Promise<void>;
   removeUser: (...args: unknown[]) => Promise<void>;
@@ -12,14 +14,14 @@ export function betterAuth(_options: unknown): {
 } {
   return {
     $context: Promise.resolve({
-      runMigrations: () => Promise.resolve(),
+      runMigrations: async () => {},
     }),
     api: {
-      listUsers: () => Promise.resolve({ users: [], total: 0 }),
-      banUser: () => Promise.resolve(),
-      unbanUser: () => Promise.resolve(),
-      removeUser: () => Promise.resolve(),
-      revokeUserSessions: () => Promise.resolve(),
+      listUsers: async () => ({ users: [], total: 0 }),
+      banUser: async () => {},
+      unbanUser: async () => {},
+      removeUser: async () => {},
+      revokeUserSessions: async () => {},
     },
   };
 }

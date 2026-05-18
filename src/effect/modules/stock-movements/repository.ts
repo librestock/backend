@@ -92,17 +92,17 @@ export class StockMovementsRepository extends Effect.Service<StockMovementsRepos
       const findById = (id: string) =>
         Effect.gen(function* () {
           const tenantId = yield* requireRequestTenantId;
-          return yield* tryAsync('find stock movement by id', () =>
-            db.query.stockMovements
-              .findFirst({
-                where: and(
-                  eq(stockMovements.tenant_id, tenantId),
-                  eq(stockMovements.id, id),
-                ),
-                with: withRelations,
-              })
-              .then((row) => row ?? null),
-          );
+          return yield* tryAsync('find stock movement by id', async () => {
+            const row = await db.query.stockMovements.findFirst({
+              where: and(
+                eq(stockMovements.tenant_id, tenantId),
+                eq(stockMovements.id, id),
+              ),
+              with: withRelations,
+            });
+
+            return row ?? null;
+          });
         });
 
       const findByProductId = (productId: string) =>

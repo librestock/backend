@@ -197,19 +197,16 @@ export async function assignRoleToUser(
   userId: string,
   roleId: string,
 ): Promise<void> {
-  await retryOnTransient(
-    () =>
-      db
-        .insert(userRoles)
-        .values({
-          tenant_id: DEFAULT_TENANT_ID,
-          user_id: userId,
-          role_id: roleId,
-        })
-        .onConflictDoNothing()
-        .then(() => undefined),
-    'assignRoleToUser',
-  );
+  await retryOnTransient(async () => {
+    await db
+      .insert(userRoles)
+      .values({
+        tenant_id: DEFAULT_TENANT_ID,
+        user_id: userId,
+        role_id: roleId,
+      })
+      .onConflictDoNothing();
+  }, 'assignRoleToUser');
 }
 
 /**

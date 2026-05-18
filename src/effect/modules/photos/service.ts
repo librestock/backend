@@ -162,7 +162,9 @@ export class PhotosService extends Effect.Service<PhotosService>()(
               display_order: existingCount,
               uploaded_by: userId ?? null,
             })
-            .pipe(Effect.tapError(() => Effect.ignore(safeUnlink(storagePath))));
+            .pipe(
+              Effect.tapError(() => Effect.ignore(safeUnlink(storagePath))),
+            );
 
           return toPhotoResponseDto(photo);
         }).pipe(
@@ -199,11 +201,14 @@ export class PhotosService extends Effect.Service<PhotosService>()(
           const photo = yield* findPhotoOrFail(id);
 
           const accessible = yield* Effect.tryPromise({
-            try: () =>
-              access(photo.storage_path).then(
-                () => true,
-                () => false,
-              ),
+            try: async () => {
+              try {
+                await access(photo.storage_path);
+                return true;
+              } catch {
+                return false;
+              }
+            },
             catch: (cause) =>
               new PhotosInfrastructureError({
                 action: 'check photo file existence',

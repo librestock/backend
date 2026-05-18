@@ -46,7 +46,7 @@ afterEach(() => {
 describe('HealthService', () => {
   describe('live', () => {
     it.effect('returns status "ok" with empty info/error/details', () => {
-      const db = makeDbMock(() => Promise.resolve([]));
+      const db = makeDbMock(async () => []);
       return Effect.gen(function* () {
         const svc = yield* HealthService;
         const result = yield* svc.live;
@@ -55,14 +55,14 @@ describe('HealthService', () => {
         expect(result.error).toEqual({});
         expect(result.details).toEqual({});
         // `live` must not touch the database.
-        expect((db.execute as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+        expect(db.execute as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
       }).pipe(provide(db));
     });
   });
 
   describe('ready', () => {
     it.effect('reports database up when SELECT 1 succeeds', () => {
-      const db = makeDbMock(() => Promise.resolve([{ '?column?': 1 }]));
+      const db = makeDbMock(async () => [{ '?column?': 1 }]);
       return Effect.gen(function* () {
         const svc = yield* HealthService;
         const result = yield* svc.ready;
@@ -75,7 +75,9 @@ describe('HealthService', () => {
     });
 
     it.effect('reports database down when SELECT 1 rejects', () => {
-      const db = makeDbMock(() => Promise.reject(new Error('connection refused')));
+      const db = makeDbMock(async () => {
+        throw new Error('connection refused');
+      });
       return Effect.gen(function* () {
         const svc = yield* HealthService;
         const result = yield* svc.ready;
@@ -96,7 +98,7 @@ describe('HealthService', () => {
   describe('healthCheck', () => {
     it.effect('reports ok when DB is up and BETTER_AUTH_SECRET is set', () => {
       vi.stubEnv('BETTER_AUTH_SECRET', 'test-secret');
-      const db = makeDbMock(() => Promise.resolve([{ '?column?': 1 }]));
+      const db = makeDbMock(async () => [{ '?column?': 1 }]);
       return Effect.gen(function* () {
         const svc = yield* HealthService;
         const result = yield* svc.healthCheck;
@@ -114,7 +116,7 @@ describe('HealthService', () => {
 
     it.effect('reports error when BETTER_AUTH_SECRET is missing', () => {
       vi.stubEnv('BETTER_AUTH_SECRET', '');
-      const db = makeDbMock(() => Promise.resolve([{ '?column?': 1 }]));
+      const db = makeDbMock(async () => [{ '?column?': 1 }]);
       return Effect.gen(function* () {
         const svc = yield* HealthService;
         const result = yield* svc.healthCheck;
@@ -127,26 +129,31 @@ describe('HealthService', () => {
       }).pipe(provide(db));
     });
 
-    it.effect('reports both checks down when DB fails and secret missing', () => {
-      vi.stubEnv('BETTER_AUTH_SECRET', '');
-      const db = makeDbMock(() => Promise.reject(new Error('db down')));
-      return Effect.gen(function* () {
-        const svc = yield* HealthService;
-        const result = yield* svc.healthCheck;
-        expect(result.status).toBe('error');
-        expect(result.info).toEqual({});
-        expect(result.error.database).toMatchObject({
-          status: 'down',
-          messageKey: 'health.databaseUnreachable',
+    it.effect(
+      'reports both checks down when DB fails and secret missing',
+      () => {
+        vi.stubEnv('BETTER_AUTH_SECRET', '');
+        const db = makeDbMock(async () => {
+          throw new Error('db down');
         });
-        expect(result.error['better-auth']).toMatchObject({
-          status: 'down',
-          messageKey: 'health.betterAuthSecretMissing',
-        });
-        expect(Object.keys(result.details)).toEqual(
-          expect.arrayContaining(['database', 'better-auth']),
-        );
-      }).pipe(provide(db));
-    });
+        return Effect.gen(function* () {
+          const svc = yield* HealthService;
+          const result = yield* svc.healthCheck;
+          expect(result.status).toBe('error');
+          expect(result.info).toEqual({});
+          expect(result.error.database).toMatchObject({
+            status: 'down',
+            messageKey: 'health.databaseUnreachable',
+          });
+          expect(result.error['better-auth']).toMatchObject({
+            status: 'down',
+            messageKey: 'health.betterAuthSecretMissing',
+          });
+          expect(Object.keys(result.details)).toEqual(
+            expect.arrayContaining(['database', 'better-auth']),
+          );
+        }).pipe(provide(db));
+      },
+    );
   });
 });
