@@ -196,11 +196,19 @@ export class UsersService extends Effect.Service<UsersService>()(
 
       const createUser = trace.traced('createUser', (dto: CreateUserDto) =>
         Effect.gen(function* () {
-          const hasAdminRole = yield* usersRepository.hasAdminRole(dto.roles);
+          const tenantId = yield* requireRequestTenantId;
+          const headers = yield* BetterAuthHeaders;
+
+          yield* usersRepository.validateRoleIds(dto.roles, tenantId);
+          const hasAdminRole = yield* usersRepository.hasAdminRole(
+            dto.roles,
+            tenantId,
+          );
           const result = yield* tryAsync(
             'create user in auth provider',
             () =>
               betterAuth.api.createUser({
+                headers,
                 body: {
                   email: dto.email,
                   name: dto.name,
@@ -209,12 +217,37 @@ export class UsersService extends Effect.Service<UsersService>()(
                 } satisfies BetterAuthCreateUserBody,
               }) as Promise<BetterAuthCreateUserResponse>,
           );
+          const userId = result.user.id;
 
-          yield* usersRepository.replaceUserRoles(result.user.id, dto.roles);
-          yield* rolesService.clearCacheForUser(result.user.id);
+          yield* Effect.gen(function* () {
+            yield* usersRepository.createTenantMembership(userId, tenantId);
+            yield* usersRepository.replaceUserRoles(
+              userId,
+              dto.roles,
+              tenantId,
+            );
+            yield* rolesService.clearCacheForUser(userId);
+          }).pipe(
+            Effect.tapError(() =>
+              Effect.all(
+                [
+                  usersRepository.deleteUserRoles(userId, tenantId),
+                  usersRepository.deleteTenantMembership(userId, tenantId),
+                  tryAsync('remove user after create failure', () =>
+                    betterAuth.api.removeUser({
+                      headers,
+                      body: { userId } satisfies BetterAuthUserActionBody,
+                    }),
+                  ),
+                ],
+                { discard: true },
+              ).pipe(Effect.ignore),
+            ),
+          );
 
           const roleEntities = yield* usersRepository.findUserRoles(
-            result.user.id,
+            userId,
+            tenantId,
           );
 
           return toUserResponse(

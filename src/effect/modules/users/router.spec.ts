@@ -16,6 +16,7 @@
 import { Effect } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
 import type { UserResponseDto } from '@librestock/types/users';
+import { BetterAuthHeaders } from '../../platform/better-auth';
 import { UserNotFound, UsersInfrastructureError } from './users.errors';
 import { makeUsersRouterHarness } from './__fixtures__/router-harness';
 import { UsersService } from './service';
@@ -214,6 +215,90 @@ describe('usersRouter', () => {
         new Request(`http://localhost/users/${TARGET_USER_ID}`),
       );
       expect(response.status).toBe(404);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // POST /users
+  // -------------------------------------------------------------------
+  describe('POST /users', () => {
+    const validBody = {
+      name: 'New User',
+      email: 'new-user@example.com',
+      password: 'password123',
+      roles: [ROLE_ID_1],
+    };
+
+    it('rejects without users:write', async () => {
+      const { handler } = makeUsersRouterHarness({
+        service: {
+          createUser: () => Effect.die('should not run'),
+        },
+        permissions: readOnly,
+      });
+      const response = await handler(
+        new Request('http://localhost/users', {
+          method: 'POST',
+          headers: jsonHeaders,
+          body: JSON.stringify(validBody),
+        }),
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('returns 400 when the body contains a non-UUID role id', async () => {
+      const { handler } = makeUsersRouterHarness({
+        service: {
+          createUser: () => Effect.die('should not run'),
+        },
+        permissions: writeAll,
+      });
+      const response = await handler(
+        new Request('http://localhost/users', {
+          method: 'POST',
+          headers: jsonHeaders,
+          body: JSON.stringify({ ...validBody, roles: ['not-a-uuid'] }),
+        }),
+      );
+      expect(response.status).toBe(400);
+    });
+
+    it('passes the create payload and request headers to the service', async () => {
+      let capturedAuthorization: string | null = null;
+      const createUser = vi.fn((dto: typeof validBody) =>
+        Effect.gen(function* () {
+          const headers = yield* BetterAuthHeaders;
+          capturedAuthorization = headers.get('authorization');
+          return makeUser({
+            name: dto.name,
+            email: dto.email,
+            roles: ['Warehouse Manager'],
+          });
+        }),
+      );
+      const { handler } = makeUsersRouterHarness({
+        service: { createUser },
+        permissions: writeAll,
+      });
+      const response = await handler(
+        new Request('http://localhost/users', {
+          method: 'POST',
+          headers: {
+            ...jsonHeaders,
+            authorization: 'Bearer admin-token',
+          },
+          body: JSON.stringify(validBody),
+        }),
+      );
+
+      expect(response.status).toBe(201);
+      await expect(response.json()).resolves.toMatchObject({
+        name: 'New User',
+        email: 'new-user@example.com',
+        roles: ['Warehouse Manager'],
+      });
+      expect(createUser).toHaveBeenCalledWith(validBody);
+      expect(capturedAuthorization).toBe('Bearer admin-token');
     });
   });
 

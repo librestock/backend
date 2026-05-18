@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Effect } from 'effect';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { makeTryAsync } from '../../platform/try-async';
@@ -83,6 +84,26 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
             );
 
           return rows;
+        });
+
+      const validateRoleIds = (roleIds: string[], tenantId: string) =>
+        tryAsync('validate user roles', async () => {
+          const uniqueRoleIds = [...new Set(roleIds)];
+          if (uniqueRoleIds.length === 0) return;
+
+          const tenantRoles = await db
+            .select({ id: roles.id })
+            .from(roles)
+            .where(
+              and(
+                inArray(roles.id, uniqueRoleIds),
+                eq(roles.tenant_id, tenantId),
+              ),
+            );
+
+          if (tenantRoles.length !== uniqueRoleIds.length) {
+            throw new Error('One or more roles do not belong to tenant');
+          }
         });
 
       const replaceUserRoles = (
@@ -287,9 +308,23 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
           return rows.length > 0;
         });
 
+      const createTenantMembership = (userId: string, tenantId: string) =>
+        tryAsync('create tenant membership', async () => {
+          await db
+            .insert(members)
+            .values({
+              id: randomUUID(),
+              organization_id: tenantId,
+              user_id: userId,
+              role: 'member',
+            })
+            .onConflictDoNothing();
+        });
+
       return {
         findRoleAssignments,
         findUserRoles,
+        validateRoleIds,
         replaceUserRoles,
         hasAdminRole,
         hasAdminRoleForUser,
@@ -299,6 +334,7 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
         deleteTenantMembership,
         hasTenantMembership,
         hasTenantMemberships,
+        createTenantMembership,
       };
     }),
   },

@@ -63,6 +63,7 @@ export const usersRouter = HttpRouter.empty.pipe(
     Effect.gen(function* () {
       yield* requirePermission(Resource.USERS, Permission.WRITE);
       const dto = yield* HttpServerRequest.schemaBodyJson(CreateUserSchema);
+      const requestHeaders = yield* getRequestHeaders;
       const usersService = yield* UsersService;
       const createDto: CreateUserDto = {
         name: dto.name,
@@ -70,9 +71,14 @@ export const usersRouter = HttpRouter.empty.pipe(
         password: dto.password,
         roles: [...dto.roles],
       };
-      return yield* respondJson(usersService.createUser(createDto), {
-        status: 201,
-      });
+      return yield* respondJson(
+        usersService
+          .createUser(createDto)
+          .pipe(Effect.provideService(BetterAuthHeaders, requestHeaders)),
+        {
+          status: 201,
+        },
+      );
     }),
   ),
   HttpRouter.put(
