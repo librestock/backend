@@ -156,7 +156,7 @@ export const localizeMessageTree = (
     return value.map((item) => localizeMessageTree(item, locale));
   }
 
-  if (!isRecord(value)) {
+  if (!isRecord(value) || value instanceof Date) {
     return value;
   }
 
