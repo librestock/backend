@@ -101,6 +101,11 @@ export const organizations = pgTable(
   (table) => [uniqueIndex('organization_slug_unique').on(table.slug)],
 );
 
+export const betterAuthUsers = pgTable('user', {
+  id: uuid('id').primaryKey(),
+  name: text('name'),
+});
+
 export const members = pgTable(
   'member',
   {

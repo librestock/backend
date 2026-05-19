@@ -96,11 +96,11 @@ const makeHandler = (
 const makeAuditLog = () => ({
   id: LOG_ID,
   user_id: USER_ID,
+  user_name: 'Router Tester',
   action: AuditAction.CREATE,
   entity_type: AuditEntityType.PRODUCT,
   entity_id: ENTITY_ID,
   changes: null,
-  ip_address: null,
   user_agent: null,
   created_at: new Date('2026-01-01T00:00:00.000Z'),
 });

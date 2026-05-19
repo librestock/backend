@@ -72,6 +72,23 @@ describe('Effect AuditLogsService', () => {
     expect(result.meta.total).toBe(1);
   });
 
+  it('maps joined user names into audit log responses', async () => {
+    const repo = makeMockRepository({
+      findById: vi.fn().mockReturnValue(
+        Effect.succeed({
+          ...makeAuditLogEntity(),
+          user_name: 'Audit Actor',
+        }),
+      ),
+    });
+    const service = await buildService(repo);
+
+    const result = await run(service.findById('log-1'));
+
+    expect(result.user_name).toBe('Audit Actor');
+    expect(result).not.toHaveProperty('ip_address');
+  });
+
   it('passes filter options to repository', async () => {
     const repo = makeMockRepository();
     const service = await buildService(repo);
@@ -95,11 +112,12 @@ describe('Effect AuditLogsService', () => {
     );
   });
 
-  it('returns a single audit log by ID', async () => {
+  it('returns a single audit log by ID with a null user name when not joined', async () => {
     const service = await buildService();
     const result = await run(service.findById('log-1'));
 
-    expect(result).toMatchObject({ id: 'log-1' });
+    expect(result).toMatchObject({ id: 'log-1', user_name: null });
+    expect(result).not.toHaveProperty('ip_address');
   });
 
   it('fails with AuditLogNotFound when ID does not exist', async () => {

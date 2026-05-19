@@ -1,5 +1,14 @@
 import { Effect } from 'effect';
-import { eq, and, desc, gte, lte, sql, type SQL } from 'drizzle-orm';
+import {
+  eq,
+  and,
+  desc,
+  gte,
+  lte,
+  sql,
+  getTableColumns,
+  type SQL,
+} from 'drizzle-orm';
 import type {
   AuditAction,
   AuditEntityType,
@@ -10,7 +19,7 @@ import {
 } from '../../platform/drizzle-query.utils';
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
-import { auditLogs } from '../../platform/db/schema';
+import { auditLogs, betterAuthUsers } from '../../platform/db/schema';
 import { requireRequestTenantId } from '../../platform/tenant-context';
 import { AuditLogsInfrastructureError } from './audit-logs.errors';
 
@@ -33,6 +42,10 @@ const tryAsync = makeTryAsync(
       messageKey: 'auditLogs.repositoryFailed',
     }),
 );
+
+export type AuditLogRowWithUser = typeof auditLogs.$inferSelect & {
+  readonly user_name: string | null;
+};
 
 function buildAuditFilters(options: AuditLogQueryOptions): SQL[] {
   const conditions: SQL[] = [];
@@ -62,6 +75,10 @@ export class AuditLogsRepository extends Effect.Service<AuditLogsRepository>()(
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;
+      const auditLogSelect = {
+        ...getTableColumns(auditLogs),
+        user_name: betterAuthUsers.name,
+      };
 
       const findPaginated = (options: AuditLogQueryOptions) =>
         Effect.gen(function* () {
@@ -82,8 +99,12 @@ export class AuditLogsRepository extends Effect.Service<AuditLogsRepository>()(
                 .from(auditLogs)
                 .where(where),
               db
-                .select()
+                .select(auditLogSelect)
                 .from(auditLogs)
+                .leftJoin(
+                  betterAuthUsers,
+                  eq(auditLogs.user_id, betterAuthUsers.id),
+                )
                 .where(where)
                 .orderBy(desc(auditLogs.created_at))
                 .offset(skip)
@@ -100,8 +121,12 @@ export class AuditLogsRepository extends Effect.Service<AuditLogsRepository>()(
           const tenantId = yield* requireRequestTenantId;
           return yield* tryAsync('load audit log', async () => {
             const rows = await db
-              .select()
+              .select(auditLogSelect)
               .from(auditLogs)
+              .leftJoin(
+                betterAuthUsers,
+                eq(auditLogs.user_id, betterAuthUsers.id),
+              )
               .where(
                 and(
                   eq(auditLogs.tenant_id, tenantId),
@@ -118,8 +143,12 @@ export class AuditLogsRepository extends Effect.Service<AuditLogsRepository>()(
           const tenantId = yield* requireRequestTenantId;
           return yield* tryAsync('load entity audit history', () =>
             db
-              .select()
+              .select(auditLogSelect)
               .from(auditLogs)
+              .leftJoin(
+                betterAuthUsers,
+                eq(auditLogs.user_id, betterAuthUsers.id),
+              )
               .where(
                 and(
                   eq(auditLogs.tenant_id, tenantId),
@@ -136,8 +165,12 @@ export class AuditLogsRepository extends Effect.Service<AuditLogsRepository>()(
           const tenantId = yield* requireRequestTenantId;
           return yield* tryAsync('load user audit history', () =>
             db
-              .select()
+              .select(auditLogSelect)
               .from(auditLogs)
+              .leftJoin(
+                betterAuthUsers,
+                eq(auditLogs.user_id, betterAuthUsers.id),
+              )
               .where(
                 and(
                   eq(auditLogs.tenant_id, tenantId),

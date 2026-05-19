@@ -7,7 +7,7 @@ import {
 import { makeGetOrFail } from '../../platform/from-null-or';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import type { auditLogs } from '../../platform/db/schema';
-import type { AuditLogQueryOptions } from './repository';
+import type { AuditLogQueryOptions, AuditLogRowWithUser } from './repository';
 import {
   AuditLogNotFound,
   type AuditLogsInfrastructureError,
@@ -15,16 +15,16 @@ import {
 import type { TenantNotResolved } from '../../platform/tenant-context';
 import { AuditLogsRepository } from './repository';
 
-type AuditLog = typeof auditLogs.$inferSelect;
+type AuditLog = typeof auditLogs.$inferSelect | AuditLogRowWithUser;
 
 const toAuditLogResponseDto = (auditLog: AuditLog): AuditLogResponseDto => ({
   id: auditLog.id,
   user_id: auditLog.user_id,
+  user_name: 'user_name' in auditLog ? auditLog.user_name : null,
   action: auditLog.action,
   entity_type: auditLog.entity_type,
   entity_id: auditLog.entity_id,
   changes: auditLog.changes as AuditLogResponseDto['changes'],
-  ip_address: auditLog.ip_address,
   user_agent: auditLog.user_agent,
   created_at: auditLog.created_at,
 });
