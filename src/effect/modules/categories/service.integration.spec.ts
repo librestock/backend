@@ -4,9 +4,11 @@ import {
   closeTestDb,
   truncateAll,
   makeTestDrizzleLayer,
+  makeTestRequestContext,
 } from '../../test/integration-layer';
 import { seedCategory } from '../../test/seed';
-import type { DrizzleDb } from '../../platform/drizzle';
+import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
+import { CurrentRequestContext } from '../../platform/request-context';
 import { CategoriesService } from './service';
 
 let db: DrizzleDb;
@@ -26,6 +28,44 @@ const run = <A, E>(effect: Effect.Effect<A, E, CategoriesService>) =>
 
 const fail = <A, E>(effect: Effect.Effect<A, E, CategoriesService>) =>
   Effect.runPromise(Effect.flip(effect.pipe(Effect.provide(TestLayer))));
+
+const TENANT_A = '00000000-0000-4000-8000-000000000301';
+const TENANT_B = '00000000-0000-4000-8000-000000000302';
+
+const makeTenantContextLayer = (tenantId: string) =>
+  Layer.succeed(CurrentRequestContext, {
+    ...makeTestRequestContext(),
+    tenantId,
+    tenantName: tenantId,
+    tenantSlug: tenantId,
+  });
+
+const makeTenantLayer = (tenantId: string): Layer.Layer<CategoriesService> =>
+  CategoriesService.Default.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        Layer.succeed(DrizzleDatabase, db),
+        makeTenantContextLayer(tenantId),
+      ),
+    ),
+  );
+
+const makeTenantTestLayer = (tenantId: string) =>
+  Layer.mergeAll(makeTenantLayer(tenantId), makeTenantContextLayer(tenantId));
+
+const runWithTenant = <A, E>(
+  tenantId: string,
+  effect: Effect.Effect<A, E, CategoriesService>,
+) =>
+  Effect.runPromise(effect.pipe(Effect.provide(makeTenantTestLayer(tenantId))));
+
+const failWithTenant = <A, E>(
+  tenantId: string,
+  effect: Effect.Effect<A, E, CategoriesService>,
+) =>
+  Effect.runPromise(
+    Effect.flip(effect.pipe(Effect.provide(makeTenantTestLayer(tenantId)))),
+  );
 
 describe('CategoriesService Integration', () => {
   describe('create', () => {
@@ -75,10 +115,13 @@ describe('CategoriesService Integration', () => {
 
       const [a, b] = await run(
         Effect.flatMap(CategoriesService, (svc) =>
-          Effect.all([
-            svc.create({ name: 'Premium', parent_id: parentA.id } as any),
-            svc.create({ name: 'Premium', parent_id: parentB.id } as any),
-          ], { concurrency: 1 }),
+          Effect.all(
+            [
+              svc.create({ name: 'Premium', parent_id: parentA.id } as any),
+              svc.create({ name: 'Premium', parent_id: parentB.id } as any),
+            ],
+            { concurrency: 1 },
+          ),
         ),
       );
 
@@ -128,7 +171,10 @@ describe('CategoriesService Integration', () => {
 
     it('detects circular reference', async () => {
       const grandparent = await seedCategory(db, { name: 'GP' });
-      const parent = await seedCategory(db, { name: 'P', parent_id: grandparent.id });
+      const parent = await seedCategory(db, {
+        name: 'P',
+        parent_id: grandparent.id,
+      });
       const child = await seedCategory(db, { name: 'C', parent_id: parent.id });
 
       // Try to make grandparent a child of child → circular
@@ -161,8 +207,14 @@ describe('CategoriesService Integration', () => {
   describe('findAllDescendantIds', () => {
     it('returns all descendant IDs recursively', async () => {
       const root = await seedCategory(db, { name: 'Root' });
-      const child = await seedCategory(db, { name: 'Child', parent_id: root.id });
-      const grandchild = await seedCategory(db, { name: 'Grandchild', parent_id: child.id });
+      const child = await seedCategory(db, {
+        name: 'Child',
+        parent_id: root.id,
+      });
+      const grandchild = await seedCategory(db, {
+        name: 'Grandchild',
+        parent_id: child.id,
+      });
 
       const ids = await run(
         Effect.flatMap(CategoriesService, (svc) =>
@@ -180,14 +232,77 @@ describe('CategoriesService Integration', () => {
     it('deletes a category', async () => {
       const cat = await seedCategory(db, { name: 'Doomed' });
 
-      await run(
-        Effect.flatMap(CategoriesService, (svc) => svc.delete(cat.id)),
-      );
+      await run(Effect.flatMap(CategoriesService, (svc) => svc.delete(cat.id)));
 
       const tree = await run(
         Effect.flatMap(CategoriesService, (svc) => svc.findAll()),
       );
       expect(tree.find((c: any) => c.id === cat.id)).toBeUndefined();
+    });
+  });
+
+  describe('tenant isolation', () => {
+    it('creates categories under the active tenant', async () => {
+      const result = await runWithTenant(
+        TENANT_A,
+        Effect.flatMap(CategoriesService, (svc) =>
+          svc.create({ name: 'Scoped Category' } as any),
+        ),
+      );
+
+      expect(result.tenant_id).toBe(TENANT_A);
+    });
+
+    it('only lists categories for the active tenant', async () => {
+      await seedCategory(db, {
+        tenant_id: TENANT_A,
+        name: 'Tenant A Category',
+      });
+      await seedCategory(db, {
+        tenant_id: TENANT_B,
+        name: 'Tenant B Category',
+      });
+
+      const tree = await runWithTenant(
+        TENANT_A,
+        Effect.flatMap(CategoriesService, (svc) => svc.findAll()),
+      );
+
+      expect(tree.map((category: any) => category.name)).toEqual([
+        'Tenant A Category',
+      ]);
+    });
+
+    it('does not update a category from another tenant', async () => {
+      const tenantBCategory = await seedCategory(db, {
+        tenant_id: TENANT_B,
+        name: 'Tenant B Category',
+      });
+
+      const error = await failWithTenant(
+        TENANT_A,
+        Effect.flatMap(CategoriesService, (svc) =>
+          svc.update(tenantBCategory.id, { name: 'Leaked Update' } as any),
+        ),
+      );
+
+      expect(error._tag).toBe('CategoryNotFound');
+    });
+
+    it('does not delete a category from another tenant', async () => {
+      const tenantBCategory = await seedCategory(db, {
+        tenant_id: TENANT_B,
+        name: 'Tenant B Category',
+      });
+
+      const error = await failWithTenant(
+        TENANT_A,
+        Effect.flatMap(CategoriesService, (svc) =>
+          svc.delete(tenantBCategory.id),
+        ),
+      );
+
+      expect(error._tag).toBe('CategoryNotFound');
     });
   });
 });

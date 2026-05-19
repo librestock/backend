@@ -1,5 +1,5 @@
 import { Effect } from 'effect';
-import { eq, or, ilike, and, sql, type SQL } from 'drizzle-orm';
+import { eq, or, ilike, sql, type SQL } from 'drizzle-orm';
 import type { ClientQueryDto } from '@librestock/types/clients';
 import {
   resolvePaginationWindow,
@@ -9,10 +9,8 @@ import {
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { clients } from '../../platform/db/schema';
-import {
-  requireRequestTenantId,
-  type TenantNotResolved,
-} from '../../platform/tenant-context';
+import type { TenantNotResolved } from '../../platform/tenant-context';
+import { TenantQuery } from '../../platform/tenant-query';
 import { ClientsInfrastructureError } from './clients.errors';
 
 const tryAsync = makeTryAsync(
@@ -45,6 +43,7 @@ export class ClientsRepository extends Effect.Service<ClientsRepository>()(
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;
+      const tenantQuery = yield* TenantQuery;
 
       const findAllPaginated = (
         query: ClientQueryDto,
@@ -53,15 +52,14 @@ export class ClientsRepository extends Effect.Service<ClientsRepository>()(
         ClientsInfrastructureError | TenantNotResolved
       > =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenant(
+            clients,
+            ...buildClientFilters(query),
+          );
           return yield* tryAsync('list clients', async () => {
             const { page, limit, skip } = resolvePaginationWindow(
               query.page,
               query.limit,
-            );
-            const where = and(
-              eq(clients.tenant_id, tenantId),
-              ...buildClientFilters(query),
             );
 
             const [countResult, data] = await Promise.all([
@@ -85,40 +83,33 @@ export class ClientsRepository extends Effect.Service<ClientsRepository>()(
 
       const findById = (id: string) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(clients, id);
           return yield* tryAsync('load client', async () => {
-            const rows = await db
-              .select()
-              .from(clients)
-              .where(and(eq(clients.tenant_id, tenantId), eq(clients.id, id)))
-              .limit(1);
+            const rows = await db.select().from(clients).where(where).limit(1);
             return rows[0] ?? null;
           });
         });
 
       const findByEmail = (email: string) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenant(
+            clients,
+            eq(clients.email, email),
+          );
           return yield* tryAsync('load client by email', async () => {
-            const rows = await db
-              .select()
-              .from(clients)
-              .where(
-                and(eq(clients.tenant_id, tenantId), eq(clients.email, email)),
-              )
-              .limit(1);
+            const rows = await db.select().from(clients).where(where).limit(1);
             return rows[0] ?? null;
           });
         });
 
       const existsById = (id: string) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(clients, id);
           return yield* tryAsync('check client existence', async () => {
             const rows = await db
               .select({ id: clients.id })
               .from(clients)
-              .where(and(eq(clients.tenant_id, tenantId), eq(clients.id, id)))
+              .where(where)
               .limit(1);
             return rows.length > 0;
           });
@@ -126,12 +117,9 @@ export class ClientsRepository extends Effect.Service<ClientsRepository>()(
 
       const create = (data: typeof clients.$inferInsert) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const values = yield* tenantQuery.insertValues(data);
           return yield* tryAsync('create client', async () => {
-            const rows = await db
-              .insert(clients)
-              .values({ ...data, tenant_id: tenantId })
-              .returning();
+            const rows = await db.insert(clients).values(values).returning();
             return rows[0]!;
           });
         });
@@ -141,14 +129,15 @@ export class ClientsRepository extends Effect.Service<ClientsRepository>()(
         data: Omit<Partial<typeof clients.$inferInsert>, 'tenant_id'>,
       ) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(clients, id);
           return yield* tryAsync('update client', async () => {
-            const { tenant_id: _tenantId, ...updateData } =
-              data as Partial<typeof clients.$inferInsert>;
+            const { tenant_id: _tenantId, ...updateData } = data as Partial<
+              typeof clients.$inferInsert
+            >;
             const rows = await db
               .update(clients)
               .set({ ...updateData, updated_at: new Date() })
-              .where(and(eq(clients.tenant_id, tenantId), eq(clients.id, id)))
+              .where(where)
               .returning({ id: clients.id });
             return rows.length;
           });
@@ -156,11 +145,9 @@ export class ClientsRepository extends Effect.Service<ClientsRepository>()(
 
       const remove = (id: string) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(clients, id);
           return yield* tryAsync('delete client', async () => {
-            await db
-              .delete(clients)
-              .where(and(eq(clients.tenant_id, tenantId), eq(clients.id, id)));
+            await db.delete(clients).where(where);
           });
         });
 
@@ -174,5 +161,6 @@ export class ClientsRepository extends Effect.Service<ClientsRepository>()(
         delete: remove,
       };
     }),
+    dependencies: [TenantQuery.Default],
   },
 ) {}

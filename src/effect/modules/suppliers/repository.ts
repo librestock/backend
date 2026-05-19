@@ -1,5 +1,5 @@
 import { Effect } from 'effect';
-import { eq, ilike, and, sql, type SQL } from 'drizzle-orm';
+import { eq, ilike, sql, type SQL } from 'drizzle-orm';
 import type { SupplierQueryDto } from '@librestock/types/suppliers';
 import {
   resolvePaginationWindow,
@@ -8,7 +8,7 @@ import {
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { suppliers } from '../../platform/db/schema';
-import { requireRequestTenantId } from '../../platform/tenant-context';
+import { TenantQuery } from '../../platform/tenant-query';
 import { SuppliersInfrastructureError } from './suppliers.errors';
 
 function buildSupplierFilters(query: SupplierQueryDto): SQL[] {
@@ -36,18 +36,18 @@ export class SuppliersRepository extends Effect.Service<SuppliersRepository>()(
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;
+      const tenantQuery = yield* TenantQuery;
 
       const findAllPaginated = (query: SupplierQueryDto) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenant(
+            suppliers,
+            ...buildSupplierFilters(query),
+          );
           return yield* tryAsync('list suppliers', async () => {
             const { page, limit, skip } = resolvePaginationWindow(
               query.page,
               query.limit,
-            );
-            const where = and(
-              eq(suppliers.tenant_id, tenantId),
-              ...buildSupplierFilters(query),
             );
 
             const [countResult, data] = await Promise.all([
@@ -71,14 +71,12 @@ export class SuppliersRepository extends Effect.Service<SuppliersRepository>()(
 
       const findById = (id: string) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(suppliers, id);
           return yield* tryAsync('load supplier', async () => {
             const rows = await db
               .select()
               .from(suppliers)
-              .where(
-                and(eq(suppliers.tenant_id, tenantId), eq(suppliers.id, id)),
-              )
+              .where(where)
               .limit(1);
             return rows[0] ?? null;
           });
@@ -86,14 +84,12 @@ export class SuppliersRepository extends Effect.Service<SuppliersRepository>()(
 
       const existsById = (id: string) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(suppliers, id);
           return yield* tryAsync('check supplier existence', async () => {
             const rows = await db
               .select({ id: suppliers.id })
               .from(suppliers)
-              .where(
-                and(eq(suppliers.tenant_id, tenantId), eq(suppliers.id, id)),
-              )
+              .where(where)
               .limit(1);
             return rows.length > 0;
           });
@@ -101,12 +97,9 @@ export class SuppliersRepository extends Effect.Service<SuppliersRepository>()(
 
       const create = (data: typeof suppliers.$inferInsert) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const values = yield* tenantQuery.insertValues(data);
           return yield* tryAsync('create supplier', async () => {
-            const rows = await db
-              .insert(suppliers)
-              .values({ ...data, tenant_id: tenantId })
-              .returning();
+            const rows = await db.insert(suppliers).values(values).returning();
             return rows[0]!;
           });
         });
@@ -116,16 +109,15 @@ export class SuppliersRepository extends Effect.Service<SuppliersRepository>()(
         data: Omit<Partial<typeof suppliers.$inferInsert>, 'tenant_id'>,
       ) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(suppliers, id);
           return yield* tryAsync('update supplier', async () => {
-            const { tenant_id: _tenantId, ...updateData } =
-              data as Partial<typeof suppliers.$inferInsert>;
+            const { tenant_id: _tenantId, ...updateData } = data as Partial<
+              typeof suppliers.$inferInsert
+            >;
             const rows = await db
               .update(suppliers)
               .set({ ...updateData, updated_at: new Date() })
-              .where(
-                and(eq(suppliers.tenant_id, tenantId), eq(suppliers.id, id)),
-              )
+              .where(where)
               .returning({ id: suppliers.id });
             return rows.length;
           });
@@ -133,13 +125,9 @@ export class SuppliersRepository extends Effect.Service<SuppliersRepository>()(
 
       const remove = (id: string) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(suppliers, id);
           return yield* tryAsync('delete supplier', async () => {
-            await db
-              .delete(suppliers)
-              .where(
-                and(eq(suppliers.tenant_id, tenantId), eq(suppliers.id, id)),
-              );
+            await db.delete(suppliers).where(where);
           });
         });
 
@@ -152,5 +140,6 @@ export class SuppliersRepository extends Effect.Service<SuppliersRepository>()(
         delete: remove,
       };
     }),
+    dependencies: [TenantQuery.Default],
   },
 ) {}

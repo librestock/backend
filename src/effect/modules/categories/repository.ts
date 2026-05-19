@@ -1,9 +1,9 @@
 import { Effect } from 'effect';
-import { eq, and, asc, sql } from 'drizzle-orm';
+import { eq, asc, sql, type SQL } from 'drizzle-orm';
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { categories } from '../../platform/db/schema';
-import { requireRequestTenantId } from '../../platform/tenant-context';
+import { TenantQuery } from '../../platform/tenant-query';
 import { CategoriesInfrastructureError } from './categories.errors';
 
 const tryAsync = makeTryAsync(
@@ -20,32 +20,28 @@ export class CategoriesRepository extends Effect.Service<CategoriesRepository>()
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;
+      const tenantQuery = yield* TenantQuery;
 
       const findAll = () =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenant(categories);
           return yield* tryAsync('list categories', () =>
             db
               .select()
               .from(categories)
-              .where(eq(categories.tenant_id, tenantId))
+              .where(where)
               .orderBy(asc(categories.name)),
           );
         });
 
       const findById = (id: string) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(categories, id);
           return yield* tryAsync('load category', async () => {
             const rows = await db
               .select()
               .from(categories)
-              .where(
-                and(
-                  eq(categories.tenant_id, tenantId),
-                  eq(categories.id, id),
-                ),
-              )
+              .where(where)
               .limit(1);
             return rows[0] ?? null;
           });
@@ -53,17 +49,12 @@ export class CategoriesRepository extends Effect.Service<CategoriesRepository>()
 
       const existsById = (id: string) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(categories, id);
           return yield* tryAsync('check category existence', async () => {
             const rows = await db
               .select({ id: categories.id })
               .from(categories)
-              .where(
-                and(
-                  eq(categories.tenant_id, tenantId),
-                  eq(categories.id, id),
-                ),
-              )
+              .where(where)
               .limit(1);
             return rows.length > 0;
           });
@@ -71,19 +62,19 @@ export class CategoriesRepository extends Effect.Service<CategoriesRepository>()
 
       const existsByName = (name: string, parentId?: string | null) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const conditions: SQL[] = [eq(categories.name, name)];
+          if (parentId != null) {
+            conditions.push(eq(categories.parent_id, parentId));
+          }
+          const where = yield* tenantQuery.whereTenant(
+            categories,
+            ...conditions,
+          );
           return yield* tryAsync('check category name uniqueness', async () => {
-            const conditions = [
-              eq(categories.tenant_id, tenantId),
-              eq(categories.name, name),
-            ];
-            if (parentId != null) {
-              conditions.push(eq(categories.parent_id, parentId));
-            }
             const rows = await db
               .select({ id: categories.id })
               .from(categories)
-              .where(and(...conditions))
+              .where(where)
               .limit(1);
             return rows.length > 0;
           });
@@ -91,12 +82,9 @@ export class CategoriesRepository extends Effect.Service<CategoriesRepository>()
 
       const create = (data: typeof categories.$inferInsert) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const values = yield* tenantQuery.insertValues(data);
           return yield* tryAsync('create category', async () => {
-            const rows = await db
-              .insert(categories)
-              .values({ ...data, tenant_id: tenantId })
-              .returning();
+            const rows = await db.insert(categories).values(values).returning();
             return rows[0]!;
           });
         });
@@ -109,7 +97,7 @@ export class CategoriesRepository extends Effect.Service<CategoriesRepository>()
         >,
       ) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(categories, id);
           return yield* tryAsync('update category', async () => {
             const {
               id: _id,
@@ -121,12 +109,7 @@ export class CategoriesRepository extends Effect.Service<CategoriesRepository>()
             const rows = await db
               .update(categories)
               .set({ ...updateData, updated_at: new Date() })
-              .where(
-                and(
-                  eq(categories.tenant_id, tenantId),
-                  eq(categories.id, id),
-                ),
-              )
+              .where(where)
               .returning({ id: categories.id });
             return rows.length;
           });
@@ -134,16 +117,9 @@ export class CategoriesRepository extends Effect.Service<CategoriesRepository>()
 
       const remove = (id: string) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(categories, id);
           return yield* tryAsync('delete category', async () => {
-            await db
-              .delete(categories)
-              .where(
-                and(
-                  eq(categories.tenant_id, tenantId),
-                  eq(categories.id, id),
-                ),
-              );
+            await db.delete(categories).where(where);
           });
         });
 
@@ -153,25 +129,29 @@ export class CategoriesRepository extends Effect.Service<CategoriesRepository>()
         parent_id?: string | null;
       }) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
-          return yield* tryAsync('load category', async () => {
-            const where: ReturnType<typeof eq>[] = [
-              eq(categories.tenant_id, tenantId),
-            ];
-            if (conditions.id) where.push(eq(categories.id, conditions.id));
-            if (conditions.name)
-              where.push(eq(categories.name, conditions.name));
-            if (conditions.parent_id !== undefined) {
-              if (conditions.parent_id === null) {
-                where.push(sql`${categories.parent_id} IS NULL`);
-              } else {
-                where.push(eq(categories.parent_id, conditions.parent_id));
-              }
+          const filterConditions: SQL[] = [];
+          if (conditions.id)
+            filterConditions.push(eq(categories.id, conditions.id));
+          if (conditions.name)
+            filterConditions.push(eq(categories.name, conditions.name));
+          if (conditions.parent_id !== undefined) {
+            if (conditions.parent_id === null) {
+              filterConditions.push(sql`${categories.parent_id} IS NULL`);
+            } else {
+              filterConditions.push(
+                eq(categories.parent_id, conditions.parent_id),
+              );
             }
+          }
+          const where = yield* tenantQuery.whereTenant(
+            categories,
+            ...filterConditions,
+          );
+          return yield* tryAsync('load category', async () => {
             const rows = await db
               .select()
               .from(categories)
-              .where(and(...where))
+              .where(where)
               .limit(1);
             return rows[0] ?? null;
           });
@@ -179,12 +159,12 @@ export class CategoriesRepository extends Effect.Service<CategoriesRepository>()
 
       const findAllDescendantIds = (parentId: string) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenant(categories);
           return yield* tryAsync('find descendant categories', async () => {
             const allCategories = await db
               .select({ id: categories.id, parent_id: categories.parent_id })
               .from(categories)
-              .where(eq(categories.tenant_id, tenantId));
+              .where(where);
 
             const childIds: string[] = [];
             const findChildren = (currentParentId: string) => {
@@ -212,5 +192,6 @@ export class CategoriesRepository extends Effect.Service<CategoriesRepository>()
         findAllDescendantIds,
       };
     }),
+    dependencies: [TenantQuery.Default],
   },
 ) {}

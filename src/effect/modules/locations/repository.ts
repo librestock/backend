@@ -1,5 +1,5 @@
 import { Effect } from 'effect';
-import { eq, ilike, sql, and, type SQL } from 'drizzle-orm';
+import { eq, ilike, sql, type SQL } from 'drizzle-orm';
 import type { LocationQueryDto } from '@librestock/types/locations';
 import { LocationSortField } from '@librestock/types/locations';
 import type { SortOrder } from '@librestock/types/common';
@@ -11,7 +11,7 @@ import {
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { locations } from '../../platform/db/schema';
-import { requireRequestTenantId } from '../../platform/tenant-context';
+import { TenantQuery } from '../../platform/tenant-query';
 import { LocationsInfrastructureError } from './locations.errors';
 
 const tryAsync = makeTryAsync(
@@ -57,18 +57,18 @@ export class LocationsRepository extends Effect.Service<LocationsRepository>()(
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;
+      const tenantQuery = yield* TenantQuery;
 
       const findAllPaginated = (query: LocationQueryDto) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenant(
+            locations,
+            ...buildLocationFilters(query),
+          );
           return yield* tryAsync('list locations', async () => {
             const { page, limit, skip } = resolvePaginationWindow(
               query.page,
               query.limit,
-            );
-            const where = and(
-              eq(locations.tenant_id, tenantId),
-              ...buildLocationFilters(query),
             );
             const orderBy = getLocationOrderBy(query.sort_by, query.sort_order);
 
@@ -93,29 +93,24 @@ export class LocationsRepository extends Effect.Service<LocationsRepository>()(
 
       const findAll = () =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenant(locations);
           return yield* tryAsync('list all locations', () =>
             db
               .select()
               .from(locations)
-              .where(eq(locations.tenant_id, tenantId))
+              .where(where)
               .orderBy(sql`"name" ASC`),
           );
         });
 
       const findById = (id: string) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(locations, id);
           return yield* tryAsync('load location', async () => {
             const rows = await db
               .select()
               .from(locations)
-              .where(
-                and(
-                  eq(locations.tenant_id, tenantId),
-                  eq(locations.id, id),
-                ),
-              )
+              .where(where)
               .limit(1);
             return rows[0] ?? null;
           });
@@ -123,17 +118,12 @@ export class LocationsRepository extends Effect.Service<LocationsRepository>()(
 
       const existsById = (id: string) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(locations, id);
           return yield* tryAsync('check location existence', async () => {
             const rows = await db
               .select({ id: locations.id })
               .from(locations)
-              .where(
-                and(
-                  eq(locations.tenant_id, tenantId),
-                  eq(locations.id, id),
-                ),
-              )
+              .where(where)
               .limit(1);
             return rows.length > 0;
           });
@@ -141,12 +131,9 @@ export class LocationsRepository extends Effect.Service<LocationsRepository>()(
 
       const create = (data: typeof locations.$inferInsert) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const values = yield* tenantQuery.insertValues(data);
           return yield* tryAsync('create location', async () => {
-            const rows = await db
-              .insert(locations)
-              .values({ ...data, tenant_id: tenantId })
-              .returning();
+            const rows = await db.insert(locations).values(values).returning();
             return rows[0]!;
           });
         });
@@ -156,19 +143,15 @@ export class LocationsRepository extends Effect.Service<LocationsRepository>()(
         data: Omit<Partial<typeof locations.$inferInsert>, 'tenant_id'>,
       ) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(locations, id);
           return yield* tryAsync('update location', async () => {
-            const { tenant_id: _tenantId, ...updateData } =
-              data as Partial<typeof locations.$inferInsert>;
+            const { tenant_id: _tenantId, ...updateData } = data as Partial<
+              typeof locations.$inferInsert
+            >;
             const rows = await db
               .update(locations)
               .set({ ...updateData, updated_at: new Date() })
-              .where(
-                and(
-                  eq(locations.tenant_id, tenantId),
-                  eq(locations.id, id),
-                ),
-              )
+              .where(where)
               .returning({ id: locations.id });
             return rows.length;
           });
@@ -176,16 +159,9 @@ export class LocationsRepository extends Effect.Service<LocationsRepository>()(
 
       const remove = (id: string) =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const where = yield* tenantQuery.whereTenantId(locations, id);
           return yield* tryAsync('delete location', async () => {
-            await db
-              .delete(locations)
-              .where(
-                and(
-                  eq(locations.tenant_id, tenantId),
-                  eq(locations.id, id),
-                ),
-              );
+            await db.delete(locations).where(where);
           });
         });
 
@@ -199,5 +175,6 @@ export class LocationsRepository extends Effect.Service<LocationsRepository>()(
         delete: remove,
       };
     }),
+    dependencies: [TenantQuery.Default],
   },
 ) {}
