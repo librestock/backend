@@ -14,7 +14,7 @@ import {
   userRoles,
 } from '../../platform/db/schema';
 import { makeTryAsync } from '../../platform/try-async';
-import { defaultRoleSeedDefinitions } from '../roles/service';
+import { defaultRoleSeedDefinitions } from '../../platform/seed/default-roles';
 import { SuperAdminRepositoryError } from './superadmin.errors';
 
 const tryAsync = makeTryAsync(
