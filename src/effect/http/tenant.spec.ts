@@ -12,6 +12,10 @@ import { makeBetterAuthTestLayer } from '../testing/better-auth-test';
 import { tenantContextMiddleware } from './tenant';
 
 const TEST_USER_ID = '00000000-0000-4000-a000-000000000001';
+const TENANT_HOST = 'librestock.librestock.maximilian.pw';
+const PLATFORM_HOST = 'default.librestock.maximilian.pw';
+const tenantUrl = (path: string) => `http://${TENANT_HOST}${path}`;
+const platformUrl = (path: string) => `http://${PLATFORM_HOST}${path}`;
 
 const makeSession = () => ({
   user: {
@@ -35,11 +39,13 @@ const makeSession = () => ({
   },
 });
 
-const makeRequestLayer = (url: string, method = 'GET') =>
-  Layer.succeed(
+const makeRequestLayer = (url: string, method = 'GET') => {
+  const { host } = new URL(url);
+  return Layer.succeed(
     HttpServerRequest.HttpServerRequest,
-    HttpServerRequest.fromWeb(new Request(url, { method })),
+    HttpServerRequest.fromWeb(new Request(url, { method, headers: { host } })),
   );
+};
 
 const makeRequestContext = (path: string): RequestContext => ({
   requestId: '00000000-0000-4000-8000-000000000099',
@@ -108,7 +114,10 @@ describe('tenantContextMiddleware', () => {
   it('does not resolve tenant context for Better Auth routes', async () => {
     const getSession = vi.fn();
 
-    const response = await run('http://localhost/api/auth/sign-in', getSession);
+    const response = await run(
+      platformUrl('/api/auth/sign-in'),
+      getSession,
+    );
     expect(response.status).toBe(200);
     expect(getSession).not.toHaveBeenCalled();
   });
@@ -117,7 +126,7 @@ describe('tenantContextMiddleware', () => {
     const getSession = vi.fn();
     const effect = tenantContextMiddleware(okApp).pipe(
       Effect.provide(
-        makeRequestLayer('http://localhost/api/v1/products', 'OPTIONS'),
+        makeRequestLayer(tenantUrl('/api/v1/products'), 'OPTIONS'),
       ),
       Effect.provide(makeBetterAuthLayer(getSession)),
     );
@@ -131,7 +140,7 @@ describe('tenantContextMiddleware', () => {
     const getSession = vi.fn(async () => null);
 
     const response = await run(
-      'http://localhost/api/v1/branding',
+      tenantUrl('/api/v1/branding'),
       getSession,
     );
 
@@ -143,7 +152,7 @@ describe('tenantContextMiddleware', () => {
     const getSession = vi.fn(async () => null);
 
     const error = await Effect.runPromise(
-      makeEffect('http://localhost/api/v1/products', getSession).pipe(
+        makeEffect(tenantUrl('/api/v1/products'), getSession).pipe(
         Effect.flip,
       ),
     );
@@ -155,7 +164,7 @@ describe('tenantContextMiddleware', () => {
     const getSession = vi.fn(async () => null);
 
     const response = await Effect.runPromise(
-      makeCaughtEffect('http://localhost/api/v1/products', getSession),
+      makeCaughtEffect(tenantUrl('/api/v1/products'), getSession),
     );
 
     expect(response.status).toBe(401);
@@ -166,7 +175,7 @@ describe('tenantContextMiddleware', () => {
     const requestContext = makeRequestContext('/api/v1/products');
 
     const response = await run(
-      'http://localhost/api/v1/products',
+      tenantUrl('/api/v1/products'),
       getSession,
       requestContext,
     );
@@ -174,5 +183,28 @@ describe('tenantContextMiddleware', () => {
     expect(response.status).toBe(200);
     expect(getSession).toHaveBeenCalledTimes(1);
     expect(requestContext.tenantId).toBe(DEFAULT_TENANT_ID);
+  });
+
+  it('rejects unknown hosts before loading a session', async () => {
+    const getSession = vi.fn(async () => makeSession());
+
+    const response = await Effect.runPromise(
+      makeCaughtEffect('http://unknown.example.com/api/v1/products', getSession),
+    );
+
+    expect(response.status).toBe(404);
+    expect(getSession).not.toHaveBeenCalled();
+  });
+
+  it('does not resolve tenant context for superadmin routes', async () => {
+    const getSession = vi.fn();
+
+    const response = await run(
+      platformUrl('/api/v1/superadmin/me'),
+      getSession,
+    );
+
+    expect(response.status).toBe(200);
+    expect(getSession).not.toHaveBeenCalled();
   });
 });

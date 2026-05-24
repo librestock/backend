@@ -17,6 +17,7 @@ export const enCatalog = {
   'tenant.membershipRejected':
     'The active tenant is not available for this user.',
   'tenant.notResolved': 'No active tenant could be resolved for this request.',
+  'tenant.hostNotFound': 'Tenant host not found.',
   'branding.repositoryFailed': 'Branding operation failed.',
   'branding.sessionUserUnavailable': 'Session user is not available.',
   'categories.circularReference':
@@ -94,6 +95,7 @@ export const enCatalog = {
   'photos.tooLarge':
     'File is too large. Maximum allowed size is {maxSize} bytes.',
   'photos.writeFailed': 'Failed to write the photo file.',
+  'platform.hostRequired': 'Platform route not found for this host.',
   'products.categoryNotFound': 'Category not found.',
   'products.createdProductLoadFailed': 'Failed to load the created product.',
   'products.deleted': 'Product deleted successfully.',
@@ -112,6 +114,15 @@ export const enCatalog = {
   'roles.repositoryFailed': 'Role operation failed.',
   'roles.systemDeletionForbidden': 'System roles cannot be deleted.',
   'session.resolveFailed': 'Failed to resolve the user session.',
+  'superadmin.forbidden': 'Superadmin access is required.',
+  'superadmin.invalidTenantSlug': 'Tenant slug is invalid.',
+  'superadmin.infrastructureFailed': 'Superadmin authorization failed.',
+  'superadmin.repositoryFailed': 'Superadmin operation failed.',
+  'superadmin.reservedTenantSlug': 'Tenant slug is reserved.',
+  'superadmin.tenantHostnameAlreadyExists':
+    'A tenant with this hostname already exists.',
+  'superadmin.tenantSlugAlreadyExists':
+    'A tenant with this slug already exists.',
   'stockMovements.destinationLocationNotFound':
     'Destination location not found.',
   'stockMovements.infrastructureFailed': 'Stock movement operation failed.',
