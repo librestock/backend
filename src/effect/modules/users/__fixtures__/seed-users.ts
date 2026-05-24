@@ -15,6 +15,10 @@ import { randomUUID } from 'node:crypto';
 import type { DrizzleDb } from '../../../platform/drizzle';
 import { members, organizations, roles } from '../../../platform/db/schema';
 import {
+  ensureBetterAuthUserTable as ensureSharedBetterAuthUserTable,
+  seedBetterAuthUser,
+} from '../../../test/seed';
+import {
   DEFAULT_TENANT_ID,
   DEFAULT_TENANT_NAME,
   DEFAULT_TENANT_SLUG,
@@ -29,21 +33,7 @@ import {
  * Idempotent: safe to call on every test-suite bootstrap.
  */
 export async function ensureBetterAuthUserTable(db: DrizzleDb): Promise<void> {
-  await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS "user" (
-      id UUID PRIMARY KEY,
-      name TEXT,
-      email TEXT,
-      email_verified BOOLEAN DEFAULT FALSE,
-      image TEXT,
-      role TEXT,
-      banned BOOLEAN DEFAULT FALSE,
-      ban_reason TEXT,
-      ban_expires TIMESTAMPTZ,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
+  await ensureSharedBetterAuthUserTable(db);
 }
 
 /**
@@ -60,19 +50,7 @@ export async function seedBetterAuthUserRow(
     role?: 'admin' | 'user';
   },
 ): Promise<void> {
-  const { id } = overrides;
-  const name = overrides.name ?? 'Test User';
-  const email = overrides.email ?? `${id}@example.com`;
-  const role = overrides.role ?? 'user';
-  await db.execute(sql`
-    INSERT INTO "user" (id, name, email, role, created_at, updated_at)
-    VALUES (${id}, ${name}, ${email}, ${role}, NOW(), NOW())
-    ON CONFLICT (id) DO UPDATE SET
-      name = EXCLUDED.name,
-      email = EXCLUDED.email,
-      role = EXCLUDED.role,
-      updated_at = EXCLUDED.updated_at
-  `);
+  await seedBetterAuthUser(db, overrides);
 }
 
 export async function seedDefaultTenantMembership(
@@ -95,6 +73,12 @@ export async function seedTenantMembership(
     slug?: string;
   },
 ): Promise<void> {
+  await ensureBetterAuthUserTable(db);
+  await db.execute(sql`
+    INSERT INTO "user" (id, name, email, role, created_at, updated_at)
+    VALUES (${userId}, 'Test User', ${`${userId}@example.com`}, 'user', NOW(), NOW())
+    ON CONFLICT (id) DO NOTHING
+  `);
   await db
     .insert(organizations)
     .values({
