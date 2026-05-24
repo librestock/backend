@@ -43,6 +43,7 @@ export const makeAuditLogWriter = Effect.gen(function* () {
             entity_type: params.entityType,
             entity_id: params.entityId,
             changes: null,
+            ip_address: requestContext.ip ?? null,
             user_agent: null,
           }),
         catch: (cause) => cause,

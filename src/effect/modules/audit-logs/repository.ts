@@ -103,7 +103,7 @@ export class AuditLogsRepository extends Effect.Service<AuditLogsRepository>()(
                 .from(auditLogs)
                 .leftJoin(
                   betterAuthUsers,
-                  eq(auditLogs.user_id, betterAuthUsers.id),
+                  eq(sql`${auditLogs.user_id}::text`, betterAuthUsers.id),
                 )
                 .where(where)
                 .orderBy(desc(auditLogs.created_at))
@@ -125,7 +125,7 @@ export class AuditLogsRepository extends Effect.Service<AuditLogsRepository>()(
               .from(auditLogs)
               .leftJoin(
                 betterAuthUsers,
-                eq(auditLogs.user_id, betterAuthUsers.id),
+                eq(sql`${auditLogs.user_id}::text`, betterAuthUsers.id),
               )
               .where(
                 and(
@@ -147,7 +147,7 @@ export class AuditLogsRepository extends Effect.Service<AuditLogsRepository>()(
               .from(auditLogs)
               .leftJoin(
                 betterAuthUsers,
-                eq(auditLogs.user_id, betterAuthUsers.id),
+                eq(sql`${auditLogs.user_id}::text`, betterAuthUsers.id),
               )
               .where(
                 and(
@@ -169,7 +169,7 @@ export class AuditLogsRepository extends Effect.Service<AuditLogsRepository>()(
               .from(auditLogs)
               .leftJoin(
                 betterAuthUsers,
-                eq(auditLogs.user_id, betterAuthUsers.id),
+                eq(sql`${auditLogs.user_id}::text`, betterAuthUsers.id),
               )
               .where(
                 and(
