@@ -13,7 +13,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS organization_slug_unique
 CREATE TABLE IF NOT EXISTS "member" (
   id text PRIMARY KEY,
   organization_id uuid NOT NULL,
-  user_id uuid NOT NULL,
+  user_id text NOT NULL,
   role text NOT NULL DEFAULT 'member',
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -33,7 +33,7 @@ BEGIN
   IF to_regclass('public.member') IS NOT NULL THEN
     ALTER TABLE "member"
       ALTER COLUMN organization_id TYPE uuid USING organization_id::uuid,
-      ALTER COLUMN user_id TYPE uuid USING user_id::uuid;
+      ALTER COLUMN user_id TYPE text USING user_id::text;
   END IF;
 END $$;
 
@@ -47,7 +47,7 @@ DO $$
 BEGIN
   IF to_regclass('public.user') IS NOT NULL THEN
     INSERT INTO "member" (id, organization_id, user_id, role, created_at)
-    SELECT gen_random_uuid()::text, '00000000-0000-4000-8000-000000000001'::uuid, u.id::uuid, 'member', now()
+    SELECT gen_random_uuid()::text, '00000000-0000-4000-8000-000000000001'::uuid, u.id, 'member', now()
     FROM "user" u
     ON CONFLICT (user_id, organization_id) DO NOTHING;
   END IF;
@@ -147,8 +147,17 @@ BEGIN
 
   IF to_regclass('public.user_roles') IS NOT NULL THEN
     DROP INDEX IF EXISTS user_roles_user_role_unique;
+    DROP INDEX IF EXISTS user_roles_tenant_user_role_unique;
+    DROP INDEX IF EXISTS user_roles_user_id_idx;
+    DROP INDEX IF EXISTS user_roles_tenant_user_id_idx;
+
+    ALTER TABLE user_roles
+      ALTER COLUMN user_id TYPE text USING user_id::text;
+
     CREATE UNIQUE INDEX IF NOT EXISTS user_roles_tenant_user_role_unique
       ON user_roles (tenant_id, user_id, role_id);
+    CREATE INDEX IF NOT EXISTS user_roles_user_id_idx
+      ON user_roles (user_id);
     CREATE INDEX IF NOT EXISTS user_roles_tenant_user_id_idx
       ON user_roles (tenant_id, user_id);
   END IF;

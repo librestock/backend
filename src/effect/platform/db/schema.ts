@@ -113,7 +113,7 @@ export const members = pgTable(
     organization_id: uuid('organization_id')
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
-    user_id: uuid('user_id').notNull(),
+    user_id: text('user_id').notNull(),
     role: text('role').notNull().default('member'),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -187,7 +187,7 @@ export const userRoles = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     tenant_id: uuid('tenant_id').default(DEFAULT_TENANT_ID).notNull(),
-    user_id: uuid('user_id').notNull(),
+    user_id: text('user_id').notNull(),
     role_id: uuid('role_id')
       .notNull()
       .references(() => roles.id, { onDelete: 'cascade' }),
