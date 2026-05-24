@@ -16,6 +16,7 @@ import {
   userRoles,
 } from '../../../platform/db/schema';
 import type { DrizzleDb } from '../../../platform/drizzle';
+import { seedBetterAuthUser } from '../../../test/seed';
 import {
   DEFAULT_TENANT_ID,
   DEFAULT_TENANT_NAME,
@@ -120,6 +121,7 @@ export async function seedDefaultTenantMembership(
   userId: string,
 ): Promise<void> {
   await retryOnTransient(async () => {
+    await seedBetterAuthUser(db, { id: userId });
     await db
       .insert(organizations)
       .values({

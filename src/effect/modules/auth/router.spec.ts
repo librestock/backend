@@ -79,7 +79,21 @@ describe('authRouter', () => {
     );
 
     expect(profileResponse.status).toBe(200);
+    await expect(profileResponse.json()).resolves.toMatchObject({
+      id: 'user-1',
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+      createdAt: '2026-03-01T00:00:00.000Z',
+      updatedAt: '2026-03-10T00:00:00.000Z',
+    });
+
     expect(claimsResponse.status).toBe(200);
+    await expect(claimsResponse.json()).resolves.toEqual({
+      user_id: 'user-1',
+      session_id: 'session-1',
+      issued_at: 1,
+      expires_at: 2,
+    });
   });
 
   it('returns 401 when unauthenticated', async () => {
