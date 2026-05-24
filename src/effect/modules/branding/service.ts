@@ -8,6 +8,8 @@ import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { brandingSettings } from '../../platform/db/schema';
 import {
+  DEFAULT_TENANT_ID,
+  getRequestTenantId,
   requireRequestTenantId,
   type TenantNotResolved,
 } from '../../platform/tenant-context';
@@ -36,10 +38,10 @@ export class BrandingService extends Effect.Service<BrandingService>()(
 
       const get = (): Effect.Effect<
         BrandingResponseDto,
-        BrandingInfrastructureError | TenantNotResolved
+        BrandingInfrastructureError
       > =>
         Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
+          const tenantId = (yield* getRequestTenantId) ?? DEFAULT_TENANT_ID;
           const settings = yield* tryAsync(
             'load branding settings',
             async () => {

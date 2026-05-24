@@ -127,6 +127,18 @@ describe('tenantContextMiddleware', () => {
     expect(getSession).not.toHaveBeenCalled();
   });
 
+  it('does not require a session for the public branding endpoint', async () => {
+    const getSession = vi.fn(async () => null);
+
+    const response = await run(
+      'http://localhost/api/v1/branding',
+      getSession,
+    );
+
+    expect(response.status).toBe(200);
+    expect(getSession).not.toHaveBeenCalled();
+  });
+
   it('rejects protected API requests without a session', async () => {
     const getSession = vi.fn(async () => null);
 

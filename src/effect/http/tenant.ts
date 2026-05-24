@@ -13,12 +13,19 @@ const getPathname = (url: string) => {
   }
 };
 
+const isPublicApiRoute = (
+  request: HttpServerRequest.HttpServerRequest,
+  pathname: string,
+) =>
+  request.method === 'GET' &&
+  (pathname === '/api/v1/branding' || pathname === '/api/v1/branding/');
+
 const requiresTenantContext = (
   request: HttpServerRequest.HttpServerRequest,
 ) => {
   const pathname = getPathname(request.url);
 
-  if (request.method === 'OPTIONS') {
+  if (request.method === 'OPTIONS' || isPublicApiRoute(request, pathname)) {
     return false;
   }
 

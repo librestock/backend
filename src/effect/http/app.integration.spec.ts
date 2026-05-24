@@ -159,6 +159,56 @@ describe('buildHttpApp acceptance', () => {
     }
   });
 
+  it('serves branding without an authenticated session', async () => {
+    const { handler, dispose } = makeTestHttpAppHandler();
+    try {
+      const response = await handler(
+        new Request('http://localhost/api/v1/branding'),
+      );
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        app_name: 'LibreStock',
+      });
+    } finally {
+      await dispose();
+    }
+  });
+
+  it('serves tenant-specific branding through a verified custom domain', async () => {
+    const tenantId = randomUUID();
+    const customHostname = 'custom-branding.example.com';
+    await seedTenantDomain(
+      { id: tenantId, name: 'Custom Branding Tenant', slug: 'custom-branding' },
+      { hostname: customHostname, kind: 'custom_domain' },
+    );
+    await db.insert(brandingSettings).values({
+      id: BRANDING_SETTINGS_ID,
+      tenant_id: tenantId,
+      app_name: 'CustomStock',
+      tagline: 'Custom tenant branding',
+      primary_color: '#123456',
+      updated_at: new Date(),
+    });
+
+    const { handler, dispose } = makeTestHttpAppHandler();
+    try {
+      const response = await handler(
+        new Request(`http://${customHostname}/api/v1/branding`, {
+          headers: { host: customHostname },
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        app_name: 'CustomStock',
+        tagline: 'Custom tenant branding',
+      });
+    } finally {
+      await dispose();
+    }
+  });
+
   it('creates inventory and writes audit through the composed authenticated app', async () => {
     await seedRoleForUser(TEST_USER_ID, [
       { resource: Resource.INVENTORY, permission: Permission.READ },
