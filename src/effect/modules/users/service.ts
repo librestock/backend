@@ -6,7 +6,7 @@ import type {
   BanUserDto,
 } from '@librestock/types/users';
 import { makeTryAsync } from '../../platform/try-async';
-import { BetterAuth, BetterAuthHeaders } from '../../platform/better-auth';
+import { BetterAuth } from '../../platform/better-auth';
 import { makeServiceTracer } from '../../platform/service-tracer';
 import {
   requireRequestTenantId,
@@ -36,32 +36,14 @@ interface BetterAuthUser {
   readonly createdAt: string | Date;
 }
 
-interface BetterAuthBanUserBody {
-  readonly userId: string;
-  banReason?: string;
-  banExpiresIn?: number;
-}
-
-const BETTER_AUTH_ROLE = {
-  Admin: 'admin',
-  User: 'user',
-} as const;
-
-type BetterAuthRole = (typeof BETTER_AUTH_ROLE)[keyof typeof BETTER_AUTH_ROLE];
-
 interface BetterAuthCreateUserBody {
   readonly email: string;
   readonly name: string;
   readonly password: string;
-  readonly role: BetterAuthRole;
 }
 
 interface BetterAuthCreateUserResponse {
   readonly user: BetterAuthUser;
-}
-
-interface BetterAuthUserActionBody {
-  readonly userId: string;
 }
 
 const toUserResponse = (
@@ -93,28 +75,13 @@ export class UsersService extends Effect.Service<UsersService>()(
         entityType: 'user',
       });
       const getBetterAuthUserOrFail = (
-        api: typeof import('../../../auth').auth.api,
         id: string,
       ): Effect.Effect<
         BetterAuthUser,
-        UserNotFound | UsersInfrastructureError,
-        globalThis.Headers
+        UserNotFound | UsersInfrastructureError
       > =>
         Effect.gen(function* () {
-          const headers = yield* BetterAuthHeaders;
-          const result = yield* tryAsync('load user from auth provider', () =>
-            api.listUsers({
-              headers,
-              query: {
-                limit: 1,
-                offset: 0,
-                filterField: 'id',
-                filterValue: id,
-              },
-            }),
-          );
-
-          const user = (result.users ?? [])[0] as BetterAuthUser | undefined;
+          const user = yield* usersRepository.findBetterAuthUser(id);
           return user
             ? yield* Effect.succeed(user)
             : yield* Effect.fail(
@@ -125,31 +92,36 @@ export class UsersService extends Effect.Service<UsersService>()(
               );
         });
 
+      const requireTenantMemberOrFail = (userId: string) =>
+        Effect.gen(function* () {
+          const tenantId = yield* requireRequestTenantId;
+          const hasTenantMembership =
+            yield* usersRepository.hasTenantMembership(userId, tenantId);
+
+          yield* Effect.filterOrFail(
+            Effect.succeed(hasTenantMembership),
+            Boolean,
+            () =>
+              new UserNotFound({
+                id: userId,
+                messageKey: 'users.notFound',
+              }),
+          );
+
+          return tenantId;
+        });
+
       const getUser = trace.traced(
         'getUser',
         (
           id: string,
         ): Effect.Effect<
           UserResponseDto,
-          UserNotFound | UsersInfrastructureError | TenantNotResolved,
-          globalThis.Headers
+          UserNotFound | UsersInfrastructureError | TenantNotResolved
         > =>
           Effect.gen(function* () {
-            const tenantId = yield* requireRequestTenantId;
-            const hasTenantMembership =
-              yield* usersRepository.hasTenantMembership(id, tenantId);
-
-            yield* Effect.filterOrFail(
-              Effect.succeed(hasTenantMembership),
-              Boolean,
-              () =>
-                new UserNotFound({
-                  id,
-                  messageKey: 'users.notFound',
-                }),
-            );
-
-            const user = yield* getBetterAuthUserOrFail(betterAuth.api, id);
+            const tenantId = yield* requireTenantMemberOrFail(id);
+            const user = yield* getBetterAuthUserOrFail(id);
             const roleEntities = yield* usersRepository.findUserRoles(
               id,
               tenantId,
@@ -202,30 +174,21 @@ export class UsersService extends Effect.Service<UsersService>()(
       );
 
       const createUser = trace.traced('createUser', (dto: CreateUserDto) =>
-        Effect.gen(function* () {
-          const tenantId = yield* requireRequestTenantId;
-          const headers = yield* BetterAuthHeaders;
+          Effect.gen(function* () {
+            const tenantId = yield* requireRequestTenantId;
 
-          yield* usersRepository.validateRoleIds(dto.roles, tenantId);
-          const hasAdminRole = yield* usersRepository.hasAdminRole(
-            dto.roles,
-            tenantId,
-          );
-          const result = yield* tryAsync(
-            'create user in auth provider',
-            () =>
-              betterAuth.api.createUser({
-                headers,
-                body: {
-                  email: dto.email,
-                  name: dto.name,
-                  password: dto.password,
-                  role: hasAdminRole
-                    ? BETTER_AUTH_ROLE.Admin
-                    : BETTER_AUTH_ROLE.User,
-                } satisfies BetterAuthCreateUserBody,
-              }) as Promise<BetterAuthCreateUserResponse>,
-          );
+            yield* usersRepository.validateRoleIds(dto.roles, tenantId);
+            const result = yield* tryAsync(
+              'create user in auth provider',
+              () =>
+                betterAuth.api.createUser({
+                  body: {
+                    email: dto.email,
+                    name: dto.name,
+                    password: dto.password,
+                  } satisfies BetterAuthCreateUserBody,
+                }) as Promise<BetterAuthCreateUserResponse>,
+            );
           const userId = result.user.id;
 
           yield* Effect.gen(function* () {
@@ -242,12 +205,7 @@ export class UsersService extends Effect.Service<UsersService>()(
                 [
                   usersRepository.deleteUserRoles(userId, tenantId),
                   usersRepository.deleteTenantMembership(userId, tenantId),
-                  tryAsync('remove user after create failure', () =>
-                    betterAuth.api.removeUser({
-                      headers,
-                      body: { userId } satisfies BetterAuthUserActionBody,
-                    }),
-                  ),
+                  usersRepository.deleteBetterAuthUser(userId),
                 ],
                 { discard: true },
               ).pipe(Effect.ignore),
@@ -270,30 +228,9 @@ export class UsersService extends Effect.Service<UsersService>()(
         'updateRoles',
         (userId: string, roleIds: string[]) =>
           Effect.gen(function* () {
-            const tenantId = yield* requireRequestTenantId;
-            const hasTenantMembership =
-              yield* usersRepository.hasTenantMembership(userId, tenantId);
-
-            yield* Effect.filterOrFail(
-              Effect.succeed(hasTenantMembership),
-              Boolean,
-              () =>
-                new UserNotFound({
-                  id: userId,
-                  messageKey: 'users.notFound',
-                }),
-            );
-
-            yield* getBetterAuthUserOrFail(betterAuth.api, userId);
+            const tenantId = yield* requireTenantMemberOrFail(userId);
+            yield* getBetterAuthUserOrFail(userId);
             yield* usersRepository.replaceUserRoles(userId, roleIds, tenantId);
-
-            const hasAdminRole =
-              yield* usersRepository.hasAdminRoleForUser(userId);
-
-            yield* usersRepository.syncBetterAuthRole(
-              userId,
-              hasAdminRole ? BETTER_AUTH_ROLE.Admin : BETTER_AUTH_ROLE.User,
-            );
 
             yield* rolesService.clearCacheForUser(userId);
 
@@ -306,28 +243,12 @@ export class UsersService extends Effect.Service<UsersService>()(
         'banUser',
         (userId: string, dto: BanUserDto) =>
           Effect.gen(function* () {
-            const headers = yield* BetterAuthHeaders;
-            yield* getBetterAuthUserOrFail(betterAuth.api, userId);
-
-            const body: BetterAuthBanUserBody = { userId };
-            if (dto.reason) {
-              body.banReason = dto.reason;
-            }
-            if (dto.expiresAt) {
-              body.banExpiresIn = Math.max(
-                0,
-                Math.floor(
-                  (new Date(dto.expiresAt).getTime() - Date.now()) / 1000,
-                ),
-              );
-            }
-
-            yield* tryAsync('ban user in auth provider', () =>
-              betterAuth.api.banUser({
-                headers,
-                body,
-              }),
-            );
+            yield* requireTenantMemberOrFail(userId);
+            yield* getBetterAuthUserOrFail(userId);
+            yield* usersRepository.banBetterAuthUser(userId, {
+              reason: dto.reason,
+              expiresAt: dto.expiresAt,
+            });
 
             return yield* getUser(userId);
           }),
@@ -338,14 +259,9 @@ export class UsersService extends Effect.Service<UsersService>()(
         'unbanUser',
         (userId: string) =>
           Effect.gen(function* () {
-            const headers = yield* BetterAuthHeaders;
-            yield* getBetterAuthUserOrFail(betterAuth.api, userId);
-            yield* tryAsync('unban user in auth provider', () =>
-              betterAuth.api.unbanUser({
-                headers,
-                body: { userId } satisfies BetterAuthUserActionBody,
-              }),
-            );
+            yield* requireTenantMemberOrFail(userId);
+            yield* getBetterAuthUserOrFail(userId);
+            yield* usersRepository.unbanBetterAuthUser(userId);
 
             return yield* getUser(userId);
           }),
@@ -356,21 +272,15 @@ export class UsersService extends Effect.Service<UsersService>()(
         'deleteUser',
         (userId: string) =>
           Effect.gen(function* () {
-            const tenantId = yield* requireRequestTenantId;
-            const headers = yield* BetterAuthHeaders;
-            yield* getBetterAuthUserOrFail(betterAuth.api, userId);
+            const tenantId = yield* requireTenantMemberOrFail(userId);
+            yield* getBetterAuthUserOrFail(userId);
             yield* usersRepository.deleteUserRoles(userId, tenantId);
             yield* usersRepository.deleteTenantMembership(userId, tenantId);
             const hasRemainingTenantMemberships =
               yield* usersRepository.hasTenantMemberships(userId);
 
             if (!hasRemainingTenantMemberships) {
-              yield* tryAsync('remove user from auth provider', () =>
-                betterAuth.api.removeUser({
-                  headers,
-                  body: { userId } satisfies BetterAuthUserActionBody,
-                }),
-              );
+              yield* usersRepository.deleteBetterAuthUser(userId);
             }
           }),
         (userId) => ({ attributes: { userId } }),
@@ -380,14 +290,9 @@ export class UsersService extends Effect.Service<UsersService>()(
         'revokeSessions',
         (userId: string) =>
           Effect.gen(function* () {
-            const headers = yield* BetterAuthHeaders;
-            yield* getBetterAuthUserOrFail(betterAuth.api, userId);
-            yield* tryAsync('revoke user sessions', () =>
-              betterAuth.api.revokeUserSessions({
-                headers,
-                body: { userId } satisfies BetterAuthUserActionBody,
-              }),
-            );
+            yield* requireTenantMemberOrFail(userId);
+            yield* getBetterAuthUserOrFail(userId);
+            yield* usersRepository.deleteBetterAuthSessions(userId);
           }),
         (userId) => ({ attributes: { userId } }),
       );
