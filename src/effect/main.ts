@@ -1,7 +1,6 @@
 import { HttpServer } from '@effect/platform';
 import { NodeHttpServer, NodeRuntime } from '@effect/platform-node';
 import { createServer } from 'node:http';
-import 'dotenv/config';
 import { Effect, Layer } from 'effect';
 import { buildHttpApp } from './http/app';
 import { AuditLogsService } from './modules/audit-logs/service';

@@ -1,5 +1,4 @@
 import * as fs from 'node:fs';
-import { config } from 'dotenv';
 import { parse } from 'csv-parse/sync';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { eq, and } from 'drizzle-orm';
@@ -7,8 +6,6 @@ import pg from 'pg';
 import { StockMovementReason } from '@librestock/types/stock-movements';
 import { LocationType } from '@librestock/types/locations';
 import { categories, products, locations, inventory, stockMovements } from '../effect/platform/db/schema';
-
-config();
 
 // Mock user ID for stock movements (you may want to pass this as a parameter)
 const IMPORT_USER_ID = 'import_sortly_user';

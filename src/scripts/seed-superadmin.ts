@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { config } from 'dotenv';
 import { hashPassword } from 'better-auth/crypto';
 import pg from 'pg';
 import {
@@ -8,8 +7,6 @@ import {
   getSSLConfig,
   IDLE_TIMEOUT_MS,
 } from '../config/db-connection.utils';
-
-config();
 
 interface BetterAuthUserRow {
   readonly id: string;

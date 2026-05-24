@@ -2,11 +2,7 @@
 bootstrap:
   pnpm install
 
-# Decrypt environment variables
-decrypt:
-  op inject -i env.template -o .env
-
-# Run development server
+# Run development server (env vars injected by `op run --environment $OP_ENVIRONMENT_ID`)
 dev:
   pnpm start:dev
 
