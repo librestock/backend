@@ -192,6 +192,9 @@ BEGIN
   END IF;
 
   IF to_regclass('public.audit_logs') IS NOT NULL THEN
+    ALTER TABLE audit_logs
+      ALTER COLUMN user_id TYPE text USING user_id::text;
+
     CREATE INDEX IF NOT EXISTS audit_logs_tenant_id_idx ON audit_logs (tenant_id);
   END IF;
 END $$;
