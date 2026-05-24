@@ -1,3 +1,5 @@
+CREATE SEQUENCE IF NOT EXISTS order_number_seq START 1;
+
 CREATE TYPE "public"."audit_logs_action" AS ENUM('CREATE', 'UPDATE', 'DELETE', 'RESTORE', 'ADJUST_QUANTITY', 'ADD_PHOTO', 'STATUS_CHANGE');
 CREATE TYPE "public"."audit_logs_entity_type" AS ENUM('PRODUCT', 'CATEGORY', 'SUPPLIER', 'ORDER', 'ORDER_ITEM', 'INVENTORY', 'LOCATION', 'STOCK_MOVEMENT', 'PHOTO', 'AREA', 'CLIENT', 'ROLE');
 CREATE TYPE "public"."clients_account_status" AS ENUM('ACTIVE', 'SUSPENDED', 'INACTIVE');
@@ -20,7 +22,7 @@ CREATE TABLE "areas" (
 CREATE TABLE "audit_logs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid DEFAULT '00000000-0000-4000-8000-000000000001' NOT NULL,
-	"user_id" uuid,
+	"user_id" text,
 	"action" "audit_logs_action" NOT NULL,
 	"entity_type" "audit_logs_entity_type" NOT NULL,
 	"entity_id" uuid NOT NULL,
@@ -102,7 +104,7 @@ CREATE TABLE "locations" (
 CREATE TABLE "member" (
 	"id" text PRIMARY KEY NOT NULL,
 	"organization_id" uuid NOT NULL,
-	"user_id" uuid NOT NULL,
+	"user_id" text NOT NULL,
 	"role" text DEFAULT 'member' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -258,7 +260,7 @@ CREATE TABLE "suppliers" (
 CREATE TABLE "user_roles" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid DEFAULT '00000000-0000-4000-8000-000000000001' NOT NULL,
-	"user_id" uuid NOT NULL,
+	"user_id" text NOT NULL,
 	"role_id" uuid NOT NULL
 );
 
