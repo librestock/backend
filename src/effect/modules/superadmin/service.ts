@@ -195,9 +195,6 @@ export class SuperAdminService extends Effect.Service<SuperAdminService>()(
                 slug,
                 hostname,
                 adminUserId,
-                actorUserId: actor.userId,
-                ipAddress: actor.ipAddress ?? null,
-                userAgent: actor.userAgent ?? null,
               })
               .pipe(
                 Effect.catchAll((error) =>
@@ -211,6 +208,25 @@ export class SuperAdminService extends Effect.Service<SuperAdminService>()(
                     : Effect.void,
                 ),
               );
+
+            yield* Effect.forkDaemon(
+              repository
+                .recordPlatformAuditEvent({
+                  actorUserId: actor.userId,
+                  action: 'tenant.create',
+                  entityType: 'tenant',
+                  entityId: created.tenant.id,
+                  metadata: {
+                    name: created.tenant.name,
+                    slug: created.tenant.slug,
+                    hostname: created.tenant.hostname,
+                    adminUserId,
+                  },
+                  ipAddress: actor.ipAddress ?? null,
+                  userAgent: actor.userAgent ?? null,
+                })
+                .pipe(Effect.ignore),
+            );
 
             return {
               tenant: created.tenant,

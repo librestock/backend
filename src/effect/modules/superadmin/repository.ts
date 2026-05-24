@@ -44,7 +44,14 @@ export interface CreateTenantInput {
   readonly slug: string;
   readonly hostname: string;
   readonly adminUserId: string;
+}
+
+export interface PlatformAuditEventInput {
   readonly actorUserId: string;
+  readonly action: string;
+  readonly entityType: string;
+  readonly entityId: string;
+  readonly metadata?: Record<string, unknown>;
   readonly ipAddress?: string | null;
   readonly userAgent?: string | null;
 }
@@ -213,21 +220,6 @@ export class SuperAdminRepository extends Effect.Service<SuperAdminRepository>()
               role_id: adminRoleId,
             });
 
-            await tx.insert(platformAuditEvents).values({
-              actor_user_id: input.actorUserId,
-              action: 'tenant.create',
-              entity_type: 'tenant',
-              entity_id: tenantId,
-              metadata: {
-                name: input.name,
-                slug: input.slug,
-                hostname: input.hostname,
-                adminUserId: input.adminUserId,
-              },
-              ip_address: input.ipAddress ?? null,
-              user_agent: input.userAgent ?? null,
-            });
-
             return {
               tenant: {
                 id: tenant!.id,
@@ -242,6 +234,19 @@ export class SuperAdminRepository extends Effect.Service<SuperAdminRepository>()
           });
         });
 
+      const recordPlatformAuditEvent = (input: PlatformAuditEventInput) =>
+        tryAsync('record platform audit event', async () => {
+          await db.insert(platformAuditEvents).values({
+            actor_user_id: input.actorUserId,
+            action: input.action,
+            entity_type: input.entityType,
+            entity_id: input.entityId,
+            metadata: input.metadata ?? null,
+            ip_address: input.ipAddress ?? null,
+            user_agent: input.userAgent ?? null,
+          });
+        });
+
       return {
         findSuperAdminUser,
         findBetterAuthUserByLoweredEmail,
@@ -249,6 +254,7 @@ export class SuperAdminRepository extends Effect.Service<SuperAdminRepository>()
         tenantSlugExists,
         tenantHostnameExists,
         createTenantWithAdmin,
+        recordPlatformAuditEvent,
       };
     }),
   },
