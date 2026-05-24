@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Effect } from 'effect';
 import { and, asc, eq, sql } from 'drizzle-orm';
-import { hashPassword } from 'better-auth/crypto';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import {
   betterAuthUsers,
@@ -44,11 +43,7 @@ export interface CreateTenantInput {
   readonly name: string;
   readonly slug: string;
   readonly hostname: string;
-  readonly admin: {
-    readonly name: string;
-    readonly email: string;
-    readonly password: string;
-  };
+  readonly adminUserId: string;
   readonly actorUserId: string;
   readonly ipAddress?: string | null;
   readonly userAgent?: string | null;
@@ -63,15 +58,11 @@ export interface CreatedTenantResult {
   };
   readonly admin: {
     readonly id: string;
-    readonly email: string;
-    readonly name: string;
   };
 }
 
 const rowsOf = <A>(result: unknown): A[] =>
   ((result as { rows?: A[] }).rows ?? (result as A[])) as A[];
-
-const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
 export class SuperAdminRepository extends Effect.Service<SuperAdminRepository>()(
   '@librestock/effect/superadmin/SuperAdminRepository',
@@ -90,6 +81,20 @@ export class SuperAdminRepository extends Effect.Service<SuperAdminRepository>()
           `);
 
           return rowsOf<SuperAdminUserRow>(result)[0] ?? null;
+        });
+
+      const findBetterAuthUserByLoweredEmail = (normalizedEmail: string) =>
+        tryAsync('find better auth user by email', async () => {
+          const rows = await db
+            .select({
+              id: betterAuthUsers.id,
+              name: betterAuthUsers.name,
+              email: betterAuthUsers.email,
+            })
+            .from(betterAuthUsers)
+            .where(sql`lower(${betterAuthUsers.email}) = ${normalizedEmail}`)
+            .limit(1);
+          return rows[0] ?? null;
         });
 
       const listTenants = () =>
@@ -138,8 +143,6 @@ export class SuperAdminRepository extends Effect.Service<SuperAdminRepository>()
       const createTenantWithAdmin = (input: CreateTenantInput) =>
         tryAsync('create tenant with admin', async () => {
           const tenantId = randomUUID();
-          const normalizedEmail = normalizeEmail(input.admin.email);
-          const passwordHash = await hashPassword(input.admin.password);
 
           return db.transaction(async (tx) => {
             const [tenant] = await tx
@@ -183,77 +186,12 @@ export class SuperAdminRepository extends Effect.Service<SuperAdminRepository>()
               );
             }
 
-            const existingUserRows = await tx
-              .select({
-                id: betterAuthUsers.id,
-                name: betterAuthUsers.name,
-                email: betterAuthUsers.email,
-              })
-              .from(betterAuthUsers)
-              .where(sql`lower(${betterAuthUsers.email}) = ${normalizedEmail}`)
-              .limit(1);
-
-            const adminUser =
-              existingUserRows[0] ??
-              (await (async () => {
-                const userId = randomUUID();
-                const result = await tx.execute(sql`
-                  INSERT INTO "user" (
-                    id,
-                    name,
-                    email,
-                    email_verified,
-                    role,
-                    created_at,
-                    updated_at
-                  )
-                  VALUES (
-                    ${userId},
-                    ${input.admin.name},
-                    ${normalizedEmail},
-                    false,
-                    'user',
-                    NOW(),
-                    NOW()
-                  )
-                  RETURNING id, name, email
-                `);
-
-                await tx.execute(sql`
-                  INSERT INTO account (
-                    id,
-                    account_id,
-                    provider_id,
-                    user_id,
-                    password,
-                    created_at,
-                    updated_at
-                  )
-                  VALUES (
-                    ${randomUUID()},
-                    ${userId},
-                    'credential',
-                    ${userId},
-                    ${passwordHash},
-                    NOW(),
-                    NOW()
-                  )
-                  ON CONFLICT DO NOTHING
-                `);
-
-                return rowsOf<{
-                  id: string;
-                  name: string | null;
-                  email: string | null;
-                }>(result)[0]!;
-              })());
-
             await tx
               .insert(members)
               .values({
                 id: randomUUID(),
                 organization_id: tenantId,
-                user_id: adminUser.id,
+                user_id: input.adminUserId,
                 role: 'member',
               })
               .onConflictDoNothing();
@@ -271,7 +209,7 @@ export class SuperAdminRepository extends Effect.Service<SuperAdminRepository>()
 
             await tx.insert(userRoles).values({
               tenant_id: tenantId,
-              user_id: adminUser.id,
+              user_id: input.adminUserId,
               role_id: adminRoleId,
             });
 
@@ -284,7 +222,7 @@ export class SuperAdminRepository extends Effect.Service<SuperAdminRepository>()
                 name: input.name,
                 slug: input.slug,
                 hostname: input.hostname,
-                adminUserId: adminUser.id,
+                adminUserId: input.adminUserId,
               },
               ip_address: input.ipAddress ?? null,
               user_agent: input.userAgent ?? null,
@@ -298,9 +236,7 @@ export class SuperAdminRepository extends Effect.Service<SuperAdminRepository>()
                 hostname: input.hostname,
               },
               admin: {
-                id: adminUser.id,
-                email: adminUser.email ?? normalizedEmail,
-                name: adminUser.name ?? input.admin.name,
+                id: input.adminUserId,
               },
             } satisfies CreatedTenantResult;
           });
@@ -308,6 +244,7 @@ export class SuperAdminRepository extends Effect.Service<SuperAdminRepository>()
 
       return {
         findSuperAdminUser,
+        findBetterAuthUserByLoweredEmail,
         listTenants,
         tenantSlugExists,
         tenantHostnameExists,

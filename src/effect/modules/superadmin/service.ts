@@ -8,9 +8,13 @@ import type {
 import { hostnameForTenantSlug, isReservedTenantSlug } from '../../platform/host';
 import type { UserSession } from '../../platform/auth/user-session';
 import { makeServiceTracer } from '../../platform/service-tracer';
+import { makeTryAsync } from '../../platform/try-async';
+import { BetterAuth } from '../../platform/better-auth';
+import { UsersRepository } from '../users/repository';
 import {
   InvalidTenantSlug,
   ReservedTenantSlug,
+  SuperAdminRepositoryError,
   TenantHostnameAlreadyExists,
   TenantSlugAlreadyExists,
 } from './superadmin.errors';
@@ -18,11 +22,65 @@ import { SuperAdminRepository } from './repository';
 
 const TENANT_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
+interface BetterAuthCreateUserResponse {
+  readonly user: { readonly id: string };
+}
+
+const isRecord = (value: unknown): value is Record<PropertyKey, unknown> =>
+  value !== null && typeof value === 'object';
+
+const uniqueConstraintName = (cause: unknown): string | null => {
+  if (!isRecord(cause)) return null;
+
+  if (cause.code === '23505' && typeof cause.constraint === 'string') {
+    return cause.constraint;
+  }
+
+  return uniqueConstraintName(cause.cause);
+};
+
+const mapCreateTenantError = (
+  error: SuperAdminRepositoryError,
+  slug: string,
+  hostname: string,
+) => {
+  const constraint = uniqueConstraintName(error);
+  if (constraint === 'organization_slug_unique') {
+    return new TenantSlugAlreadyExists({
+      slug,
+      messageKey: 'superadmin.tenantSlugAlreadyExists',
+    });
+  }
+
+  if (
+    constraint === 'tenant_domains_hostname_unique' ||
+    constraint === 'tenant_domains_hostname_key'
+  ) {
+    return new TenantHostnameAlreadyExists({
+      hostname,
+      messageKey: 'superadmin.tenantHostnameAlreadyExists',
+    });
+  }
+
+  return error;
+};
+
+const tryAsync = makeTryAsync(
+  (action, cause) =>
+    new SuperAdminRepositoryError({
+      action,
+      cause,
+      messageKey: 'superadmin.repositoryFailed',
+    }),
+);
+
 export class SuperAdminService extends Effect.Service<SuperAdminService>()(
   '@librestock/effect/superadmin/SuperAdminService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* SuperAdminRepository;
+      const usersRepository = yield* UsersRepository;
+      const betterAuth = yield* BetterAuth;
       const trace = makeServiceTracer({
         serviceName: 'SuperAdminService',
         module: 'superadmin',
@@ -104,19 +162,64 @@ export class SuperAdminService extends Effect.Service<SuperAdminService>()(
               );
             }
 
-            return yield* repository.createTenantWithAdmin({
-              name: input.name.trim(),
-              slug,
-              hostname,
+            const normalizedEmail = input.admin.email.trim().toLowerCase();
+            const adminName = input.admin.name.trim();
+
+            const existing =
+              yield* repository.findBetterAuthUserByLoweredEmail(normalizedEmail);
+
+            let adminUserId: string;
+            let adminCreatedHere: boolean;
+            if (existing) {
+              adminUserId = existing.id;
+              adminCreatedHere = false;
+            } else {
+              const created = yield* tryAsync(
+                'create tenant admin in auth provider',
+                () =>
+                  betterAuth.api.createUser({
+                    body: {
+                      email: normalizedEmail,
+                      name: adminName,
+                      password: input.admin.password,
+                    },
+                  }) as Promise<BetterAuthCreateUserResponse>,
+              );
+              adminUserId = created.user.id;
+              adminCreatedHere = true;
+            }
+
+            const created = yield* repository
+              .createTenantWithAdmin({
+                name: input.name.trim(),
+                slug,
+                hostname,
+                adminUserId,
+                actorUserId: actor.userId,
+                ipAddress: actor.ipAddress ?? null,
+                userAgent: actor.userAgent ?? null,
+              })
+              .pipe(
+                Effect.catchAll((error) =>
+                  Effect.fail(mapCreateTenantError(error, slug, hostname)),
+                ),
+                Effect.tapError(() =>
+                  adminCreatedHere
+                    ? usersRepository
+                        .deleteBetterAuthUser(adminUserId)
+                        .pipe(Effect.ignore)
+                    : Effect.void,
+                ),
+              );
+
+            return {
+              tenant: created.tenant,
               admin: {
-                name: input.admin.name.trim(),
-                email: input.admin.email.trim().toLowerCase(),
-                password: input.admin.password,
+                id: adminUserId,
+                email: existing?.email ?? normalizedEmail,
+                name: existing?.name ?? adminName,
               },
-              actorUserId: actor.userId,
-              ipAddress: actor.ipAddress ?? null,
-              userAgent: actor.userAgent ?? null,
-            });
+            } satisfies SuperAdminCreateTenantResponse;
           }),
         (input) => ({ attributes: { entityId: input.slug } }),
       );
@@ -127,6 +230,6 @@ export class SuperAdminService extends Effect.Service<SuperAdminService>()(
         createTenant,
       };
     }),
-    dependencies: [SuperAdminRepository.Default],
+    dependencies: [SuperAdminRepository.Default, UsersRepository.Default],
   },
 ) {}
