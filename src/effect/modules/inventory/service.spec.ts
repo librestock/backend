@@ -49,7 +49,9 @@ const makeAreaDto = (overrides: Record<string, any> = {}) => ({
 });
 
 const makeMockRepository = (
-  overrides: Partial<Record<keyof import('./repository').InventoryRepository, Mock>> = {},
+  overrides: Partial<
+    Record<keyof import('./repository').InventoryRepository, Mock>
+  > = {},
 ) => ({
   findAllPaginated: vi.fn().mockReturnValue(
     Effect.succeed({
@@ -62,36 +64,59 @@ const makeMockRepository = (
   ),
   findAll: vi.fn().mockReturnValue(Effect.succeed([makeInventoryEntity()])),
   findById: vi.fn().mockReturnValue(Effect.succeed(makeInventoryEntity())),
-  findByProductId: vi.fn().mockReturnValue(Effect.succeed([makeInventoryEntity()])),
-  findByLocationId: vi.fn().mockReturnValue(Effect.succeed([makeInventoryEntity()])),
+  findByProductId: vi
+    .fn()
+    .mockReturnValue(Effect.succeed([makeInventoryEntity()])),
+  findByLocationId: vi
+    .fn()
+    .mockReturnValue(Effect.succeed([makeInventoryEntity()])),
   findByProductAndLocation: vi.fn().mockReturnValue(Effect.succeed(null)),
-  create: vi.fn().mockReturnValue(Effect.succeed(makeInventoryEntity({ id: 'inventory-created' }))),
+  create: vi
+    .fn()
+    .mockReturnValue(
+      Effect.succeed(makeInventoryEntity({ id: 'inventory-created' })),
+    ),
   update: vi.fn().mockReturnValue(Effect.succeed(1)),
   adjustQuantity: vi.fn().mockReturnValue(Effect.succeed(1)),
   delete: vi.fn().mockReturnValue(Effect.void),
+  findSummary: vi.fn().mockReturnValue(
+    Effect.succeed({
+      low_stock_count: 2,
+      expiring_soon_count: 1,
+    }),
+  ),
   ...overrides,
 });
 
 const makeMockProductsService = (
-  overrides: Partial<Record<keyof import('../products/service').ProductsService, Mock>> = {},
-) => ({
-  existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
-  ...overrides,
-} as any);
+  overrides: Partial<
+    Record<keyof import('../products/service').ProductsService, Mock>
+  > = {},
+) =>
+  ({
+    existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
+    ...overrides,
+  }) as any;
 
 const makeMockLocationsService = (
-  overrides: Partial<Record<keyof import('../locations/service').LocationsService, Mock>> = {},
-) => ({
-  existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
-  ...overrides,
-} as any);
+  overrides: Partial<
+    Record<keyof import('../locations/service').LocationsService, Mock>
+  > = {},
+) =>
+  ({
+    existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
+    ...overrides,
+  }) as any;
 
 const makeMockAreasService = (
-  overrides: Partial<Record<keyof import('../areas/service').AreasService, Mock>> = {},
-) => ({
-  findById: vi.fn().mockReturnValue(Effect.succeed(makeAreaDto())),
-  ...overrides,
-} as any);
+  overrides: Partial<
+    Record<keyof import('../areas/service').AreasService, Mock>
+  > = {},
+) =>
+  ({
+    findById: vi.fn().mockReturnValue(Effect.succeed(makeAreaDto())),
+    ...overrides,
+  }) as any;
 
 const buildService = (
   repository = makeMockRepository(),
@@ -140,6 +165,28 @@ describe('Effect InventoryService', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({ id: 'inventory-1' });
+    });
+  });
+
+  describe('findSummary', () => {
+    it('returns inventory summary counts from the repository', async () => {
+      const repository = makeMockRepository({
+        findSummary: vi.fn().mockReturnValue(
+          Effect.succeed({
+            low_stock_count: 3,
+            expiring_soon_count: 2,
+          }),
+        ),
+      });
+      const service = await buildService(repository);
+
+      const result = await run(service.findSummary());
+
+      expect(repository.findSummary).toHaveBeenCalledWith();
+      expect(result).toEqual({
+        low_stock_count: 3,
+        expiring_soon_count: 2,
+      });
     });
   });
 
@@ -199,7 +246,11 @@ describe('Effect InventoryService', () => {
       const locationsService = makeMockLocationsService({
         existsById: vi.fn().mockReturnValue(Effect.succeed(false)),
       });
-      const service = await buildService(undefined, undefined, locationsService);
+      const service = await buildService(
+        undefined,
+        undefined,
+        locationsService,
+      );
 
       const error = await fail(service.findByLocation('missing'));
       expect(error).toMatchObject({ _tag: 'InventoryLocationNotFound' });
@@ -224,7 +275,11 @@ describe('Effect InventoryService', () => {
           .fn()
           .mockReturnValueOnce(
             Effect.succeed(
-              makeInventoryEntity({ id: 'inventory-created', area_id: 'area-1', area: makeAreaDto() }),
+              makeInventoryEntity({
+                id: 'inventory-created',
+                area_id: 'area-1',
+                area: makeAreaDto(),
+              }),
             ),
           ),
       });
@@ -264,7 +319,11 @@ describe('Effect InventoryService', () => {
       const locationsService = makeMockLocationsService({
         existsById: vi.fn().mockReturnValue(Effect.succeed(false)),
       });
-      const service = await buildService(undefined, undefined, locationsService);
+      const service = await buildService(
+        undefined,
+        undefined,
+        locationsService,
+      );
 
       const error = await fail(service.create(createDto));
       expect(error).toMatchObject({ _tag: 'InvalidInventoryLocation' });
@@ -281,7 +340,12 @@ describe('Effect InventoryService', () => {
           ),
         ),
       });
-      const service = await buildService(undefined, undefined, undefined, areasService);
+      const service = await buildService(
+        undefined,
+        undefined,
+        undefined,
+        areasService,
+      );
 
       const error = await fail(service.create(createDto));
       expect(error).toMatchObject({ _tag: 'InvalidInventoryArea' });
@@ -289,11 +353,18 @@ describe('Effect InventoryService', () => {
 
     it('fails when area belongs to another location', async () => {
       const areasService = makeMockAreasService({
-        findById: vi.fn().mockReturnValue(
-          Effect.succeed(makeAreaDto({ location_id: 'location-2' })),
-        ),
+        findById: vi
+          .fn()
+          .mockReturnValue(
+            Effect.succeed(makeAreaDto({ location_id: 'location-2' })),
+          ),
       });
-      const service = await buildService(undefined, undefined, undefined, areasService);
+      const service = await buildService(
+        undefined,
+        undefined,
+        undefined,
+        areasService,
+      );
 
       const error = await fail(service.create(createDto));
       expect(error).toMatchObject({ _tag: 'InventoryAreaLocationMismatch' });
@@ -301,7 +372,9 @@ describe('Effect InventoryService', () => {
 
     it('fails when matching inventory already exists', async () => {
       const repository = makeMockRepository({
-        findByProductAndLocation: vi.fn().mockReturnValue(Effect.succeed(makeInventoryEntity())),
+        findByProductAndLocation: vi
+          .fn()
+          .mockReturnValue(Effect.succeed(makeInventoryEntity())),
       });
       const service = await buildService(repository);
 
@@ -330,7 +403,11 @@ describe('Effect InventoryService', () => {
             Effect.succeed(
               makeInventoryEntity({
                 location_id: 'location-2',
-                location: { id: 'location-2', name: 'Warehouse B', type: 'WAREHOUSE' },
+                location: {
+                  id: 'location-2',
+                  name: 'Warehouse B',
+                  type: 'WAREHOUSE',
+                },
                 area_id: 'area-2',
                 area: makeAreaDto({ id: 'area-2', location_id: 'location-2' }),
               }),
@@ -341,9 +418,13 @@ describe('Effect InventoryService', () => {
         existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
       });
       const areasService = makeMockAreasService({
-        findById: vi.fn().mockReturnValue(
-          Effect.succeed(makeAreaDto({ id: 'area-2', location_id: 'location-2' })),
-        ),
+        findById: vi
+          .fn()
+          .mockReturnValue(
+            Effect.succeed(
+              makeAreaDto({ id: 'area-2', location_id: 'location-2' }),
+            ),
+          ),
       });
       const service = await buildService(
         repository,
@@ -368,19 +449,28 @@ describe('Effect InventoryService', () => {
         location_id: 'location-2',
         area_id: 'area-2',
       });
-      expect(result).toMatchObject({ location_id: 'location-2', area_id: 'area-2' });
+      expect(result).toMatchObject({
+        location_id: 'location-2',
+        area_id: 'area-2',
+      });
     });
 
     it('fails when the updated combination already exists', async () => {
       const repository = makeMockRepository({
-        findByProductAndLocation: vi.fn().mockReturnValue(
-          Effect.succeed(makeInventoryEntity({ id: 'inventory-2' })),
-        ),
+        findByProductAndLocation: vi
+          .fn()
+          .mockReturnValue(
+            Effect.succeed(makeInventoryEntity({ id: 'inventory-2' })),
+          ),
       });
       const locationsService = makeMockLocationsService({
         existsById: vi.fn().mockReturnValue(Effect.succeed(true)),
       });
-      const service = await buildService(repository, undefined, locationsService);
+      const service = await buildService(
+        repository,
+        undefined,
+        locationsService,
+      );
 
       const error = await fail(
         service.update('inventory-1', { location_id: 'location-2' } as any),
@@ -394,8 +484,12 @@ describe('Effect InventoryService', () => {
       const repository = makeMockRepository({
         findById: vi
           .fn()
-          .mockReturnValueOnce(Effect.succeed(makeInventoryEntity({ quantity: 10 })))
-          .mockReturnValueOnce(Effect.succeed(makeInventoryEntity({ quantity: 7 }))),
+          .mockReturnValueOnce(
+            Effect.succeed(makeInventoryEntity({ quantity: 10 })),
+          )
+          .mockReturnValueOnce(
+            Effect.succeed(makeInventoryEntity({ quantity: 7 })),
+          ),
       });
       const service = await buildService(repository);
 
@@ -416,7 +510,9 @@ describe('Effect InventoryService', () => {
       const error = await fail(
         service.adjustQuantity('inventory-1', { adjustment: -100 } as any),
       );
-      expect(error).toMatchObject({ _tag: 'InventoryQuantityAdjustmentFailed' });
+      expect(error).toMatchObject({
+        _tag: 'InventoryQuantityAdjustmentFailed',
+      });
     });
   });
 

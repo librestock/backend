@@ -1,4 +1,5 @@
 import { Effect, Layer } from 'effect';
+import { randomUUID } from 'node:crypto';
 import {
   getTestDb,
   closeTestDb,
@@ -212,6 +213,97 @@ describe('InventoryService Integration', () => {
       expect(result[0]!.product_id).toBe(product.id);
       expect(result[0]!.product).toMatchObject({ name: product.name });
       expect(result[0]!.location).toMatchObject({ name: location.name });
+    });
+  });
+
+  describe('findSummary', () => {
+    it('counts low-stock and expiring-soon inventory from real rows', async () => {
+      const location = await seedLocation(db);
+      const category = await seedCategory(db);
+      const lowStockProduct = await seedProduct(db, {
+        category_id: category.id,
+        reorder_point: 10,
+      });
+      const healthyProduct = await seedProduct(db, {
+        category_id: category.id,
+        reorder_point: 5,
+      });
+      const futureProduct = await seedProduct(db, {
+        category_id: category.id,
+        reorder_point: 1,
+      });
+
+      await seedInventory(db, {
+        product_id: lowStockProduct.id,
+        location_id: location.id,
+        quantity: 10,
+        expiry_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+      });
+      await seedInventory(db, {
+        product_id: healthyProduct.id,
+        location_id: location.id,
+        quantity: 20,
+        expiry_date: null,
+      });
+      await seedInventory(db, {
+        product_id: futureProduct.id,
+        location_id: location.id,
+        quantity: 2,
+        expiry_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+      });
+
+      const result = await run(
+        Effect.flatMap(InventoryService, (svc) => svc.findSummary()),
+      );
+
+      expect(result).toEqual({
+        low_stock_count: 1,
+        expiring_soon_count: 1,
+      });
+    });
+
+    it('excludes inventory rows from other tenants', async () => {
+      const location = await seedLocation(db);
+      const category = await seedCategory(db);
+      const product = await seedProduct(db, {
+        category_id: category.id,
+        reorder_point: 10,
+      });
+      await seedInventory(db, {
+        product_id: product.id,
+        location_id: location.id,
+        quantity: 1,
+        expiry_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+      });
+
+      const otherTenantId = randomUUID();
+      const otherCategory = await seedCategory(db, {
+        tenant_id: otherTenantId,
+      });
+      const otherProduct = await seedProduct(db, {
+        tenant_id: otherTenantId,
+        category_id: otherCategory.id,
+        reorder_point: 10,
+      });
+      const otherLocation = await seedLocation(db, {
+        tenant_id: otherTenantId,
+      });
+      await seedInventory(db, {
+        tenant_id: otherTenantId,
+        product_id: otherProduct.id,
+        location_id: otherLocation.id,
+        quantity: 1,
+        expiry_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+      });
+
+      const result = await run(
+        Effect.flatMap(InventoryService, (svc) => svc.findSummary()),
+      );
+
+      expect(result).toEqual({
+        low_stock_count: 1,
+        expiring_soon_count: 1,
+      });
     });
   });
 
