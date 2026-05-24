@@ -16,6 +16,8 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:mutation:pure": "stryker run stryker.config.mjs",
+    "test:duplicates": "jscpd src --pattern \"**/*.spec.ts\" --min-lines 12 --min-tokens 80 --threshold 8 --reporters console --noSymlinks --noTips",
     "import:sortly": "tsx src/scripts/import-sortly.ts",
     "seed": "tsx src/scripts/seed-database.ts",
     "type-check": "tsc --noEmit"
@@ -47,12 +49,17 @@
     "@effect/vitest": "^0.29.0",
     "@faker-js/faker": "^10.4.0",
     "@librestock/tsconfig": "workspace:*",
+    "@stryker-mutator/core": "9.6.1",
+    "@stryker-mutator/typescript-checker": "9.6.1",
+    "@stryker-mutator/vitest-runner": "9.6.1",
     "@types/node": "^22.19.0",
     "@types/pg": "^8.20.0",
     "@vitest/coverage-v8": "4.1.2",
     "esbuild": "^0.27.7",
+    "jscpd": "4.2.3",
     "oxlint": "^1.17.0",
     "tsx": "^4.21.0",
+    "typescript": "5.9.3",
     "vitest": "4.1.2"
   },
   "trustedDependencies": [

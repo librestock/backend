@@ -1,4 +1,11 @@
 packages:
   - .
   - packages/*
+
 minimumReleaseAge: 1440
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - esbuild
+  - msgpackr-extract
+  - protobufjs
