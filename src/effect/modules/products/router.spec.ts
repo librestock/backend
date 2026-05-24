@@ -2,8 +2,7 @@
  * Unit-scope tests for `productsRouter`.
  *
  * Scope: HTTP boundary only — guard → decode → service → respond. Service
- * internals live in `service.spec.ts` / `service.effect.spec.ts` /
- * `service.integration.spec.ts`.
+ * internals live in `service.effect.spec.ts` / `service.integration.spec.ts`.
  *
  * Canonical coverage per route:
  *   1. Permission guard rejects insufficient role → 403
@@ -82,9 +81,9 @@ const makeProductResponse = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const bulkResult = (overrides: Partial<{ succeeded: string[]; failed: unknown[]; success_count: number; failure_count: number }> = {}) => ({
+const bulkResult = (overrides: Partial<{ succeeded: string[]; failures: unknown[]; success_count: number; failure_count: number }> = {}) => ({
   succeeded: [PRODUCT_ID],
-  failed: [],
+  failures: [],
   success_count: 1,
   failure_count: 0,
   ...overrides,
@@ -303,6 +302,7 @@ describe('productsRouter', () => {
       );
 
       expect(response.status).toBe(201);
+      await expect(response.json()).resolves.toEqual(bulkResult());
       expect(bulkCreate).toHaveBeenCalledTimes(1);
       expect(auditLog).toHaveBeenCalledWith({
         action: AuditAction.CREATE,
@@ -625,6 +625,7 @@ describe('productsRouter', () => {
       );
 
       expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual(bulkResult());
       expect(bulkUpdateStatus).toHaveBeenCalledTimes(1);
       expect(auditLog).toHaveBeenCalledWith({
         action: AuditAction.STATUS_CHANGE,
@@ -716,6 +717,7 @@ describe('productsRouter', () => {
       );
 
       expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual(bulkResult());
       expect(bulkRestore).toHaveBeenCalledTimes(1);
       expect(auditLog).toHaveBeenCalledWith({
         action: AuditAction.RESTORE,
@@ -807,6 +809,7 @@ describe('productsRouter', () => {
       );
 
       expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual(bulkResult());
       expect(bulkDelete).toHaveBeenCalledTimes(1);
       expect(auditLog).toHaveBeenCalledWith({
         action: AuditAction.DELETE,
