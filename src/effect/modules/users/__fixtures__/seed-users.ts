@@ -73,12 +73,12 @@ export async function seedTenantMembership(
     slug?: string;
   },
 ): Promise<void> {
-  await seedBetterAuthUser(db, {
-    id: userId,
-    name: 'Test User',
-    email: `${userId}@example.com`,
-    role: 'user',
-  });
+  await ensureBetterAuthUserTable(db);
+  await db.execute(sql`
+    INSERT INTO "user" (id, name, email, role, created_at, updated_at)
+    VALUES (${userId}, 'Test User', ${`${userId}@example.com`}, 'user', NOW(), NOW())
+    ON CONFLICT (id) DO NOTHING
+  `);
   await db
     .insert(organizations)
     .values({
