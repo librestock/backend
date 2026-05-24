@@ -151,5 +151,5 @@ export const buildHttpApp = Effect.gen(function* () {
     securityHeadersMiddleware(
       corsMiddleware(bodyLimitMiddleware(tenantContextMiddleware(base))),
     ),
-  );
+  ).pipe(Effect.catchAllCause(respondCause));
 });
