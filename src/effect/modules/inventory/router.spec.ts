@@ -81,13 +81,10 @@ const makePermissionProviderLayer = (
     [Resource.INVENTORY]: [Permission.READ, Permission.WRITE],
   },
 ) =>
-  Layer.succeed(
-    PermissionProvider,
-    {
-      getPermissionsForUser: () =>
-        Effect.succeed({ roleNames: ['Admin'], permissions }),
-    } as any,
-  );
+  Layer.succeed(PermissionProvider, {
+    getPermissionsForUser: () =>
+      Effect.succeed({ roleNames: ['Admin'], permissions }),
+  } as any);
 
 const auditLogWriterLayer = Layer.succeed(AuditLogWriter, {
   log: () => Effect.void,
@@ -191,6 +188,45 @@ describe('inventoryRouter', () => {
         new Request('http://localhost/inventory/product/not-a-uuid'),
       );
       expect(response.status).toBe(400);
+    });
+  });
+
+  describe('GET /inventory/summary', () => {
+    it('returns the inventory summary when the caller can read inventory', async () => {
+      const handler = makeHandler({
+        service: {
+          findSummary: () =>
+            Effect.succeed({
+              low_stock_count: 2,
+              expiring_soon_count: 1,
+            }),
+        } as any,
+      });
+
+      const response = await handler(
+        new Request('http://localhost/inventory/summary'),
+      );
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({
+        low_stock_count: 2,
+        expiring_soon_count: 1,
+      });
+    });
+
+    it('returns 403 before loading the summary when the caller lacks inventory:read', async () => {
+      const findSummary = vi.fn(() => Effect.die('should not be called'));
+      const handler = makeHandler({
+        service: { findSummary } as any,
+        permissions: {},
+      });
+
+      const response = await handler(
+        new Request('http://localhost/inventory/summary'),
+      );
+
+      expect(response.status).toBe(403);
+      expect(findSummary).not.toHaveBeenCalled();
     });
   });
 
@@ -301,14 +337,11 @@ describe('inventoryRouter', () => {
       });
 
       const response = await handler(
-        new Request(
-          `http://localhost/inventory/${TEST_INVENTORY_ID}/adjust`,
-          {
-            method: 'PATCH',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ adjustment: 5 }),
-          },
-        ),
+        new Request(`http://localhost/inventory/${TEST_INVENTORY_ID}/adjust`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ adjustment: 5 }),
+        }),
       );
       expect(response.status).toBe(200);
       await expect(response.json()).resolves.toMatchObject({
@@ -332,14 +365,11 @@ describe('inventoryRouter', () => {
       });
 
       const response = await handler(
-        new Request(
-          `http://localhost/inventory/${TEST_INVENTORY_ID}/adjust`,
-          {
-            method: 'PATCH',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ adjustment: -50 }),
-          },
-        ),
+        new Request(`http://localhost/inventory/${TEST_INVENTORY_ID}/adjust`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ adjustment: -50 }),
+        }),
       );
       expect(response.status).toBe(400);
       await expect(response.json()).resolves.toMatchObject({
@@ -356,14 +386,11 @@ describe('inventoryRouter', () => {
       });
 
       const response = await handler(
-        new Request(
-          `http://localhost/inventory/${TEST_INVENTORY_ID}/adjust`,
-          {
-            method: 'PATCH',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({}),
-          },
-        ),
+        new Request(`http://localhost/inventory/${TEST_INVENTORY_ID}/adjust`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({}),
+        }),
       );
       expect(response.status).toBe(400);
     });

@@ -6,6 +6,7 @@ import {
   CurrentRequestContext,
   type RequestContext,
 } from '../platform/request-context';
+import { respondCause } from '../platform/errors';
 import { DEFAULT_TENANT_ID } from '../platform/tenant-context';
 import { makeBetterAuthTestLayer } from '../testing/better-auth-test';
 import { tenantContextMiddleware } from './tenant';
@@ -57,24 +58,45 @@ const makeBetterAuthLayer = (getSession: ReturnType<typeof vi.fn>) =>
     } as unknown as Partial<BetterAuthService['api']>,
   });
 
-const makeEffect = (
+const provideTestRequest = <A, E, R>(
+  effect: Effect.Effect<A, E, R>,
   url: string,
   getSession: ReturnType<typeof vi.fn>,
   requestContext?: RequestContext,
 ) => {
-  let effect = tenantContextMiddleware(okApp).pipe(
+  let provided = effect.pipe(
     Effect.provide(makeRequestLayer(url)),
     Effect.provide(makeBetterAuthLayer(getSession)),
   );
 
   if (requestContext) {
-    effect = effect.pipe(
+    provided = provided.pipe(
       Effect.provide(Layer.succeed(CurrentRequestContext, requestContext)),
     );
   }
 
-  return effect;
+  return provided;
 };
+
+const makeEffect = (
+  url: string,
+  getSession: ReturnType<typeof vi.fn>,
+  requestContext?: RequestContext,
+) => provideTestRequest(
+  tenantContextMiddleware(okApp),
+  url,
+  getSession,
+  requestContext,
+);
+
+const makeCaughtEffect = (
+  url: string,
+  getSession: ReturnType<typeof vi.fn>,
+) => provideTestRequest(
+  tenantContextMiddleware(okApp).pipe(Effect.catchAllCause(respondCause)),
+  url,
+  getSession,
+);
 
 const run = (
   url: string,
@@ -115,6 +137,16 @@ describe('tenantContextMiddleware', () => {
     );
 
     expect(error).toMatchObject({ _tag: 'SessionUnauthorized' });
+  });
+
+  it('can be caught into a 401 response when it rejects before the router runs', async () => {
+    const getSession = vi.fn(async () => null);
+
+    const response = await Effect.runPromise(
+      makeCaughtEffect('http://localhost/api/v1/products', getSession),
+    );
+
+    expect(response.status).toBe(401);
   });
 
   it('resolves and stores tenant context for protected API requests', async () => {

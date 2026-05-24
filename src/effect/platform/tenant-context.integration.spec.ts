@@ -10,7 +10,11 @@ import {
   TenantMembershipRejected,
   TenantNotResolved,
 } from './tenant-context';
-import { getTestDb, withTestDb } from '../testing/test-harness';
+import {
+  getTestDb,
+  seedBetterAuthUser,
+  withTestDb,
+} from '../testing/test-harness';
 
 withTestDb();
 
@@ -59,6 +63,7 @@ const seedMembership = async (
   name = 'Tenant Org',
 ) => {
   const db = getTestDb();
+  await seedBetterAuthUser(db, { id: userId });
   await db.insert(organizations).values({
     id: organizationId,
     name,
@@ -88,7 +93,7 @@ beforeEach(async () => {
     CREATE TABLE IF NOT EXISTS "member" (
       id TEXT PRIMARY KEY,
       organization_id UUID NOT NULL,
-      user_id UUID NOT NULL,
+      user_id TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'member',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       CONSTRAINT member_user_organization_unique UNIQUE (user_id, organization_id)

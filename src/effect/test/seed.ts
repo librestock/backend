@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'drizzle-orm';
 import { LocationType } from '@librestock/types/locations';
 import { ClientStatus } from '@librestock/types/clients';
 import { StockMovementReason } from '@librestock/types/stock-movements';
@@ -11,6 +12,51 @@ const shortId = () => randomUUID().slice(0, 8);
 /** Stable fake user UUID for test actor references (orders.created_by, etc.) */
 export const TEST_USER_ID = '00000000-0000-4000-a000-000000000001';
 export const TEST_USER_ID_2 = '00000000-0000-4000-a000-000000000002';
+
+export async function ensureBetterAuthUserTable(db: DrizzleDb): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "user" (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      email TEXT,
+      email_verified BOOLEAN DEFAULT FALSE,
+      image TEXT,
+      role TEXT,
+      banned BOOLEAN DEFAULT FALSE,
+      ban_reason TEXT,
+      ban_expires TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+}
+
+export async function seedBetterAuthUser(
+  db: DrizzleDb,
+  overrides: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    role?: 'admin' | 'user';
+  },
+): Promise<void> {
+  await ensureBetterAuthUserTable(db);
+
+  const { id } = overrides;
+  const name = overrides.name ?? 'Test User';
+  const email = overrides.email ?? `${id}@example.com`;
+  const role = overrides.role ?? 'user';
+
+  await db.execute(sql`
+    INSERT INTO "user" (id, name, email, role, created_at, updated_at)
+    VALUES (${id}, ${name}, ${email}, ${role}, NOW(), NOW())
+    ON CONFLICT (id) DO UPDATE SET
+      name = EXCLUDED.name,
+      email = EXCLUDED.email,
+      role = EXCLUDED.role,
+      updated_at = EXCLUDED.updated_at
+  `);
+}
 
 export async function seedCategory(
   db: DrizzleDb,

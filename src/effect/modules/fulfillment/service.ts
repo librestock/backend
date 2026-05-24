@@ -1,4 +1,4 @@
-import { Effect } from 'effect';
+import { Cause, Effect, Exit, Layer, Option } from 'effect';
 import type {
   OrderFulfillmentView,
   PackInput,
@@ -7,6 +7,8 @@ import type {
 import { fromNullOr } from '../../platform/from-null-or';
 import { OrderStatus } from '@librestock/types/orders';
 import { StockMovementReason } from '@librestock/types/stock-movements';
+import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
+import { CurrentRequestContext } from '../../platform/request-context';
 import { InventoryRepository } from '../inventory/repository';
 import { OrderItemsRepository, OrdersRepository } from '../orders/repository';
 import type { Order } from '../orders/orders.utils';
@@ -17,7 +19,37 @@ import {
   FulfillmentNotImplemented,
   FulfillmentOrderNotFound,
   FulfillmentPickFailed,
+  type FulfillmentError,
 } from './errors';
+
+const isFulfillmentError = (cause: unknown): cause is FulfillmentError =>
+  cause instanceof FulfillmentOrderNotFound ||
+  cause instanceof FulfillmentInvalidTransition ||
+  cause instanceof FulfillmentPickFailed ||
+  cause instanceof FulfillmentNotImplemented ||
+  cause instanceof FulfillmentInfrastructureError;
+
+// Thrown only for defects/interrupts inside the pick transaction. A typed
+// failure (`Cause.failureOption` is `Some`) is rethrown as-is so the outer
+// `tryPromise` catch can pattern-match it back to a FulfillmentError. The
+// pretty-printed cause keeps stack/interrupt info that `Cause.squash` would drop.
+class FulfillmentTransactionDefect extends Error {
+  constructor(public readonly cause: Cause.Cause<unknown>) {
+    super(Cause.pretty(cause));
+    this.name = 'FulfillmentTransactionDefect';
+  }
+}
+
+const runEffectAsPromise = async <A, E>(
+  effect: Effect.Effect<A, E, never>,
+): Promise<A> => {
+  const exit = await Effect.runPromiseExit(effect);
+  if (Exit.isSuccess(exit)) return exit.value;
+
+  const failure = Cause.failureOption(exit.cause);
+  if (Option.isSome(failure)) throw failure.value;
+  throw new FulfillmentTransactionDefect(exit.cause);
+};
 
 export class FulfillmentService extends Effect.Service<FulfillmentService>()(
   '@librestock/effect/fulfillment/FulfillmentService',
@@ -27,6 +59,10 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
       const orderItemsRepository = yield* OrderItemsRepository;
       const inventoryRepository = yield* InventoryRepository;
       const stockMovementsRepository = yield* StockMovementsRepository;
+      // Pull DrizzleDatabase at construction time so a missing platform layer
+      // fails loudly during wiring rather than silently degrading pick() to a
+      // non-transactional code path at runtime.
+      const db = yield* DrizzleDatabase;
 
       const wrapInfrastructureError = (action: string) => (cause: unknown) =>
         new FulfillmentInfrastructureError({
@@ -35,14 +71,24 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
           messageKey: 'fulfillment.infrastructureFailed',
         });
 
-      const loadOrderOrFail = (orderId: string) =>
+      const loadOrderOrFailFrom = (
+        repository: typeof ordersRepository,
+        orderId: string,
+      ) =>
         fromNullOr(
           Effect.mapError(
-            ordersRepository.findById(orderId),
+            repository.findById(orderId),
             wrapInfrastructureError('load order'),
           ),
-          () => new FulfillmentOrderNotFound({ orderId, messageKey: 'fulfillment.orderNotFound' }),
+          () =>
+            new FulfillmentOrderNotFound({
+              orderId,
+              messageKey: 'fulfillment.orderNotFound',
+            }),
         );
+
+      const loadOrderOrFail = (orderId: string) =>
+        loadOrderOrFailFrom(ordersRepository, orderId);
 
       const toView = (order: Order): OrderFulfillmentView => ({
         orderId: order.id,
@@ -58,6 +104,68 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
           quantityPacked: item.quantity_packed,
         })),
       });
+
+      const runPickAtomically = <A, E>(
+        effect: (repositories: {
+          readonly ordersRepository: typeof ordersRepository;
+          readonly orderItemsRepository: typeof orderItemsRepository;
+          readonly inventoryRepository: typeof inventoryRepository;
+          readonly stockMovementsRepository: typeof stockMovementsRepository;
+        }) => Effect.Effect<A, E, never>,
+      ) =>
+        Effect.gen(function* () {
+          const requestContext = yield* Effect.serviceOption(
+            CurrentRequestContext,
+          );
+
+          return yield* Effect.tryPromise({
+            try: () =>
+              db.transaction(async (tx) => {
+                // drizzle's PgTransaction is structurally compatible with
+                // NodePgDatabase for all query methods we use, but the two are
+                // nominally distinct types — there is no clean public way to
+                // express "either".
+                const txDb = tx as unknown as DrizzleDb;
+                let txPlatformLayer: Layer.Layer<DrizzleDb> = Layer.succeed(
+                  DrizzleDatabase,
+                  txDb,
+                );
+                if (Option.isSome(requestContext)) {
+                  txPlatformLayer = Layer.merge(
+                    txPlatformLayer,
+                    Layer.succeed(CurrentRequestContext, requestContext.value),
+                  );
+                }
+                const txRepositoriesLayer = Layer.mergeAll(
+                  OrdersRepository.Default,
+                  OrderItemsRepository.Default,
+                  InventoryRepository.Default,
+                  StockMovementsRepository.Default,
+                ).pipe(Layer.provide(txPlatformLayer));
+
+                const txEffect = Effect.gen(function* () {
+                  const txOrdersRepository = yield* OrdersRepository;
+                  const txOrderItemsRepository = yield* OrderItemsRepository;
+                  const txInventoryRepository = yield* InventoryRepository;
+                  const txStockMovementsRepository =
+                    yield* StockMovementsRepository;
+
+                  return yield* effect({
+                    ordersRepository: txOrdersRepository,
+                    orderItemsRepository: txOrderItemsRepository,
+                    inventoryRepository: txInventoryRepository,
+                    stockMovementsRepository: txStockMovementsRepository,
+                  });
+                }).pipe(Effect.provide(txRepositoriesLayer));
+
+                return runEffectAsPromise(txEffect);
+              }),
+            catch: (cause) =>
+              isFulfillmentError(cause)
+                ? cause
+                : wrapInfrastructureError('pick transaction')(cause),
+          });
+        });
 
       const confirm = (orderId: string, actorId: string) =>
         Effect.gen(function* () {
@@ -84,7 +192,11 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
 
           const updated = yield* loadOrderOrFail(orderId);
           return toView(updated);
-        }).pipe(Effect.withSpan('FulfillmentService.confirm', { attributes: { orderId } }));
+        }).pipe(
+          Effect.withSpan('FulfillmentService.confirm', {
+            attributes: { orderId },
+          }),
+        );
 
       const PICKABLE_STATUSES: readonly OrderStatus[] = [
         OrderStatus.CONFIRMED,
@@ -97,101 +209,134 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
         readonly picks: readonly PickInput[];
       }) =>
         Effect.gen(function* () {
-          const order = yield* loadOrderOrFail(input.orderId);
+          const preflightOrder = yield* loadOrderOrFail(input.orderId);
 
-          if (!PICKABLE_STATUSES.includes(order.status)) {
+          if (!PICKABLE_STATUSES.includes(preflightOrder.status)) {
             return yield* Effect.fail(
               new FulfillmentInvalidTransition({
                 orderId: input.orderId,
-                from: order.status,
+                from: preflightOrder.status,
                 to: OrderStatus.PICKING,
                 messageKey: 'fulfillment.notPickable',
               }),
             );
           }
 
-          if (order.status === OrderStatus.CONFIRMED) {
-            yield* ordersRepository
-              .update(input.orderId, { status: OrderStatus.PICKING })
-              .pipe(
-                Effect.mapError(
-                  wrapInfrastructureError('transition to picking'),
-                ),
+          return yield* runPickAtomically((repositories) =>
+            Effect.gen(function* () {
+              const order = yield* loadOrderOrFailFrom(
+                repositories.ordersRepository,
+                input.orderId,
               );
-          }
 
-          const itemIds = input.picks.map((p) => p.orderItemId);
-          const items = yield* orderItemsRepository
-            .findByIds(itemIds)
-            .pipe(Effect.mapError(wrapInfrastructureError('load order items')));
-          const itemMap = new Map((items ?? []).map((i) => [i.id, i]));
+              if (!PICKABLE_STATUSES.includes(order.status)) {
+                return yield* Effect.fail(
+                  new FulfillmentInvalidTransition({
+                    orderId: input.orderId,
+                    from: order.status,
+                    to: OrderStatus.PICKING,
+                    messageKey: 'fulfillment.notPickable',
+                  }),
+                );
+              }
 
-          for (const p of input.picks) {
-            const item = itemMap.get(p.orderItemId);
-            if (!item) {
-              return yield* Effect.fail(
-                new FulfillmentPickFailed({
-                  orderItemId: p.orderItemId,
-                  messageKey: 'fulfillment.orderItemNotFound',
-                }),
-              );
-            }
+              if (order.status === OrderStatus.CONFIRMED) {
+                yield* repositories.ordersRepository
+                  .update(input.orderId, { status: OrderStatus.PICKING })
+                  .pipe(
+                    Effect.mapError(
+                      wrapInfrastructureError('transition to picking'),
+                    ),
+                  );
+              }
 
-            // Decrement inventory first — fail fast if stock is unavailable
-            yield* inventoryRepository
-              .adjustQuantity(p.inventoryId, -p.quantity)
-              .pipe(
-                Effect.mapError(wrapInfrastructureError('decrement inventory')),
-                Effect.filterOrFail(
-                  (rows) => rows !== 0,
-                  () =>
+              const itemIds = input.picks.map((p) => p.orderItemId);
+              const items = yield* repositories.orderItemsRepository
+                .findByIds(itemIds)
+                .pipe(
+                  Effect.mapError(wrapInfrastructureError('load order items')),
+                );
+              const itemMap = new Map((items ?? []).map((i) => [i.id, i]));
+
+              for (const p of input.picks) {
+                const item = itemMap.get(p.orderItemId);
+                if (!item || item.order_id !== input.orderId) {
+                  return yield* Effect.fail(
                     new FulfillmentPickFailed({
                       orderItemId: p.orderItemId,
-                      messageKey: 'fulfillment.insufficientInventory',
+                      messageKey: 'fulfillment.orderItemNotFound',
                     }),
-                ),
+                  );
+                }
+
+                // Decrement inventory first — fail fast if stock is unavailable
+                yield* repositories.inventoryRepository
+                  .adjustQuantity(p.inventoryId, -p.quantity)
+                  .pipe(
+                    Effect.mapError(
+                      wrapInfrastructureError('decrement inventory'),
+                    ),
+                    Effect.filterOrFail(
+                      (rows) => rows !== 0,
+                      () =>
+                        new FulfillmentPickFailed({
+                          orderItemId: p.orderItemId,
+                          messageKey: 'fulfillment.insufficientInventory',
+                        }),
+                    ),
+                  );
+
+                // Atomic increment — returns 0 rows if it would over-pick
+                yield* repositories.orderItemsRepository
+                  .incrementPicked(p.orderItemId, p.quantity)
+                  .pipe(
+                    Effect.mapError(
+                      wrapInfrastructureError('increment quantity_picked'),
+                    ),
+                    Effect.filterOrFail(
+                      (rows) => rows !== 0,
+                      () =>
+                        new FulfillmentPickFailed({
+                          orderItemId: p.orderItemId,
+                          messageKey: 'fulfillment.overPick',
+                        }),
+                    ),
+                  );
+
+                const inv = yield* repositories.inventoryRepository
+                  .findById(p.inventoryId)
+                  .pipe(
+                    Effect.mapError(wrapInfrastructureError('load inventory')),
+                  );
+
+                yield* repositories.stockMovementsRepository
+                  .create({
+                    product_id: item.product_id,
+                    from_location_id: inv?.location_id ?? null,
+                    quantity: p.quantity,
+                    reason: StockMovementReason.SALE,
+                    order_id: input.orderId,
+                    user_id: input.actorId,
+                  })
+                  .pipe(
+                    Effect.mapError(
+                      wrapInfrastructureError('create stock movement'),
+                    ),
+                  );
+              }
+
+              const updated = yield* loadOrderOrFailFrom(
+                repositories.ordersRepository,
+                input.orderId,
               );
-
-            // Atomic increment — returns 0 rows if it would over-pick
-            yield* orderItemsRepository
-              .incrementPicked(p.orderItemId, p.quantity)
-              .pipe(
-                Effect.mapError(
-                  wrapInfrastructureError('increment quantity_picked'),
-                ),
-                Effect.filterOrFail(
-                  (rows) => rows !== 0,
-                  () =>
-                    new FulfillmentPickFailed({
-                      orderItemId: p.orderItemId,
-                      messageKey: 'fulfillment.overPick',
-                    }),
-                ),
-              );
-
-            const inv = yield* inventoryRepository
-              .findById(p.inventoryId)
-              .pipe(Effect.mapError(wrapInfrastructureError('load inventory')));
-
-            yield* stockMovementsRepository
-              .create({
-                product_id: item.product_id,
-                from_location_id: inv?.location_id ?? null,
-                quantity: p.quantity,
-                reason: StockMovementReason.SALE,
-                order_id: input.orderId,
-                user_id: input.actorId,
-              })
-              .pipe(
-                Effect.mapError(
-                  wrapInfrastructureError('create stock movement'),
-                ),
-              );
-          }
-
-          const updated = yield* loadOrderOrFail(input.orderId);
-          return toView(updated);
-        }).pipe(Effect.withSpan('FulfillmentService.pick', { attributes: { orderId: input.orderId } }));
+              return toView(updated);
+            }),
+          );
+        }).pipe(
+          Effect.withSpan('FulfillmentService.pick', {
+            attributes: { orderId: input.orderId },
+          }),
+        );
 
       const pack = (input: {
         readonly orderId: string;
@@ -211,7 +356,11 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
               messageKey: 'fulfillment.packNotImplemented',
             }),
           );
-        }).pipe(Effect.withSpan('FulfillmentService.pack', { attributes: { orderId: input.orderId } }));
+        }).pipe(
+          Effect.withSpan('FulfillmentService.pack', {
+            attributes: { orderId: input.orderId },
+          }),
+        );
 
       const ship = (orderId: string, actorId: string) =>
         Effect.gen(function* () {
@@ -227,7 +376,11 @@ export class FulfillmentService extends Effect.Service<FulfillmentService>()(
               messageKey: 'fulfillment.shipNotImplemented',
             }),
           );
-        }).pipe(Effect.withSpan('FulfillmentService.ship', { attributes: { orderId } }));
+        }).pipe(
+          Effect.withSpan('FulfillmentService.ship', {
+            attributes: { orderId },
+          }),
+        );
 
       return {
         confirm,
