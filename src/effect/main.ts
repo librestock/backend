@@ -18,6 +18,7 @@ import { PhotosService } from './modules/photos/service';
 import { ProductsService } from './modules/products/service';
 import type { RolesInfrastructureError } from './modules/roles/roles.errors';
 import { RolesService } from './modules/roles/service';
+import { SuperAdminService } from './modules/superadmin/service';
 import { PermissionProvider } from './platform/permission-provider';
 import { StockMovementsService } from './modules/stock-movements/service';
 import { SuppliersService } from './modules/suppliers/service';
@@ -61,6 +62,9 @@ const authApplicationLayer = AuthService.Default.pipe(
 );
 const usersApplicationLayer = UsersService.Default.pipe(
   Layer.provide(Layer.mergeAll(platformLayer, rolesApplicationLayer)),
+);
+const superAdminApplicationLayer = SuperAdminService.Default.pipe(
+  Layer.provide(platformLayer),
 );
 
 const shouldRunStartupMigrations = () =>
@@ -175,6 +179,7 @@ const applicationLayer = Layer.mergeAll(
   permissionProviderLayer,
   authApplicationLayer,
   usersApplicationLayer,
+  superAdminApplicationLayer,
   areasApplicationLayer,
   productsApplicationLayer,
   workflowServicesLayer,

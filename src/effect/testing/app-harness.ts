@@ -15,6 +15,7 @@ import { PhotosService } from '../modules/photos/service';
 import { ProductsService } from '../modules/products/service';
 import { RolesService } from '../modules/roles/service';
 import { StockMovementsService } from '../modules/stock-movements/service';
+import { SuperAdminService } from '../modules/superadmin/service';
 import { SuppliersService } from '../modules/suppliers/service';
 import { UsersService } from '../modules/users/service';
 import { auditLayer } from '../platform/audit';
@@ -59,6 +60,9 @@ export const makeTestApplicationLayer = (options: TestHttpAppOptions = {}) => {
   );
   const usersApplicationLayer = UsersService.Default.pipe(
     Layer.provide(Layer.mergeAll(platformLayer, rolesApplicationLayer)),
+  );
+  const superAdminApplicationLayer = SuperAdminService.Default.pipe(
+    Layer.provide(platformLayer),
   );
 
   const foundationalServicesLayer = Layer.mergeAll(
@@ -120,6 +124,7 @@ export const makeTestApplicationLayer = (options: TestHttpAppOptions = {}) => {
     permissionProviderLayer,
     authApplicationLayer,
     usersApplicationLayer,
+    superAdminApplicationLayer,
     areasApplicationLayer,
     productsApplicationLayer,
     workflowServicesLayer,

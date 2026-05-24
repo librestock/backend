@@ -22,7 +22,7 @@ import { RolesRepository } from './repository';
 
 export type { UserPermissions };
 
-const seedDefinitions: {
+export const defaultRoleSeedDefinitions: {
   readonly name: string;
   readonly description: string;
   readonly permissions: { resource: Resource; permission: Permission }[];
@@ -195,6 +195,30 @@ export class RolesService extends Effect.Service<RolesService>()(
       const getPermissionsForUser = (userId: string, tenantId: string) =>
         permissionCache.get(`${tenantId}:${userId}`);
 
+      const seedDefaultRolesForTenant = (tenantId: string) =>
+        Effect.forEach(defaultRoleSeedDefinitions, (seed) =>
+          Effect.gen(function* () {
+            const existing = yield* repository.findByName(seed.name, tenantId);
+            if (existing) {
+              return;
+            }
+
+            const role = yield* repository.create({
+              tenant_id: tenantId,
+              name: seed.name,
+              description: seed.description,
+              is_system: true,
+            });
+
+            yield* repository.replacePermissions(role.id, seed.permissions);
+          }),
+        ).pipe(
+          Effect.asVoid,
+          Effect.withSpan('RolesService.seedDefaultRolesForTenant', {
+            attributes: { tenantId },
+          }),
+        );
+
       return {
         findAll: () =>
           Effect.gen(function* () {
@@ -308,27 +332,11 @@ export class RolesService extends Effect.Service<RolesService>()(
           ),
         clearAllCache: () =>
           clearAllCache().pipe(Effect.withSpan('RolesService.clearAllCache')),
+        seedDefaultRolesForTenant,
         seed: () =>
-          Effect.forEach(seedDefinitions, (seed) =>
-            Effect.gen(function* () {
-              const existing = yield* repository.findByName(
-                seed.name,
-                DEFAULT_TENANT_ID,
-              );
-              if (existing) {
-                return;
-              }
-
-              const role = yield* repository.create({
-                tenant_id: DEFAULT_TENANT_ID,
-                name: seed.name,
-                description: seed.description,
-                is_system: true,
-              });
-
-              yield* repository.replacePermissions(role.id, seed.permissions);
-            }),
-          ).pipe(Effect.asVoid, Effect.withSpan('RolesService.seed')),
+          seedDefaultRolesForTenant(DEFAULT_TENANT_ID).pipe(
+            Effect.withSpan('RolesService.seed'),
+          ),
       };
     }),
     dependencies: [RolesRepository.Default],
