@@ -1,7 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { admin, organization } from 'better-auth/plugins';
 import { Pool } from 'pg';
-import { createFirstAdminAssigner } from './auth-first-admin';
 import { getCrossSubDomainCookieConfig } from './auth-cookie-domain';
 import {
   getSSLConfig,
@@ -9,11 +8,65 @@ import {
   IDLE_TIMEOUT_MS,
   getDbConnectionParams,
 } from './config/db-connection.utils';
+import { isPlatformHost, normalizeHost } from './effect/platform/host';
 function parseOrigins(value: string | undefined): string[] {
   return (value ?? '')
     .split(',')
     .map((origin) => origin.trim())
     .filter((origin) => origin.length > 0);
+}
+
+const normalizeForwardedProto = (proto: string | null | undefined) => {
+  const normalizedProto = proto?.split(',')[0]?.trim().toLowerCase() || 'https';
+  return normalizedProto === 'http' || normalizedProto === 'https'
+    ? normalizedProto
+    : null;
+};
+
+async function isTrustedAuthHost(host: string | null | undefined) {
+  const normalizedHost = normalizeHost(host);
+  if (!normalizedHost) return false;
+  if (isPlatformHost(normalizedHost)) return true;
+
+  try {
+    const result = await pool.query(
+      `
+        SELECT 1
+        FROM tenant_domains
+        WHERE hostname = $1 AND verified_at IS NOT NULL
+        LIMIT 1
+      `,
+      [normalizedHost],
+    );
+
+    return result.rowCount !== null && result.rowCount > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function originFromUrl(value: string | null | undefined) {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    return (await isTrustedAuthHost(url.host)) ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
+
+async function originFromForwardedHost(
+  host: string | null | undefined,
+  proto: string | null | undefined,
+) {
+  const normalizedHost = normalizeHost(host);
+  const normalizedProto = normalizeForwardedProto(proto);
+  if (!normalizedHost || !normalizedProto) return null;
+
+  return (await isTrustedAuthHost(normalizedHost))
+    ? `${normalizedProto}://${normalizedHost}`
+    : null;
 }
 
 if (!process.env.BETTER_AUTH_SECRET) {
@@ -43,12 +96,27 @@ const pool =
         idleTimeoutMillis: IDLE_TIMEOUT_MS,
       });
 
-const trustedOrigins = parseOrigins(process.env.FRONTEND_URL);
+const configuredTrustedOrigins = parseOrigins(process.env.FRONTEND_URL);
 const crossSubDomainCookies = getCrossSubDomainCookieConfig({
   authBaseUrl: process.env.BETTER_AUTH_URL,
-  frontendOrigins: trustedOrigins,
+  frontendOrigins: configuredTrustedOrigins,
   cookieDomain: process.env.BETTER_AUTH_COOKIE_DOMAIN,
 });
+const trustedOrigins = async (request?: Request): Promise<string[]> => {
+  const dynamicOrigins = await Promise.all([
+    originFromUrl(request?.headers.get('origin')),
+    originFromUrl(request?.headers.get('referer')),
+    originFromForwardedHost(
+      request?.headers.get('x-forwarded-host') ?? request?.headers.get('host'),
+      request?.headers.get('x-forwarded-proto'),
+    ),
+  ]);
+
+  return [
+    ...configuredTrustedOrigins,
+    ...dynamicOrigins.filter((origin): origin is string => origin !== null),
+  ];
+};
 
 const coreAuthSchema = {
   user: {
@@ -134,8 +202,6 @@ const organizationSchema = {
   },
 } as const;
 
-const assignFirstAdminRole = createFirstAdminAssigner(pool);
-
 // Better Auth defaults to camelCase column names. The rest of the codebase uses
 // snake_case (Drizzle schema, hand-written SQL in this file and in repositories,
 // and the committed migrations). Map every camelCase field Better Auth knows
@@ -173,14 +239,5 @@ export const auth = betterAuth({
       generateId: 'uuid',
     },
     ...(crossSubDomainCookies ? { crossSubDomainCookies } : {}),
-  },
-  databaseHooks: {
-    user: {
-      create: {
-        after: async (user) => {
-          await assignFirstAdminRole(user.id);
-        },
-      },
-    },
   },
 });
