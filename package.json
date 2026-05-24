@@ -20,6 +20,8 @@
     "test:duplicates": "jscpd src --pattern \"**/*.spec.ts\" --min-lines 12 --min-tokens 80 --threshold 8 --reporters console --noSymlinks --noTips",
     "import:sortly": "tsx src/scripts/import-sortly.ts",
     "seed": "tsx src/scripts/seed-database.ts",
+    "superadmin:hash-password": "tsx src/scripts/seed-superadmin.ts --hash-password",
+    "superadmin:seed": "tsx src/scripts/seed-superadmin.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
