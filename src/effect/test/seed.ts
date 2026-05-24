@@ -60,6 +60,7 @@ export async function seedBetterAuthUser(
     email?: string | null;
     role?: 'admin' | 'user';
   },
+  options: { readonly onConflict?: 'update' | 'nothing' } = {},
 ): Promise<void> {
   await ensureBetterAuthUserTable(db);
 
@@ -67,6 +68,15 @@ export async function seedBetterAuthUser(
   const name = overrides.name ?? 'Test User';
   const email = overrides.email ?? `${id}@example.com`;
   const role = overrides.role ?? 'user';
+
+  if (options.onConflict === 'nothing') {
+    await db.execute(sql`
+      INSERT INTO "user" (id, name, email, role, created_at, updated_at)
+      VALUES (${id}, ${name}, ${email}, ${role}, NOW(), NOW())
+      ON CONFLICT (id) DO NOTHING
+    `);
+    return;
+  }
 
   await db.execute(sql`
     INSERT INTO "user" (id, name, email, role, created_at, updated_at)

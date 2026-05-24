@@ -4,11 +4,13 @@ import { Permission, Resource } from '@librestock/types/auth';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import {
   auditLogs,
+  brandingSettings,
   inventory,
   members,
   organizations,
   rolePermissions,
   roles,
+  tenantDomains,
   userRoles,
 } from '../platform/db/schema';
 import {
@@ -17,6 +19,8 @@ import {
   DEFAULT_TENANT_SLUG,
 } from '../platform/tenant-constants';
 import type { DrizzleDb } from '../platform/drizzle';
+import { hostnameForTenantSlug } from '../platform/host';
+import { BRANDING_SETTINGS_ID } from '../modules/branding/branding.constants';
 import { makeTestHttpAppHandler } from '../testing/app-harness';
 import {
   getTestDb,
@@ -30,6 +34,18 @@ import {
 } from '../testing/test-harness';
 
 let db: DrizzleDb;
+const TEST_TENANT_HOST = hostnameForTenantSlug(DEFAULT_TENANT_SLUG);
+const TEST_TENANT_ORIGIN = `http://${TEST_TENANT_HOST}`;
+
+const tenantRequest = (path: string, init: RequestInit = {}) => {
+  const headers = new Headers(init.headers);
+  headers.set('host', TEST_TENANT_HOST);
+
+  return new Request(`${TEST_TENANT_ORIGIN}${path}`, {
+    ...init,
+    headers,
+  });
+};
 
 withTestDb();
 beforeAll(() => {
@@ -58,16 +74,52 @@ const makeSession = (userId = TEST_USER_ID) => ({
   },
 });
 
-async function seedDefaultTenantMembership(userId: string) {
-  await seedBetterAuthUser(db, { id: userId });
+async function seedTenantDomain(
+  tenant: {
+    readonly id: string;
+    readonly name: string;
+    readonly slug: string;
+  },
+  domain: {
+    readonly hostname: string;
+    readonly kind: 'subdomain' | 'custom_domain';
+    readonly isPrimary?: boolean;
+  },
+) {
   await db
     .insert(organizations)
     .values({
+      id: tenant.id,
+      name: tenant.name,
+      slug: tenant.slug,
+    })
+    .onConflictDoNothing();
+  await db
+    .insert(tenantDomains)
+    .values({
+      tenant_id: tenant.id,
+      hostname: domain.hostname,
+      kind: domain.kind,
+      is_primary: domain.isPrimary ?? true,
+      verified_at: new Date(),
+    })
+    .onConflictDoNothing();
+}
+
+async function seedDefaultTenantDomain() {
+  await seedTenantDomain(
+    {
       id: DEFAULT_TENANT_ID,
       name: DEFAULT_TENANT_NAME,
       slug: DEFAULT_TENANT_SLUG,
-    })
-    .onConflictDoNothing();
+    },
+    { hostname: TEST_TENANT_HOST, kind: 'subdomain' },
+  );
+}
+
+async function seedDefaultTenantMembership(userId: string) {
+  await seedBetterAuthUser(db, { id: userId });
+  await seedDefaultTenantDomain();
   await db
     .insert(members)
     .values({
@@ -160,11 +212,10 @@ describe('buildHttpApp acceptance', () => {
   });
 
   it('serves branding without an authenticated session', async () => {
+    await seedDefaultTenantDomain();
     const { handler, dispose } = makeTestHttpAppHandler();
     try {
-      const response = await handler(
-        new Request('http://localhost/api/v1/branding'),
-      );
+      const response = await handler(tenantRequest('/api/v1/branding'));
 
       expect(response.status).toBe(200);
       await expect(response.json()).resolves.toMatchObject({
@@ -221,7 +272,7 @@ describe('buildHttpApp acceptance', () => {
     });
     try {
       const response = await handler(
-        new Request('http://localhost/api/v1/inventory', {
+        tenantRequest('/api/v1/inventory', {
           method: 'POST',
           headers: {
             'content-type': 'application/json',
@@ -275,7 +326,7 @@ describe('buildHttpApp acceptance', () => {
     });
     try {
       const response = await handler(
-        new Request('http://localhost/api/v1/inventory', {
+        tenantRequest('/api/v1/inventory', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
@@ -307,7 +358,7 @@ describe('buildHttpApp acceptance', () => {
     });
     try {
       const response = await handler(
-        new Request('http://localhost/api/v1/inventory', {
+        tenantRequest('/api/v1/inventory', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({

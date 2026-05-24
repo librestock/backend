@@ -90,6 +90,14 @@ export const isTrustedForwardedHostSource = (remoteAddress: unknown) => {
   );
 };
 
+const hostFromUrl = (url: string) => {
+  try {
+    return new URL(url).host;
+  } catch {
+    return null;
+  }
+};
+
 export const resolveRequestHost = (
   request: HttpServerRequest.HttpServerRequest,
 ) => {
@@ -104,7 +112,7 @@ export const resolveRequestHost = (
     if (normalizedForwardedHost) return normalizedForwardedHost;
   }
 
-  return normalizeHost(request.headers.host);
+  return normalizeHost(request.headers.host ?? hostFromUrl(request.originalUrl));
 };
 
 export const isPlatformHost = (host: string | null | undefined) => {

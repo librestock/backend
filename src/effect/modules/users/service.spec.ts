@@ -308,4 +308,39 @@ describe('Effect UsersService', () => {
       'user-1',
     );
   });
+
+  it('checks tenant membership before mutating auth state', async () => {
+    const usersRepository = makeBaseRepository();
+    usersRepository.hasTenantMembership.mockReturnValue(Effect.succeed(false));
+    const service = await makeService({
+      betterAuth: { api: { createUser: vi.fn() } },
+      usersRepository,
+      rolesService: { clearCacheForUser: vi.fn().mockReturnValue(Effect.void) },
+    });
+
+    await expect(
+      fail(
+        withTenantContext(
+          service.banUser('user-1', {
+            reason: 'abuse',
+          }),
+        ),
+      ),
+    ).resolves.toMatchObject({ _tag: 'UserNotFound' });
+    await expect(
+      fail(withTenantContext(service.unbanUser('user-1'))),
+    ).resolves.toMatchObject({ _tag: 'UserNotFound' });
+    await expect(
+      fail(withTenantContext(service.revokeSessions('user-1'))),
+    ).resolves.toMatchObject({ _tag: 'UserNotFound' });
+    await expect(
+      fail(withTenantContext(service.deleteUser('user-1'))),
+    ).resolves.toMatchObject({ _tag: 'UserNotFound' });
+
+    expect(usersRepository.findBetterAuthUser).not.toHaveBeenCalled();
+    expect(usersRepository.banBetterAuthUser).not.toHaveBeenCalled();
+    expect(usersRepository.unbanBetterAuthUser).not.toHaveBeenCalled();
+    expect(usersRepository.deleteBetterAuthSessions).not.toHaveBeenCalled();
+    expect(usersRepository.deleteBetterAuthUser).not.toHaveBeenCalled();
+  });
 });
