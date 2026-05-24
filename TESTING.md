@@ -14,9 +14,9 @@ For deeper detail on the Effect test harness internals (layers, seeds, Better Au
 | **Effect-native unit** | `*.effect.spec.ts`           | `pnpm test`               | No                  | New unit tests where the test body itself is an Effect (preferred for new code on services with simple wiring).                      |
 | **Property**           | `*.property.spec.ts`         | `pnpm test`               | No                  | Pure functions whose behavior is best expressed as an invariant ("for all inputs, X holds").                                         |
 | **Integration**        | `*.integration.spec.ts`      | `pnpm test:integration`   | Yes (real Postgres) | Testing a service through real Drizzle SQL, transactional behavior, or full HTTP-app composition.                                    |
-| **Mutation**           | n/a (re-runs existing specs) | `pnpm test:mutation:pure` | No                  | Quality-gating the test suite around pure utility files. Catches assertions that are too weak to detect off-by-one or boolean flips. |
+| **Mutation**           | n/a (re-runs existing specs) | `pnpm test:mutation:pure` | No                  | Optional quality check for pure utility files. Catches assertions that are too weak to detect off-by-one or boolean flips. |
 
-There is also a **duplication check** (`pnpm test:duplicates`) — not a test flavor, but a CI signal that spec files are diverging from copy-paste.
+There is also a **duplication check** (`pnpm test:duplicates`) — not a test flavor, but a signal for excessive copy-paste across spec files.
 
 ---
 
@@ -154,14 +154,14 @@ vi.mock('../../platform/session', async () => {
 });
 ```
 
-Per-route, write **at least** these four tests:
+For routes with meaningful domain behavior, consider covering these cases:
 
 1. **Happy path** — 200/201 with the expected body.
 2. **Domain error mapping** — service yields `Effect.fail(new MyNotFound(...))`, response is 404.
 3. **Permission denied** — `permissions: {}` (no `Resource.X: [...]`), response is 403, and assert the service method is `not.toHaveBeenCalled()`.
 4. **Schema rejection** — invalid body, response is 400 (don't reach the service).
 
-The permission-denied test is the load-bearing one. If a developer forgets `requirePermission(...)`, this catches it.
+The permission-denied test is often the load-bearing one. If a developer forgets `requirePermission(...)`, this catches it.
 
 ### Plain utility unit tests
 
@@ -383,6 +383,8 @@ async function waitForAuditLog(entityId: string) {
 
 Stryker mutates the source files listed in `stryker.config.mjs` (currently `auth-cookie-domain.ts`, `bulk-operation.utils.ts`, `messages.ts`) and re-runs the test suite. Each surviving mutant is a hint that the tests don't actually pin down the behavior.
 
+Mutation testing is slower than normal Vitest runs. Use it as a targeted confidence check, not as part of the default edit-test loop.
+
 **When to add a file to `mutate:`**:
 
 - It's a **pure utility** (no I/O, no Effect dependencies) that the system relies on.
@@ -423,19 +425,19 @@ Run it before merging a PR that adds a lot of similar tests. If the percentage j
 - **Don't `await Effect.runPromise` and expect rejection.** Use `await fail(effect)` (= `Effect.runPromise(Effect.flip(effect))`) or `it.effect` with an `Effect.flip`. Mixing rejected-promise and Effect-failure semantics is a source of brittle tests.
 - **Don't seed via raw SQL.** Use the `seed*` helpers. Schema changes break raw `INSERT`s silently — defaults shift, columns get renamed.
 - **Don't share `db`, `TestLayer`, or `Pool` instances across describe blocks via globals.** Keep them inside a `beforeAll` that runs after `withTestDb()` has wired the lifecycle.
-- **Don't test private behavior through `as any`.** If a test needs to reach into internals, the service's public surface is wrong. Refactor.
+- **Avoid testing private behavior through `as any`.** Treat it as a design smell; prefer testing through the public surface or refactoring the seam.
 - **Don't add `console.log` or `process.exit` for "temporary debugging" and forget to remove it.** Use `Effect.tap((x) => Effect.log(x))` or vitest's `--reporter=verbose`.
 
 ---
 
 ## 11. Anatomy of a test addition
 
-When you're adding a feature, the test suite usually needs **at least these layers**:
+When you're adding a feature, consider which of these layers would catch the likely regression:
 
-1. **Property test** for any new pure utility introduced.
-2. **Unit test** for the service's domain logic (one happy path, one mapped-error case per method).
-3. **Router unit test** if you added a new route — minimum: 200, 4xx for missing permission, 4xx for invalid input.
-4. **Integration test** for any new SQL query (filter behavior, tenant scoping, transactional invariants).
-5. **Acceptance test** if it's a golden path that should never regress.
+1. **Property test** for a new pure utility with interesting invariants.
+2. **Unit test** for service domain logic, especially mapped-error cases.
+3. **Router unit test** for a new route's HTTP/permission/schema boundary.
+4. **Integration test** for SQL behavior, tenant scoping, sorting/filtering, or transactional invariants.
+5. **Acceptance test** for a golden path that should never regress.
 
-You don't need all five every time. But before saying a feature is "done", ask: which of these would catch the bug I'm most worried about? Write that one first.
+You don't need all five every time. Default to the smallest test that catches the bug you're most worried about, then add broader tests only when the narrower seam would miss the risk.

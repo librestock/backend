@@ -41,8 +41,9 @@ When request/response shapes change:
 
 ## Testing
 
-- Run unit tests with `pnpm test`.
-- For cross-module workflows, prefer a deeper boundary over more mocks around neighboring services.
+- Run unit tests with `pnpm test`; integration tests use `pnpm test:integration`.
+- Choose the smallest test boundary that catches the likely regression; use integration/acceptance tests when correctness depends on real SQL, transactions, tenant isolation, or full HTTP composition.
+- For detailed backend testing patterns, read `TESTING.md` instead of duplicating guidance here.
 - If type-check fails, confirm whether the failure is from your change before chasing unrelated errors.
 
 ## Issue Tracking
