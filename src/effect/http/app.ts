@@ -9,6 +9,7 @@ import * as HttpServerRequest from '@effect/platform/HttpServerRequest';
 import { Effect, Layer, Option } from 'effect';
 import { auth } from '../../auth';
 import { apiRouter } from '../modules';
+import { HealthService } from '../modules/health/service';
 import { HealthApiLive } from '../modules/health/router';
 import { respondCause } from '../platform/errors';
 import {
@@ -89,18 +90,23 @@ const bodyLimitMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>) =>
     );
   });
 
-const apiLayer = Layer.provide(HttpApiBuilder.api(AppApi), [HealthApiLive]);
+const makeApiBuilderApp = (healthService: HealthService) => {
+  const healthLayer = Layer.succeed(HealthService, healthService);
+  const apiLayer = Layer.provide(HttpApiBuilder.api(AppApi), [
+    HealthApiLive.pipe(Layer.provide(healthLayer)),
+  ]);
 
-const apiBuilderApp = HttpApiBuilder.httpApp.pipe(
-  Effect.provide(
-    Layer.mergeAll(
-      apiLayer,
-      HttpApiSwagger.layer({ path: '/docs' }).pipe(Layer.provide(apiLayer)),
-      HttpApiBuilder.Router.Live,
-      HttpApiBuilder.Middleware.layer,
+  return HttpApiBuilder.httpApp.pipe(
+    Effect.provide(
+      Layer.mergeAll(
+        apiLayer,
+        HttpApiSwagger.layer({ path: '/docs' }).pipe(Layer.provide(apiLayer)),
+        HttpApiBuilder.Router.Live,
+        HttpApiBuilder.Middleware.layer,
+      ),
     ),
-  ),
-);
+  );
+};
 
 const betterAuthHandler = (request: Request): Promise<Response> => {
   const url = new URL(request.url);
@@ -117,7 +123,8 @@ export const buildHttpApp = Effect.gen(function* () {
   // Build the HttpApiBuilder app once. HealthService is in scope from the
   // applicationLayer provided in main.ts. The resulting HttpApp serves both
   // the typed API routes and the Swagger UI at /docs.
-  const builderApp = yield* apiBuilderApp;
+  const healthService = yield* HealthService;
+  const builderApp = yield* makeApiBuilderApp(healthService);
 
   const appRouter = HttpRouter.empty.pipe(
     // Health routes handled by HttpApiBuilder (typed, schema-validated)
