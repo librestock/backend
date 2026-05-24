@@ -13,6 +13,7 @@ import {
   index,
   primaryKey,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
 import { ClientStatus } from '@librestock/types/clients';
 import { LocationType } from '@librestock/types/locations';
@@ -104,7 +105,68 @@ export const organizations = pgTable(
 export const betterAuthUsers = pgTable('user', {
   id: text('id').primaryKey(),
   name: text('name'),
+  email: text('email'),
+  email_verified: boolean('email_verified'),
+  image: text('image'),
+  role: text('role'),
+  banned: boolean('banned'),
+  ban_reason: text('ban_reason'),
+  ban_expires: timestamp('ban_expires', { withTimezone: true }),
+  created_at: timestamp('created_at', { withTimezone: true }),
+  updated_at: timestamp('updated_at', { withTimezone: true }),
 });
+
+export const tenantDomains = pgTable(
+  'tenant_domains',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenant_id: uuid('tenant_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    hostname: text('hostname').notNull(),
+    kind: text('kind').notNull(),
+    is_primary: boolean('is_primary').notNull().default(false),
+    verified_at: timestamp('verified_at', { withTimezone: true }),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('tenant_domains_hostname_unique').on(table.hostname),
+    index('tenant_domains_tenant_id_idx').on(table.tenant_id),
+    uniqueIndex('tenant_domains_one_primary_per_tenant_idx')
+      .on(table.tenant_id)
+      .where(sql`is_primary = true`),
+  ],
+);
+
+export const superAdmins = pgTable('super_admins', {
+  user_id: text('user_id').primaryKey(),
+  created_at: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const platformAuditEvents = pgTable(
+  'platform_audit_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    actor_user_id: text('actor_user_id'),
+    action: text('action').notNull(),
+    entity_type: text('entity_type').notNull(),
+    entity_id: text('entity_id').notNull(),
+    metadata: jsonb('metadata'),
+    ip_address: text('ip_address'),
+    user_agent: text('user_agent'),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('platform_audit_events_actor_user_id_idx').on(table.actor_user_id),
+    index('platform_audit_events_created_at_idx').on(table.created_at),
+  ],
+);
 
 export const members = pgTable(
   'member',
