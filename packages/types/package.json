@@ -109,6 +109,12 @@
       "require": "./dist/cjs/stock-movements/index.js",
       "default": "./dist/esm/stock-movements/index.js"
     },
+    "./superadmin": {
+      "types": "./dist/esm/superadmin/index.d.ts",
+      "import": "./dist/esm/superadmin/index.js",
+      "require": "./dist/cjs/superadmin/index.js",
+      "default": "./dist/esm/superadmin/index.js"
+    },
     "./suppliers": {
       "types": "./dist/esm/suppliers/index.d.ts",
       "import": "./dist/esm/suppliers/index.js",
@@ -168,6 +174,9 @@
       ],
       "stock-movements": [
         "dist/esm/stock-movements/index.d.ts"
+      ],
+      "superadmin": [
+        "dist/esm/superadmin/index.d.ts"
       ],
       "suppliers": [
         "dist/esm/suppliers/index.d.ts"
