@@ -208,53 +208,73 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
           return { users, total };
         });
 
-      const hasAdminRole = (roleIds: string[], tenantId: string) =>
-        tryAsync('check admin role', async () => {
-          if (roleIds.length === 0) return false;
-
-          const rows = await db
-            .select({ id: roles.id })
-            .from(roles)
-            .where(
-              and(
-                inArray(roles.id, roleIds),
-                eq(roles.tenant_id, tenantId),
-                sql`LOWER(${roles.name}) = LOWER('Admin')`,
-              ),
-            )
-            .limit(1);
-
-          return rows.length > 0;
+      const findBetterAuthUser = (userId: string) =>
+        tryAsync('find better auth user', async () => {
+          const result = await db.execute(sql`
+            SELECT
+              id,
+              name,
+              email,
+              image,
+              banned,
+              ban_reason AS "banReason",
+              ban_expires AS "banExpires",
+              created_at AS "createdAt"
+            FROM "user"
+            WHERE id = ${userId}
+            LIMIT 1
+          `);
+          const rows =
+            (result as unknown as { rows?: TenantUserRow[] }).rows ??
+            (result as unknown as TenantUserRow[]);
+          return rows[0] ?? null;
         });
 
-      const hasAdminRoleForUser = (userId: string) =>
-        tryAsync('check user admin role', async () => {
-          const rows = await db
-            .select({ id: userRoles.id })
-            .from(userRoles)
-            .innerJoin(
-              roles,
-              and(
-                eq(userRoles.role_id, roles.id),
-                eq(userRoles.tenant_id, roles.tenant_id),
-              ),
-            )
-            .where(
-              and(
-                eq(userRoles.user_id, userId),
-                sql`LOWER(${roles.name}) = LOWER('Admin')`,
-              ),
-            )
-            .limit(1);
-
-          return rows.length > 0;
+      const deleteBetterAuthUser = (userId: string) =>
+        tryAsync('delete better auth user', async () => {
+          await db.transaction(async (tx) => {
+            await tx.execute(
+              sql`DELETE FROM "session" WHERE user_id = ${userId}`,
+            );
+            await tx.execute(sql`DELETE FROM account WHERE user_id = ${userId}`);
+            await tx.execute(sql`DELETE FROM "user" WHERE id = ${userId}`);
+          });
         });
 
-      const syncBetterAuthRole = (userId: string, role: 'admin' | 'user') =>
-        tryAsync('sync better auth role', async () => {
-          await db.execute(
-            sql`UPDATE "user" SET role = ${role} WHERE id = ${userId}`,
-          );
+      const banBetterAuthUser = (
+        userId: string,
+        options: { reason?: string; expiresAt?: string | null },
+      ) =>
+        tryAsync('ban better auth user', async () => {
+          await db.execute(sql`
+            UPDATE "user"
+            SET
+              banned = true,
+              ban_reason = ${options.reason ?? null},
+              ban_expires = ${
+                options.expiresAt ? new Date(options.expiresAt) : null
+              },
+              updated_at = NOW()
+            WHERE id = ${userId}
+          `);
+        });
+
+      const unbanBetterAuthUser = (userId: string) =>
+        tryAsync('unban better auth user', async () => {
+          await db.execute(sql`
+            UPDATE "user"
+            SET
+              banned = false,
+              ban_reason = NULL,
+              ban_expires = NULL,
+              updated_at = NOW()
+            WHERE id = ${userId}
+          `);
+        });
+
+      const deleteBetterAuthSessions = (userId: string) =>
+        tryAsync('delete better auth sessions', async () => {
+          await db.execute(sql`DELETE FROM "session" WHERE user_id = ${userId}`);
         });
 
       const deleteUserRoles = (userId: string, tenantId: string) =>
@@ -326,10 +346,12 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
         findUserRoles,
         validateRoleIds,
         replaceUserRoles,
-        hasAdminRole,
-        hasAdminRoleForUser,
         listTenantUsers,
-        syncBetterAuthRole,
+        findBetterAuthUser,
+        deleteBetterAuthUser,
+        banBetterAuthUser,
+        unbanBetterAuthUser,
+        deleteBetterAuthSessions,
         deleteUserRoles,
         deleteTenantMembership,
         hasTenantMembership,

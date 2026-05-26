@@ -14,6 +14,8 @@ import { productPhotosRouter, photosRouter } from './photos/router';
 import { stockMovementsRouter } from './stock-movements/router';
 import { inventoryRouter } from './inventory/router';
 import { ordersRouter } from './orders/router';
+import { platformRouter } from './platform/router';
+import { superAdminRouter } from './superadmin/router';
 
 export const moduleCounterparts = [
   'health',
@@ -32,6 +34,8 @@ export const moduleCounterparts = [
   'stock-movements',
   'inventory',
   'orders',
+  'platform',
+  'superadmin',
 ] as const;
 
 const migrationRouter = HttpRouter.empty.pipe(
@@ -62,4 +66,6 @@ export const apiRouter = HttpRouter.concatAll(
   stockMovementsRouter,
   inventoryRouter,
   ordersRouter,
+  platformRouter,
+  superAdminRouter,
 ).pipe(HttpRouter.prefixAll('/api/v1'));

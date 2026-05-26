@@ -1,14 +1,14 @@
 /**
  * Fixtures for the `UsersService` integration test.
  *
- * `UsersService.updateRoles` calls `usersRepository.syncBetterAuthRole`, which
- * runs `UPDATE "user" SET role = ... WHERE id = $1` against the Better Auth
- * `user` table. That table is NOT part of the Drizzle schema pushed by
- * `integration-global-setup.ts`, so we provision a minimal compatible version
- * here so the test can exercise the full flow end-to-end.
+ * `UsersService` reads and mutates Better Auth's local tables through
+ * `UsersRepository` while tenant membership and role assignments remain in
+ * LibreStock tables. Better Auth owns the `user`, `account`, and `session`
+ * tables in production, so this fixture provisions a minimal compatible shape
+ * for integration tests.
  *
  * Similarly, the `roles` table is truncated between tests but not seeded, so
- * `seedRole` inserts a row we can reference from `updateRoles` calls.
+ * `seedRole` inserts rows we can reference from `updateRoles` calls.
  */
 import { sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
@@ -25,10 +25,9 @@ import {
 } from '../../../platform/tenant-constants';
 
 /**
- * Create a stand-in for Better Auth's `user` table if the schema push did not
- * provision one. Only the columns `UsersRepository.syncBetterAuthRole` touches
- * need to exist (`id`, `role`). Extra columns are added to keep the shape
- * plausible and tolerate future growth.
+ * Create stand-ins for Better Auth tables if the schema push did not provision
+ * them. The shared fixture includes the columns exercised by repository-backed
+ * user lookup, delete, session revocation, and ban/unban flows.
  *
  * Idempotent: safe to call on every test-suite bootstrap.
  */
@@ -37,9 +36,8 @@ export async function ensureBetterAuthUserTable(db: DrizzleDb): Promise<void> {
 }
 
 /**
- * Insert a Better Auth `user` row so the integration test's
- * `UPDATE "user" SET role = ...` touches a real row (the production query has
- * no `RETURNING`, but inserting one matches the real runtime state).
+ * Insert a Better Auth `user` row so repository-backed service methods can
+ * read and mutate the same local auth table shape used at runtime.
  */
 export async function seedBetterAuthUserRow(
   db: DrizzleDb,
@@ -53,32 +51,22 @@ export async function seedBetterAuthUserRow(
   await seedBetterAuthUser(db, overrides);
 }
 
-export async function seedDefaultTenantMembership(
-  db: DrizzleDb,
-  userId: string,
-): Promise<void> {
-  await seedTenantMembership(db, userId, {
-    tenantId: DEFAULT_TENANT_ID,
-    name: DEFAULT_TENANT_NAME,
-    slug: DEFAULT_TENANT_SLUG,
-  });
-}
+type TenantSeed = {
+  readonly tenantId: string;
+  readonly name?: string;
+  readonly slug?: string;
+};
 
-export async function seedTenantMembership(
+const defaultTenantSeed: TenantSeed = {
+  tenantId: DEFAULT_TENANT_ID,
+  name: DEFAULT_TENANT_NAME,
+  slug: DEFAULT_TENANT_SLUG,
+};
+
+async function seedTenantOrganization(
   db: DrizzleDb,
-  userId: string,
-  tenant: {
-    tenantId: string;
-    name?: string;
-    slug?: string;
-  },
+  tenant: TenantSeed,
 ): Promise<void> {
-  await ensureBetterAuthUserTable(db);
-  await db.execute(sql`
-    INSERT INTO "user" (id, name, email, role, created_at, updated_at)
-    VALUES (${userId}, 'Test User', ${`${userId}@example.com`}, 'user', NOW(), NOW())
-    ON CONFLICT (id) DO NOTHING
-  `);
   await db
     .insert(organizations)
     .values({
@@ -87,6 +75,14 @@ export async function seedTenantMembership(
       slug: tenant.slug ?? `tenant-${tenant.tenantId}`,
     })
     .onConflictDoNothing();
+}
+
+async function seedTenantMembershipRow(
+  db: DrizzleDb,
+  userId: string,
+  tenant: TenantSeed,
+): Promise<void> {
+  await seedTenantOrganization(db, tenant);
   await db
     .insert(members)
     .values({
@@ -96,6 +92,38 @@ export async function seedTenantMembership(
       role: 'member',
     })
     .onConflictDoNothing();
+}
+
+export async function seedDefaultTenantMembership(
+  db: DrizzleDb,
+  userId: string,
+): Promise<void> {
+  await seedTenantMembership(db, userId, defaultTenantSeed);
+}
+
+export async function seedDefaultTenantMembershipWithoutUser(
+  db: DrizzleDb,
+  userId: string,
+): Promise<void> {
+  await seedTenantMembershipRow(db, userId, defaultTenantSeed);
+}
+
+export async function seedTenantMembership(
+  db: DrizzleDb,
+  userId: string,
+  tenant: TenantSeed,
+): Promise<void> {
+  await seedBetterAuthUser(
+    db,
+    {
+      id: userId,
+      name: 'Test User',
+      email: `${userId}@example.com`,
+      role: 'user',
+    },
+    { onConflict: 'nothing' },
+  );
+  await seedTenantMembershipRow(db, userId, tenant);
 }
 
 export async function seedTenantUserRow(

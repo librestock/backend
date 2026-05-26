@@ -1,6 +1,6 @@
 import { Cache, Duration, Effect } from 'effect';
 import { and, eq } from 'drizzle-orm';
-import { Permission, Resource } from '@librestock/types/auth';
+import { type Permission, type Resource } from '@librestock/types/auth';
 import type { CreateRoleDto, UpdateRoleDto } from '@librestock/types/roles';
 import { makeGetOrFail } from '../../platform/from-null-or';
 import { makeTryAsync } from '../../platform/try-async';
@@ -19,92 +19,11 @@ import {
   SystemRoleDeletionForbidden,
 } from './roles.errors';
 import { RolesRepository } from './repository';
+import { defaultRoleSeedDefinitions } from '../../platform/seed/default-roles';
 
 export type { UserPermissions };
 
-const seedDefinitions: {
-  readonly name: string;
-  readonly description: string;
-  readonly permissions: { resource: Resource; permission: Permission }[];
-}[] = [
-  {
-    name: 'Admin',
-    description: 'Full system access',
-    permissions: [
-      { resource: Resource.DASHBOARD, permission: Permission.READ },
-      { resource: Resource.ORDERS, permission: Permission.READ },
-      { resource: Resource.ORDERS, permission: Permission.WRITE },
-      { resource: Resource.CLIENTS, permission: Permission.READ },
-      { resource: Resource.CLIENTS, permission: Permission.WRITE },
-      { resource: Resource.SUPPLIERS, permission: Permission.READ },
-      { resource: Resource.SUPPLIERS, permission: Permission.WRITE },
-      { resource: Resource.STOCK_MOVEMENTS, permission: Permission.READ },
-      { resource: Resource.STOCK_MOVEMENTS, permission: Permission.WRITE },
-      { resource: Resource.PRODUCTS, permission: Permission.READ },
-      { resource: Resource.PRODUCTS, permission: Permission.WRITE },
-      { resource: Resource.LOCATIONS, permission: Permission.READ },
-      { resource: Resource.LOCATIONS, permission: Permission.WRITE },
-      { resource: Resource.INVENTORY, permission: Permission.READ },
-      { resource: Resource.INVENTORY, permission: Permission.WRITE },
-      { resource: Resource.AUDIT_LOGS, permission: Permission.READ },
-      { resource: Resource.USERS, permission: Permission.READ },
-      { resource: Resource.USERS, permission: Permission.WRITE },
-      { resource: Resource.SETTINGS, permission: Permission.READ },
-      { resource: Resource.SETTINGS, permission: Permission.WRITE },
-      { resource: Resource.ROLES, permission: Permission.READ },
-      { resource: Resource.ROLES, permission: Permission.WRITE },
-    ],
-  },
-  {
-    name: 'Warehouse Manager',
-    description: 'Manage warehouse operations',
-    permissions: [
-      { resource: Resource.DASHBOARD, permission: Permission.READ },
-      { resource: Resource.STOCK_MOVEMENTS, permission: Permission.READ },
-      { resource: Resource.STOCK_MOVEMENTS, permission: Permission.WRITE },
-      { resource: Resource.SUPPLIERS, permission: Permission.READ },
-      { resource: Resource.SUPPLIERS, permission: Permission.WRITE },
-      { resource: Resource.PRODUCTS, permission: Permission.READ },
-      { resource: Resource.PRODUCTS, permission: Permission.WRITE },
-      { resource: Resource.LOCATIONS, permission: Permission.READ },
-      { resource: Resource.LOCATIONS, permission: Permission.WRITE },
-      { resource: Resource.INVENTORY, permission: Permission.READ },
-      { resource: Resource.INVENTORY, permission: Permission.WRITE },
-      { resource: Resource.SETTINGS, permission: Permission.READ },
-      { resource: Resource.SETTINGS, permission: Permission.WRITE },
-    ],
-  },
-  {
-    name: 'Picker',
-    description: 'Pick and manage inventory',
-    permissions: [
-      { resource: Resource.DASHBOARD, permission: Permission.READ },
-      { resource: Resource.ORDERS, permission: Permission.READ },
-      { resource: Resource.STOCK_MOVEMENTS, permission: Permission.READ },
-      { resource: Resource.PRODUCTS, permission: Permission.READ },
-      { resource: Resource.LOCATIONS, permission: Permission.READ },
-      { resource: Resource.INVENTORY, permission: Permission.READ },
-      { resource: Resource.INVENTORY, permission: Permission.WRITE },
-      { resource: Resource.SETTINGS, permission: Permission.READ },
-      { resource: Resource.SETTINGS, permission: Permission.WRITE },
-    ],
-  },
-  {
-    name: 'Sales',
-    description: 'View products and orders',
-    permissions: [
-      { resource: Resource.DASHBOARD, permission: Permission.READ },
-      { resource: Resource.ORDERS, permission: Permission.READ },
-      { resource: Resource.ORDERS, permission: Permission.WRITE },
-      { resource: Resource.CLIENTS, permission: Permission.READ },
-      { resource: Resource.CLIENTS, permission: Permission.WRITE },
-      { resource: Resource.PRODUCTS, permission: Permission.READ },
-      { resource: Resource.INVENTORY, permission: Permission.READ },
-      { resource: Resource.SETTINGS, permission: Permission.READ },
-      { resource: Resource.SETTINGS, permission: Permission.WRITE },
-    ],
-  },
-];
+export { defaultRoleSeedDefinitions };
 
 export class RolesService extends Effect.Service<RolesService>()(
   '@librestock/effect/roles/RolesService',
@@ -194,6 +113,30 @@ export class RolesService extends Effect.Service<RolesService>()(
 
       const getPermissionsForUser = (userId: string, tenantId: string) =>
         permissionCache.get(`${tenantId}:${userId}`);
+
+      const seedDefaultRolesForTenant = (tenantId: string) =>
+        Effect.forEach(defaultRoleSeedDefinitions, (seed) =>
+          Effect.gen(function* () {
+            const existing = yield* repository.findByName(seed.name, tenantId);
+            if (existing) {
+              return;
+            }
+
+            const role = yield* repository.create({
+              tenant_id: tenantId,
+              name: seed.name,
+              description: seed.description,
+              is_system: true,
+            });
+
+            yield* repository.replacePermissions(role.id, seed.permissions);
+          }),
+        ).pipe(
+          Effect.asVoid,
+          Effect.withSpan('RolesService.seedDefaultRolesForTenant', {
+            attributes: { tenantId },
+          }),
+        );
 
       return {
         findAll: () =>
@@ -308,27 +251,11 @@ export class RolesService extends Effect.Service<RolesService>()(
           ),
         clearAllCache: () =>
           clearAllCache().pipe(Effect.withSpan('RolesService.clearAllCache')),
+        seedDefaultRolesForTenant,
         seed: () =>
-          Effect.forEach(seedDefinitions, (seed) =>
-            Effect.gen(function* () {
-              const existing = yield* repository.findByName(
-                seed.name,
-                DEFAULT_TENANT_ID,
-              );
-              if (existing) {
-                return;
-              }
-
-              const role = yield* repository.create({
-                tenant_id: DEFAULT_TENANT_ID,
-                name: seed.name,
-                description: seed.description,
-                is_system: true,
-              });
-
-              yield* repository.replacePermissions(role.id, seed.permissions);
-            }),
-          ).pipe(Effect.asVoid, Effect.withSpan('RolesService.seed')),
+          seedDefaultRolesForTenant(DEFAULT_TENANT_ID).pipe(
+            Effect.withSpan('RolesService.seed'),
+          ),
       };
     }),
     dependencies: [RolesRepository.Default],

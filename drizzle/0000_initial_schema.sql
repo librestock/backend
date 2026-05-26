@@ -153,6 +153,34 @@ CREATE TABLE "organization" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 
+CREATE TABLE "tenant_domains" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"hostname" text NOT NULL,
+	"kind" text NOT NULL,
+	"is_primary" boolean DEFAULT false NOT NULL,
+	"verified_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "tenant_domains_kind_check" CHECK ("kind" IN ('subdomain', 'custom_domain'))
+);
+
+CREATE TABLE "super_admins" (
+	"user_id" text PRIMARY KEY NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "platform_audit_events" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"actor_user_id" text,
+	"action" text NOT NULL,
+	"entity_type" text NOT NULL,
+	"entity_id" text NOT NULL,
+	"metadata" jsonb,
+	"ip_address" text,
+	"user_agent" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
 CREATE TABLE "photos" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"product_id" uuid NOT NULL,
@@ -269,6 +297,7 @@ ALTER TABLE "inventory" ADD CONSTRAINT "inventory_product_id_products_id_fk" FOR
 ALTER TABLE "inventory" ADD CONSTRAINT "inventory_location_id_locations_id_fk" FOREIGN KEY ("location_id") REFERENCES "public"."locations"("id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "inventory" ADD CONSTRAINT "inventory_area_id_areas_id_fk" FOREIGN KEY ("area_id") REFERENCES "public"."areas"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "member" ADD CONSTRAINT "member_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "tenant_domains" ADD CONSTRAINT "tenant_domains_tenant_id_organization_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "orders" ADD CONSTRAINT "orders_client_id_clients_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id") ON DELETE no action ON UPDATE no action;
@@ -307,6 +336,11 @@ CREATE UNIQUE INDEX "orders_tenant_order_number_unique" ON "orders" USING btree 
 CREATE INDEX "orders_client_id_idx" ON "orders" USING btree ("client_id");
 CREATE INDEX "orders_status_idx" ON "orders" USING btree ("status");
 CREATE UNIQUE INDEX "organization_slug_unique" ON "organization" USING btree ("slug");
+CREATE UNIQUE INDEX "tenant_domains_hostname_unique" ON "tenant_domains" USING btree ("hostname");
+CREATE INDEX "tenant_domains_tenant_id_idx" ON "tenant_domains" USING btree ("tenant_id");
+CREATE UNIQUE INDEX "tenant_domains_one_primary_per_tenant_idx" ON "tenant_domains" USING btree ("tenant_id") WHERE "is_primary" = true;
+CREATE INDEX "platform_audit_events_actor_user_id_idx" ON "platform_audit_events" USING btree ("actor_user_id");
+CREATE INDEX "platform_audit_events_created_at_idx" ON "platform_audit_events" USING btree ("created_at");
 CREATE INDEX "photos_product_id_idx" ON "photos" USING btree ("product_id");
 CREATE UNIQUE INDEX "products_tenant_sku_unique" ON "products" USING btree ("tenant_id","sku");
 CREATE INDEX "products_deleted_at_idx" ON "products" USING btree ("deleted_at");
@@ -323,3 +357,23 @@ CREATE INDEX "stock_movements_created_at_idx" ON "stock_movements" USING btree (
 CREATE UNIQUE INDEX "user_roles_tenant_user_role_unique" ON "user_roles" USING btree ("tenant_id","user_id","role_id");
 CREATE INDEX "user_roles_user_id_idx" ON "user_roles" USING btree ("user_id");
 CREATE INDEX "user_roles_tenant_user_id_idx" ON "user_roles" USING btree ("tenant_id","user_id");
+
+INSERT INTO tenant_domains (tenant_id, hostname, kind, is_primary, verified_at)
+SELECT
+  o.id,
+  lower(trim(trailing '.' from o.slug)) || '.librestock.maximilian.pw',
+  'subdomain',
+  true,
+  now()
+FROM organization o
+WHERE lower(trim(trailing '.' from o.slug)) NOT IN (
+    'default',
+    'api',
+    'deploy',
+    'www',
+    'admin',
+    'superadmin',
+    'auth',
+    'assets'
+  )
+ON CONFLICT (hostname) DO NOTHING;

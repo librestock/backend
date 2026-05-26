@@ -1,9 +1,22 @@
+import { HttpServerRequest } from '@effect/platform';
 import { Effect, Layer } from 'effect';
 import { Permission, Resource } from '@librestock/types/auth';
+import { DrizzleDatabase } from './drizzle';
 import { PermissionProvider } from './permission-provider';
-import { requirePermission, PermissionDenied } from './authorization';
+import {
+  requirePermission,
+  requireSuperAdmin,
+  PermissionDenied,
+  PlatformHostRequired,
+  SuperAdminDenied,
+  SuperAdminInfrastructureError,
+} from './authorization';
 
 const mockRequireSession = vi.fn();
+const run = <A, E>(effect: Effect.Effect<A, E, any>) =>
+  Effect.runPromise(effect as Effect.Effect<A, E, never>);
+const fail = <A, E>(effect: Effect.Effect<A, E, any>) =>
+  Effect.runPromise(Effect.flip(effect as Effect.Effect<A, E, never>));
 
 vi.mock('./session', async () => {
   const { Effect } = await vi.importActual<typeof import('effect')>('effect');
@@ -14,11 +27,6 @@ vi.mock('./session', async () => {
 });
 
 describe('requirePermission', () => {
-  const run = <A, E>(effect: Effect.Effect<A, E, any>) =>
-    Effect.runPromise(effect as Effect.Effect<A, E, never>);
-  const fail = <A, E>(effect: Effect.Effect<A, E, any>) =>
-    Effect.runPromise(Effect.flip(effect as Effect.Effect<A, E, never>));
-
   const permissionProvider = {
     getPermissionsForUser: vi.fn(),
   };
@@ -130,5 +138,110 @@ describe('requirePermission', () => {
       _tag: 'RolesInfrastructureError',
       statusCode: 500,
     });
+  });
+});
+
+describe('requireSuperAdmin', () => {
+  const makeRequestLayer = (host: string) =>
+    Layer.succeed(
+      HttpServerRequest.HttpServerRequest,
+      HttpServerRequest.fromWeb(
+        new Request(`http://${host}/api/v1/superadmin/me`, {
+          headers: { host },
+        }),
+      ),
+    );
+
+  const makeDbLayer = (rows: unknown[]) =>
+    Layer.succeed(DrizzleDatabase, {
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            limit: vi.fn(() => Promise.resolve(rows)),
+          })),
+        })),
+      })),
+    } as unknown as typeof DrizzleDatabase.Service);
+
+  const makeFailingDbLayer = () =>
+    Layer.succeed(DrizzleDatabase, {
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            limit: vi.fn(() => Promise.reject(new Error('db down'))),
+          })),
+        })),
+      })),
+    } as unknown as typeof DrizzleDatabase.Service);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('fails before DB authorization on a tenant host', async () => {
+    mockRequireSession.mockReturnValue(
+      Effect.succeed({ user: { id: 'user-1' } }),
+    );
+
+    await expect(
+      fail(
+        requireSuperAdmin.pipe(
+          Effect.provide(makeRequestLayer('tenant.librestock.maximilian.pw')),
+          Effect.provide(makeDbLayer([{ user_id: 'user-1' }])),
+        ),
+      ),
+    ).resolves.toBeInstanceOf(PlatformHostRequired);
+    expect(mockRequireSession).not.toHaveBeenCalled();
+  });
+
+  it('fails with 403 when the session user is not in super_admins', async () => {
+    mockRequireSession.mockReturnValue(
+      Effect.succeed({ user: { id: 'user-1' } }),
+    );
+
+    await expect(
+      fail(
+        requireSuperAdmin.pipe(
+          Effect.provide(
+            makeRequestLayer('default.librestock.maximilian.pw'),
+          ),
+          Effect.provide(makeDbLayer([])),
+        ),
+      ),
+    ).resolves.toBeInstanceOf(SuperAdminDenied);
+  });
+
+  it('maps DB failures to SuperAdminInfrastructureError', async () => {
+    mockRequireSession.mockReturnValue(
+      Effect.succeed({ user: { id: 'user-1' } }),
+    );
+
+    await expect(
+      fail(
+        requireSuperAdmin.pipe(
+          Effect.provide(
+            makeRequestLayer('default.librestock.maximilian.pw'),
+          ),
+          Effect.provide(makeFailingDbLayer()),
+        ),
+      ),
+    ).resolves.toBeInstanceOf(SuperAdminInfrastructureError);
+  });
+
+  it('passes on the platform host when the session user is a superadmin', async () => {
+    mockRequireSession.mockReturnValue(
+      Effect.succeed({ user: { id: 'user-1' } }),
+    );
+
+    await expect(
+      run(
+        requireSuperAdmin.pipe(
+          Effect.provide(
+            makeRequestLayer('default.librestock.maximilian.pw'),
+          ),
+          Effect.provide(makeDbLayer([{ user_id: 'user-1' }])),
+        ),
+      ),
+    ).resolves.toMatchObject({ user: { id: 'user-1' } });
   });
 });

@@ -1,0 +1,251 @@
+import { Effect } from 'effect';
+import type {
+  CreateSuperAdminTenantInput,
+  SuperAdminCreateTenantResponse,
+  SuperAdminMeResponse,
+  SuperAdminTenantListResponse,
+} from '@librestock/types/superadmin';
+import { hostnameForTenantSlug, isReservedTenantSlug } from '../../platform/host';
+import type { UserSession } from '../../platform/auth/user-session';
+import { makeServiceTracer } from '../../platform/service-tracer';
+import { makeTryAsync } from '../../platform/try-async';
+import { BetterAuth } from '../../platform/better-auth';
+import { UsersRepository } from '../users/repository';
+import {
+  InvalidTenantSlug,
+  ReservedTenantSlug,
+  SuperAdminRepositoryError,
+  TenantHostnameAlreadyExists,
+  TenantSlugAlreadyExists,
+} from './superadmin.errors';
+import { SuperAdminRepository } from './repository';
+
+const TENANT_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
+interface BetterAuthCreateUserResponse {
+  readonly user: { readonly id: string };
+}
+
+const isRecord = (value: unknown): value is Record<PropertyKey, unknown> =>
+  value !== null && typeof value === 'object';
+
+const uniqueConstraintName = (cause: unknown): string | null => {
+  if (!isRecord(cause)) return null;
+
+  if (cause.code === '23505' && typeof cause.constraint === 'string') {
+    return cause.constraint;
+  }
+
+  return uniqueConstraintName(cause.cause);
+};
+
+const mapCreateTenantError = (
+  error: SuperAdminRepositoryError,
+  slug: string,
+  hostname: string,
+) => {
+  const constraint = uniqueConstraintName(error);
+  if (constraint === 'organization_slug_unique') {
+    return new TenantSlugAlreadyExists({
+      slug,
+      messageKey: 'superadmin.tenantSlugAlreadyExists',
+    });
+  }
+
+  if (
+    constraint === 'tenant_domains_hostname_unique' ||
+    constraint === 'tenant_domains_hostname_key'
+  ) {
+    return new TenantHostnameAlreadyExists({
+      hostname,
+      messageKey: 'superadmin.tenantHostnameAlreadyExists',
+    });
+  }
+
+  return error;
+};
+
+const tryAsync = makeTryAsync(
+  (action, cause) =>
+    new SuperAdminRepositoryError({
+      action,
+      cause,
+      messageKey: 'superadmin.repositoryFailed',
+    }),
+);
+
+export class SuperAdminService extends Effect.Service<SuperAdminService>()(
+  '@librestock/effect/superadmin/SuperAdminService',
+  {
+    effect: Effect.gen(function* () {
+      const repository = yield* SuperAdminRepository;
+      const usersRepository = yield* UsersRepository;
+      const betterAuth = yield* BetterAuth;
+      const trace = makeServiceTracer({
+        serviceName: 'SuperAdminService',
+        module: 'superadmin',
+        layer: 'service',
+        entityType: 'tenant',
+      });
+
+      const me = trace.traced('me', (session: UserSession) =>
+        Effect.succeed({
+          id: session.user.id,
+          email: session.user.email ?? '',
+          name: session.user.name ?? '',
+          isSuperAdmin: true,
+        } satisfies SuperAdminMeResponse),
+      );
+
+      const listTenants = trace.traced('listTenants', () =>
+        Effect.map(
+          repository.listTenants(),
+          (rows) =>
+            ({
+              data: rows.map((row) => ({
+                id: row.id,
+                name: row.name,
+                slug: row.slug,
+                primaryHostname: row.primaryHostname,
+                createdAt: row.createdAt.toISOString(),
+              })),
+            }) satisfies SuperAdminTenantListResponse,
+        ),
+      );
+
+      const createTenant = trace.traced(
+        'createTenant',
+        (
+          input: CreateSuperAdminTenantInput,
+          actor: {
+            readonly userId: string;
+            readonly ipAddress?: string | null;
+            readonly userAgent?: string | null;
+          },
+        ) =>
+          Effect.gen(function* () {
+            const slug = input.slug.trim().toLowerCase();
+            if (!TENANT_SLUG_PATTERN.test(slug)) {
+              return yield* Effect.fail(
+                new InvalidTenantSlug({
+                  slug: input.slug,
+                  messageKey: 'superadmin.invalidTenantSlug',
+                }),
+              );
+            }
+
+            if (isReservedTenantSlug(slug)) {
+              return yield* Effect.fail(
+                new ReservedTenantSlug({
+                  slug,
+                  messageKey: 'superadmin.reservedTenantSlug',
+                }),
+              );
+            }
+
+            const hostname = hostnameForTenantSlug(slug);
+            if (yield* repository.tenantSlugExists(slug)) {
+              return yield* Effect.fail(
+                new TenantSlugAlreadyExists({
+                  slug,
+                  messageKey: 'superadmin.tenantSlugAlreadyExists',
+                }),
+              );
+            }
+
+            if (yield* repository.tenantHostnameExists(hostname)) {
+              return yield* Effect.fail(
+                new TenantHostnameAlreadyExists({
+                  hostname,
+                  messageKey: 'superadmin.tenantHostnameAlreadyExists',
+                }),
+              );
+            }
+
+            const normalizedEmail = input.admin.email.trim().toLowerCase();
+            const adminName = input.admin.name.trim();
+
+            const existing =
+              yield* repository.findBetterAuthUserByLoweredEmail(normalizedEmail);
+
+            let adminUserId: string;
+            let adminCreatedHere: boolean;
+            if (existing) {
+              adminUserId = existing.id;
+              adminCreatedHere = false;
+            } else {
+              const created = yield* tryAsync(
+                'create tenant admin in auth provider',
+                () =>
+                  betterAuth.api.createUser({
+                    body: {
+                      email: normalizedEmail,
+                      name: adminName,
+                      password: input.admin.password,
+                    },
+                  }) as Promise<BetterAuthCreateUserResponse>,
+              );
+              adminUserId = created.user.id;
+              adminCreatedHere = true;
+            }
+
+            const created = yield* repository
+              .createTenantWithAdmin({
+                name: input.name.trim(),
+                slug,
+                hostname,
+                adminUserId,
+              })
+              .pipe(
+                Effect.catchAll((error) =>
+                  Effect.fail(mapCreateTenantError(error, slug, hostname)),
+                ),
+                Effect.tapError(() =>
+                  adminCreatedHere
+                    ? usersRepository
+                        .deleteBetterAuthUser(adminUserId)
+                        .pipe(Effect.ignore)
+                    : Effect.void,
+                ),
+              );
+
+            yield* Effect.forkDaemon(
+              repository
+                .recordPlatformAuditEvent({
+                  actorUserId: actor.userId,
+                  action: 'tenant.create',
+                  entityType: 'tenant',
+                  entityId: created.tenant.id,
+                  metadata: {
+                    name: created.tenant.name,
+                    slug: created.tenant.slug,
+                    hostname: created.tenant.hostname,
+                    adminUserId,
+                  },
+                  ipAddress: actor.ipAddress ?? null,
+                  userAgent: actor.userAgent ?? null,
+                })
+                .pipe(Effect.ignore),
+            );
+
+            return {
+              tenant: created.tenant,
+              admin: {
+                id: adminUserId,
+                email: existing?.email ?? normalizedEmail,
+                name: existing?.name ?? adminName,
+              },
+            } satisfies SuperAdminCreateTenantResponse;
+          }),
+        (input) => ({ attributes: { entityId: input.slug } }),
+      );
+
+      return {
+        me,
+        listTenants,
+        createTenant,
+      };
+    }),
+    dependencies: [SuperAdminRepository.Default, UsersRepository.Default],
+  },
+) {}

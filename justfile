@@ -2,13 +2,13 @@
 bootstrap:
   pnpm install
 
-# Decrypt environment variables
-decrypt:
-  op inject -i env.template -o .env
+# Export environment variables from Infisical
+env:
+  infisical export --env=dev --format=dotenv > .env
 
 # Run development server
 dev:
-  pnpm start:dev
+  pnpm start
 
 # Build for production
 build:

@@ -20,6 +20,7 @@ export const deCatalog: Record<MessageKey, string> = {
     'Der aktive Tenant ist fuer diesen Benutzer nicht verfuegbar.',
   'tenant.notResolved':
     'Fuer diese Anfrage konnte kein aktiver Tenant ermittelt werden.',
+  'tenant.hostNotFound': 'Tenant-Host nicht gefunden.',
   'branding.repositoryFailed': 'Der Branding-Vorgang ist fehlgeschlagen.',
   'branding.sessionUserUnavailable':
     'Der Sitzungsbenutzer ist nicht verfuegbar.',
@@ -111,6 +112,8 @@ export const deCatalog: Record<MessageKey, string> = {
   'photos.tooLarge':
     'Die Datei ist zu gross. Maximal zulaessige Groesse: {maxSize} Byte.',
   'photos.writeFailed': 'Die Fotodatei konnte nicht geschrieben werden.',
+  'platform.hostRequired':
+    'Die Plattformroute wurde fuer diesen Host nicht gefunden.',
   'products.categoryNotFound': 'Kategorie nicht gefunden.',
   'products.createdProductLoadFailed':
     'Das neu erstellte Produkt konnte nicht geladen werden.',
@@ -133,6 +136,16 @@ export const deCatalog: Record<MessageKey, string> = {
     'Systemrollen koennen nicht geloescht werden.',
   'session.resolveFailed':
     'Die Aufloesung der Benutzersitzung ist fehlgeschlagen.',
+  'superadmin.forbidden': 'Superadmin-Zugriff ist erforderlich.',
+  'superadmin.invalidTenantSlug': 'Der Tenant-Slug ist ungueltig.',
+  'superadmin.infrastructureFailed':
+    'Die Superadmin-Autorisierung ist fehlgeschlagen.',
+  'superadmin.repositoryFailed': 'Der Superadmin-Vorgang ist fehlgeschlagen.',
+  'superadmin.reservedTenantSlug': 'Der Tenant-Slug ist reserviert.',
+  'superadmin.tenantHostnameAlreadyExists':
+    'Ein Tenant mit diesem Hostnamen existiert bereits.',
+  'superadmin.tenantSlugAlreadyExists':
+    'Ein Tenant mit diesem Slug existiert bereits.',
   'stockMovements.destinationLocationNotFound': 'Zielstandort nicht gefunden.',
   'stockMovements.infrastructureFailed':
     'Der Lagerbewegungsvorgang ist fehlgeschlagen.',

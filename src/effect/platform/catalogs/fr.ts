@@ -20,6 +20,7 @@ export const frCatalog: Record<MessageKey, string> = {
     "Le tenant actif n'est pas disponible pour cet utilisateur.",
   'tenant.notResolved':
     'Aucun tenant actif na pu etre resolu pour cette requete.',
+  'tenant.hostNotFound': 'Hote tenant introuvable.',
   'branding.repositoryFailed': "L'operation de branding a echoue.",
   'branding.sessionUserUnavailable':
     "L'utilisateur de session n'est pas disponible.",
@@ -107,6 +108,8 @@ export const frCatalog: Record<MessageKey, string> = {
   'photos.tooLarge':
     'Le fichier est trop volumineux. Taille maximale autorisee : {maxSize} octets.',
   'photos.writeFailed': "L'ecriture du fichier photo a echoue.",
+  'platform.hostRequired':
+    "La route plateforme est introuvable pour cet hote.",
   'products.categoryNotFound': 'Categorie introuvable.',
   'products.createdProductLoadFailed':
     'Le chargement du produit cree a echoue.',
@@ -128,6 +131,14 @@ export const frCatalog: Record<MessageKey, string> = {
   'roles.systemDeletionForbidden':
     'Les roles systeme ne peuvent pas etre supprimes.',
   'session.resolveFailed': 'La resolution de la session utilisateur a echoue.',
+  'superadmin.forbidden': "L'acces superadmin est requis.",
+  'superadmin.invalidTenantSlug': 'Le slug tenant est invalide.',
+  'superadmin.infrastructureFailed': "L'autorisation superadmin a echoue.",
+  'superadmin.repositoryFailed': "L'operation superadmin a echoue.",
+  'superadmin.reservedTenantSlug': 'Le slug tenant est reserve.',
+  'superadmin.tenantHostnameAlreadyExists':
+    'Un tenant avec cet hote existe deja.',
+  'superadmin.tenantSlugAlreadyExists': 'Un tenant avec ce slug existe deja.',
   'stockMovements.destinationLocationNotFound':
     'Emplacement de destination introuvable.',
   'stockMovements.infrastructureFailed':

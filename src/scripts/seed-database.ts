@@ -1,4 +1,3 @@
-import { config } from 'dotenv';
 import { clearDatabase, createDatabase } from './seed/config';
 import { registry } from './seed/registry';
 
@@ -12,8 +11,6 @@ import './seed/inventory';
 import './seed/orders';
 import './seed/stock-movements';
 import './seed/audit-logs';
-
-config();
 
 async function main() {
   console.log('Starting database seed...\n');

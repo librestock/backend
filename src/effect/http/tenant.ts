@@ -2,7 +2,11 @@ import type { HttpApp } from '@effect/platform';
 import * as HttpServerRequest from '@effect/platform/HttpServerRequest';
 import { Effect } from 'effect';
 import { requireSession } from '../platform/session';
-import { resolveTenantForSession } from '../platform/tenant-context';
+import { resolveRequestHost } from '../platform/host';
+import {
+  resolvePublicTenantForHost,
+  resolveTenantForHostAndSession,
+} from '../platform/tenant-context';
 
 const getPathname = (url: string) => {
   try {
@@ -13,12 +17,30 @@ const getPathname = (url: string) => {
   }
 };
 
+const isPublicApiRoute = (
+  request: HttpServerRequest.HttpServerRequest,
+  pathname: string,
+) =>
+  request.method === 'GET' &&
+  (pathname === '/api/v1/branding' || pathname === '/api/v1/branding/');
+
+const isBypassedRoute = (pathname: string) =>
+  pathname === '/health-check' ||
+  pathname.startsWith('/health-check/') ||
+  pathname === '/docs' ||
+  pathname.startsWith('/docs/') ||
+  pathname === '/api/auth' ||
+  pathname.startsWith('/api/auth/') ||
+  pathname === '/api/v1/superadmin' ||
+  pathname.startsWith('/api/v1/superadmin/') ||
+  pathname === '/api/v1/platform/tls/ask';
+
 const requiresTenantContext = (
   request: HttpServerRequest.HttpServerRequest,
 ) => {
   const pathname = getPathname(request.url);
 
-  if (request.method === 'OPTIONS') {
+  if (request.method === 'OPTIONS' || isBypassedRoute(pathname)) {
     return false;
   }
 
@@ -32,8 +54,17 @@ export const tenantContextMiddleware = <E, R>(httpApp: HttpApp.Default<E, R>) =>
     }
 
     return Effect.gen(function* () {
+      const host = resolveRequestHost(request);
+      const pathname = getPathname(request.url);
+
+      if (isPublicApiRoute(request, pathname)) {
+        yield* resolvePublicTenantForHost(host);
+        return yield* httpApp;
+      }
+
+      yield* resolvePublicTenantForHost(host);
       const session = yield* requireSession;
-      yield* resolveTenantForSession(session);
+      yield* resolveTenantForHostAndSession(host, session);
       return yield* httpApp;
     });
   });

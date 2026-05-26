@@ -3,9 +3,9 @@ import { CurrentRequestContext } from './request-context';
 
 type AnyEffect = Effect.Effect<any, any, any>;
 
-export type TraceModule = 'auth' | 'users' | 'orders' | 'health';
+export type TraceModule = 'auth' | 'users' | 'orders' | 'health' | 'superadmin';
 export type TraceLayer = 'service';
-export type TraceEntityType = 'user' | 'order';
+export type TraceEntityType = 'user' | 'order' | 'tenant';
 export type TraceOutcome =
   | 'success'
   | 'not_found'
