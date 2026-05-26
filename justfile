@@ -2,9 +2,13 @@
 bootstrap:
   pnpm install
 
-# Run development server (env vars injected by `op run --environment $OP_ENVIRONMENT_ID`)
+# Export environment variables from Infisical
+env:
+  infisical export --env=dev --format=dotenv > .env
+
+# Run development server
 dev:
-  pnpm start:dev
+  pnpm start
 
 # Build for production
 build:

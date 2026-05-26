@@ -24,11 +24,6 @@
           infisical
         ];
 
-        # Keep 1Password CLI outside the Nix shell for now: nixpkgs'
-        # stable `_1password-cli` does not yet support `op run --environment`.
-        shellHook = ''
-          export OP_ENVIRONMENT_ID=le35y7a3du23ysthxvaxgnnenq
-        '';
       };
     });
 }
