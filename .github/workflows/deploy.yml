@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
@@ -27,6 +27,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: backend
+
+      - uses: actions/checkout@v4
+        with:
+          repository: librestock/packages
+          path: backend/packages
 
       - uses: docker/setup-buildx-action@v3
 

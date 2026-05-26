@@ -8,9 +8,18 @@ on:
 
 jobs:
   lint:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: backend
+      - uses: actions/checkout@v4
+        with:
+          repository: librestock/packages
+          path: backend/packages
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -18,13 +27,24 @@ jobs:
         with:
           version: 10.28.0
       - run: pnpm install --frozen-lockfile
+      - name: Build shared types
+        run: pnpm --filter @librestock/types barrels && pnpm --filter @librestock/types build
       - run: pnpm lint
       - run: pnpm type-check
 
   test:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: backend
+      - uses: actions/checkout@v4
+        with:
+          repository: librestock/packages
+          path: backend/packages
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -32,10 +52,15 @@ jobs:
         with:
           version: 10.28.0
       - run: pnpm install --frozen-lockfile
+      - name: Build shared types
+        run: pnpm --filter @librestock/types barrels && pnpm --filter @librestock/types build
       - run: pnpm test
 
   integration-test:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     services:
       postgres:
         image: postgres:16
@@ -52,6 +77,12 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: backend
+      - uses: actions/checkout@v4
+        with:
+          repository: librestock/packages
+          path: backend/packages
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -59,14 +90,25 @@ jobs:
         with:
           version: 10.28.0
       - run: pnpm install --frozen-lockfile
+      - name: Build shared types
+        run: pnpm --filter @librestock/types barrels && pnpm --filter @librestock/types build
       - run: pnpm test:integration
         env:
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/librestock_inventory_test
 
   build:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: backend
+      - uses: actions/checkout@v4
+        with:
+          repository: librestock/packages
+          path: backend/packages
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -74,4 +116,6 @@ jobs:
         with:
           version: 10.28.0
       - run: pnpm install --frozen-lockfile
+      - name: Build shared types
+        run: pnpm --filter @librestock/types barrels && pnpm --filter @librestock/types build
       - run: pnpm build

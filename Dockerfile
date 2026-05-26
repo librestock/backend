@@ -18,7 +18,9 @@ COPY src ./src
 COPY drizzle ./drizzle
 COPY drizzle.config.ts tsconfig.json tsconfig.build.json ./
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
-    pnpm run build \
+    pnpm --filter @librestock/types barrels \
+  && pnpm --filter @librestock/types build \
+  && pnpm run build \
   && rm -rf /tmp/librestock-api \
   && pnpm deploy --prod --legacy --filter=@librestock/api /tmp/librestock-api \
   && cp -a dist drizzle drizzle.config.ts /tmp/librestock-api/
