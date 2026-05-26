@@ -197,7 +197,7 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
               u.ban_expires AS "banExpires",
               u.created_at AS "createdAt"
             ${fromAndWhere}
-            ORDER BY u.created_at ASC, u.id ASC
+            ORDER BY "createdAt" ASC, id ASC
             LIMIT ${limit}
             OFFSET ${offset}
           `);

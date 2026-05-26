@@ -82,8 +82,8 @@ export class SuperAdminRepository extends Effect.Service<SuperAdminRepository>()
           const result = await db.execute(sql`
             SELECT u.id, u.email, u.name
             FROM "user" u
-            INNER JOIN super_admins sa ON sa.user_id = u.id::text
-            WHERE u.id::text = ${userId}
+            INNER JOIN super_admins sa ON sa.user_id = u.id
+            WHERE u.id = ${userId}
             LIMIT 1
           `);
 
