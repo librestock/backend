@@ -2,11 +2,7 @@
 bootstrap:
   pnpm install
 
-# Export environment variables from Infisical
-env:
-  infisical export --env=dev --format=dotenv > .env
-
-# Run development server
+# Run development server with Infisical-injected environment variables
 dev:
   pnpm start
 
@@ -14,9 +10,9 @@ dev:
 build:
   pnpm build
 
-# Run production server
+# Run production server with Infisical-injected environment variables
 start:
-  pnpm start:prod
+  pnpm start:prod:infisical
 
 # Lint and fix code
 lint:

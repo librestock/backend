@@ -16,10 +16,7 @@ This repo is a pnpm workspace. A single `pnpm install` from the workspace root i
 # From the workspace root
 pnpm install
 
-# Copy env template and set BETTER_AUTH_SECRET
-cp .env.template .env
-
-# Start in dev mode (needs PostgreSQL running)
+# Start in dev mode with Infisical-injected env vars (needs PostgreSQL running)
 pnpm start
 ```
 
@@ -27,18 +24,8 @@ The API will be at `http://localhost:8080`.
 
 ### Environment Variables
 
-```env
-PORT=8080
-BETTER_AUTH_SECRET=<random 32+ byte string>
-BETTER_AUTH_URL=http://localhost:8080
-FRONTEND_URL=http://localhost:3000
-CORS_ORIGIN=http://localhost:3000
-
-# Database (URL or individual vars)
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/librestock_inventory
-# OR
-PGHOST=localhost  PGPORT=5432  PGUSER=postgres  PGPASSWORD=postgres  PGDATABASE=librestock_inventory
-```
+Environment values are managed in Infisical and injected at runtime by the npm
+scripts. The checked-in `env.template` file documents the expected keys.
 
 ## Project Structure
 
