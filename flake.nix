@@ -21,6 +21,7 @@
           pnpm
           just
           postgresql_16
+          infisical
         ];
 
         # Keep 1Password CLI outside the Nix shell for now: nixpkgs'

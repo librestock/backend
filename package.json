@@ -9,6 +9,7 @@
     "build": "esbuild src/effect/main.ts --bundle --platform=node --format=cjs --target=node22 --packages=external --outfile=dist/effect/main.cjs",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "sh scripts/run-environment.sh tsx src/effect/main.ts",
+    "start:infisical": "infisical run --env=dev -- tsx src/effect/main.ts",
     "start:prod": "NODE_ENV=production node dist/effect/main.cjs",
     "lint": "oxlint src test",
     "lint:fix": "oxlint --fix src test",
@@ -20,9 +21,13 @@
     "test:duplicates": "jscpd src --pattern \"**/*.spec.ts\" --min-lines 12 --min-tokens 80 --threshold 8 --reporters console --noSymlinks --noTips",
     "import:sortly": "sh scripts/run-environment.sh tsx src/scripts/import-sortly.ts",
     "seed": "sh scripts/run-environment.sh tsx src/scripts/seed-database.ts",
+    "seed:infisical": "infisical run --env=dev -- tsx src/scripts/seed-database.ts",
     "superadmin:hash-password": "sh scripts/run-environment.sh tsx src/scripts/seed-superadmin.ts --hash-password",
+    "superadmin:hash-password:infisical": "infisical run --env=dev -- tsx src/scripts/seed-superadmin.ts --hash-password",
     "superadmin:seed": "sh scripts/run-environment.sh tsx src/scripts/seed-superadmin.ts",
+    "superadmin:seed:infisical": "infisical run --env=dev -- tsx src/scripts/seed-superadmin.ts",
     "drizzle": "sh scripts/run-environment.sh drizzle-kit",
+    "drizzle:infisical": "infisical run --env=dev -- drizzle-kit",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
