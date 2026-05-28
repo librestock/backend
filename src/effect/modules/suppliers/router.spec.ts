@@ -6,9 +6,9 @@
  * mapping. Service internals live in `service.spec.ts`.
  */
 import { Effect } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
-import type { SupplierResponseDto } from '@librestock/types/suppliers';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { Permission, Resource } from '@stocket/types/auth';
+import type { SupplierResponseDto } from '@stocket/types/suppliers';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import { SupplierNotFound, SuppliersInfrastructureError } from './suppliers.errors';
 import { makeSuppliersRouterHarness } from './__fixtures__/router-harness';
 import { SuppliersService } from './service';
@@ -30,7 +30,7 @@ vi.mock('./service', async () => {
     await vi.importActual<typeof import('effect')>('effect');
 
   return {
-    SuppliersService: Context.GenericTag('@librestock/test/SuppliersService'),
+    SuppliersService: Context.GenericTag('@stocket/test/SuppliersService'),
     suppliersLayer: Layer.empty,
   };
 });

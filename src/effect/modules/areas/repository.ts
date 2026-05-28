@@ -4,7 +4,7 @@ import type {
   CreateAreaDto,
   UpdateAreaDto,
   AreaQueryDto,
-} from '@librestock/types/areas';
+} from '@stocket/types/areas';
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { areas, locations } from '../../platform/db/schema';
@@ -29,7 +29,7 @@ const tryAsync = makeTryAsync(
 );
 
 export class AreasRepository extends Effect.Service<AreasRepository>()(
-  '@librestock/effect/areas/AreasRepository',
+  '@stocket/effect/areas/AreasRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

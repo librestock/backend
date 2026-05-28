@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { LocationType } from '@librestock/types/locations';
+import { LocationType } from '@stocket/types/locations';
 import { areas, locations } from '../../effect/platform/db/schema';
 import { AREA_TEMPLATES, LOCATION_NAMES, SEED_CONFIG, SUB_AREA_TEMPLATES } from './config';
 import { buildLocation } from './factories';

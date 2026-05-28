@@ -7,7 +7,7 @@
  * `user_roles`) by hand.
  */
 import { and, eq } from 'drizzle-orm';
-import type { Permission, Resource } from '@librestock/types/auth';
+import type { Permission, Resource } from '@stocket/types/auth';
 import {
   members,
   organizations,

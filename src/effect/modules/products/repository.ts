@@ -13,7 +13,7 @@ import {
   sql,
   type SQL,
 } from 'drizzle-orm';
-import { ProductSortField } from '@librestock/types/products';
+import { ProductSortField } from '@stocket/types/products';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
@@ -74,7 +74,7 @@ function mapProductRow(row: ProductJoinRow) {
 }
 
 export class ProductsRepository extends Effect.Service<ProductsRepository>()(
-  '@librestock/effect/products/ProductsRepository',
+  '@stocket/effect/products/ProductsRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

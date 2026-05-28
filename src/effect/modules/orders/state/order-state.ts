@@ -1,4 +1,4 @@
-import { OrderStatus } from '@librestock/types/orders';
+import { OrderStatus } from '@stocket/types/orders';
 import type { orders } from '../../../platform/db/schema';
 
 type Order = typeof orders.$inferSelect;

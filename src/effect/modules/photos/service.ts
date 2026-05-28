@@ -2,7 +2,7 @@ import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { access, mkdir, unlink, writeFile } from 'node:fs/promises';
 import { Effect } from 'effect';
-import type { PhotoResponseDto } from '@librestock/types/photos';
+import type { PhotoResponseDto } from '@stocket/types/photos';
 import { fromNullOr } from '../../platform/from-null-or';
 import { toPhotoResponseDto } from './photos.utils';
 import {
@@ -59,7 +59,7 @@ export interface UploadedFile {
 }
 
 export class PhotosService extends Effect.Service<PhotosService>()(
-  '@librestock/effect/photos/PhotosService',
+  '@stocket/effect/photos/PhotosService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* PhotosRepository;

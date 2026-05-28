@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
-import { LimitSchema, PageSchema } from '@librestock/types/common';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { LimitSchema, PageSchema } from '@stocket/types/common';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 
 const AuditEntityTypeValues = [
   AuditEntityType.PRODUCT,

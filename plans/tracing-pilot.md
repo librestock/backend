@@ -1,6 +1,6 @@
 # Plan: Tracing Pilot
 
-> Source PRD: `~/Documents/obsidian vault/100-PROJECTS/LIBRESTOCK/audits/Tracing Pilot Implementation Plan 2026-04-14.md`
+> Source PRD: `~/Documents/obsidian vault/100-PROJECTS/STOCKET/audits/Tracing Pilot Implementation Plan 2026-04-14.md`
 
 ## Goal
 

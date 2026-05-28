@@ -1,11 +1,11 @@
 {
-  "name": "@librestock/tsconfig",
+  "name": "@stocket/tsconfig",
   "version": "1.3.0",
-  "description": "Shared TypeScript configurations for LibreStock Inventory monorepo",
+  "description": "Shared TypeScript configurations for Stocket Inventory monorepo",
   "license": "AGPL-3.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/librestock/packages.git",
+    "url": "https://github.com/stocket/packages.git",
     "directory": "tsconfig"
   },
   "publishConfig": {

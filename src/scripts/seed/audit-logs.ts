@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
-import { OrderStatus } from '@librestock/types/orders';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
+import { OrderStatus } from '@stocket/types/orders';
 import {
   auditLogs,
   type categories,

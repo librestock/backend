@@ -8,11 +8,11 @@ export interface BetterAuthService {
 }
 
 export const BetterAuth = Context.GenericTag<BetterAuthService>(
-  '@librestock/effect/platform/BetterAuth',
+  '@stocket/effect/platform/BetterAuth',
 );
 
 export const BetterAuthHeaders = Context.GenericTag<globalThis.Headers>(
-  '@librestock/effect/platform/BetterAuthHeaders',
+  '@stocket/effect/platform/BetterAuthHeaders',
 );
 
 export const betterAuthLayer = Layer.succeed(BetterAuth, {

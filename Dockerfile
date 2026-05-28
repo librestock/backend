@@ -18,12 +18,12 @@ COPY src ./src
 COPY drizzle ./drizzle
 COPY drizzle.config.ts tsconfig.json tsconfig.build.json ./
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
-    pnpm --filter @librestock/types barrels \
-  && pnpm --filter @librestock/types build \
+    pnpm --filter @stocket/types barrels \
+  && pnpm --filter @stocket/types build \
   && pnpm run build \
-  && rm -rf /tmp/librestock-api \
-  && pnpm deploy --prod --legacy --filter=@librestock/api /tmp/librestock-api \
-  && cp -a dist drizzle drizzle.config.ts /tmp/librestock-api/
+  && rm -rf /tmp/stocket-api \
+  && pnpm deploy --prod --legacy --filter=@stocket/api /tmp/stocket-api \
+  && cp -a dist drizzle drizzle.config.ts /tmp/stocket-api/
 
 FROM node:22-bookworm-slim AS runtime
 
@@ -31,7 +31,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=4000
 
-COPY --from=build /tmp/librestock-api ./
+COPY --from=build /tmp/stocket-api ./
 
 EXPOSE 4000
 

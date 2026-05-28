@@ -4,7 +4,7 @@ import type {
   CreateAreaDto,
   UpdateAreaDto,
   AreaQueryDto,
-} from '@librestock/types/areas';
+} from '@stocket/types/areas';
 import { makeGetOrFail } from '../../platform/from-null-or';
 import { LocationsService } from '../locations/service';
 import type { areas } from '../../platform/db/schema';
@@ -27,7 +27,7 @@ type Area = AreaRow & {
 };
 
 export class AreasService extends Effect.Service<AreasService>()(
-  '@librestock/effect/areas/AreasService',
+  '@stocket/effect/areas/AreasService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* AreasRepository;

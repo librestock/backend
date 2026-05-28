@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
-import { LimitSchema, PageSchema, SortOrder  } from '@librestock/types/common';
-import { InventorySortField } from '@librestock/types/inventory';
+import { LimitSchema, PageSchema, SortOrder  } from '@stocket/types/common';
+import { InventorySortField } from '@stocket/types/inventory';
 
 const QueryBooleanSchema = Schema.BooleanFromString;
 const InventorySortFieldValues = [

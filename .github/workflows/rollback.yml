@@ -56,7 +56,7 @@ jobs:
         run: |
           printf '%s' "$GHCR_TOKEN" \
             | ssh "$DEPLOY_USER@$DEPLOY_HOST" \
-                "sudo /usr/local/bin/librestock-deploy backend '${IMAGE_NAME}:${ROLLBACK_SHA}' '$GHCR_USER'"
+                "sudo /usr/local/bin/stocket-deploy backend '${IMAGE_NAME}:${ROLLBACK_SHA}' '$GHCR_USER'"
 
       - name: Verify API health
         if: ${{ env.DEPLOY_API_HEALTH_URL != '' }}

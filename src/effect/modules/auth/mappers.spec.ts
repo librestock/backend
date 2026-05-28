@@ -34,8 +34,8 @@ describe('auth mappers', () => {
         },
         {
           tenantId: '00000000-0000-4000-8000-000000000001',
-          tenantName: 'LibreStock',
-          tenantSlug: 'librestock',
+          tenantName: 'Stocket',
+          tenantSlug: 'stocket',
         },
       ),
     ).toEqual({
@@ -44,8 +44,8 @@ describe('auth mappers', () => {
       email: 'jane@example.com',
       image: 'https://example.com/avatar.png',
       tenantId: '00000000-0000-4000-8000-000000000001',
-      tenantName: 'LibreStock',
-      tenantSlug: 'librestock',
+      tenantName: 'Stocket',
+      tenantSlug: 'stocket',
       roles: ['Admin'],
       permissions: {
         roles: ['read', 'write'],

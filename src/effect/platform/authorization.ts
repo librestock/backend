@@ -1,7 +1,7 @@
 import * as HttpServerRequest from '@effect/platform/HttpServerRequest';
 import { Effect } from 'effect';
 import { eq } from 'drizzle-orm';
-import type { Permission, Resource } from '@librestock/types/auth';
+import type { Permission, Resource } from '@stocket/types/auth';
 import { DrizzleDatabase } from './drizzle';
 import { superAdmins } from './db/schema';
 import { PermissionProvider } from './permission-provider';

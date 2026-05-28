@@ -6,7 +6,7 @@ import {
   Multipart,
 } from '@effect/platform';
 import { Effect, Schema } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
+import { Permission, Resource } from '@stocket/types/auth';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson, respondJsonOk, respondCause } from '../../platform/errors';
 import { makeMessageResponse } from '../../platform/messages';

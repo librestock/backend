@@ -17,7 +17,7 @@ import {
 
 const TEST_DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
-  'postgresql://postgres:postgres@localhost:5432/librestock_inventory_test';
+  'postgresql://postgres:postgres@localhost:5432/stocket_inventory_test';
 
 let pool: pg.Pool | null = null;
 let db: DrizzleDb | null = null;

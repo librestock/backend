@@ -1,7 +1,7 @@
 import { HttpServerRequest } from '@effect/platform';
 import { and, eq } from 'drizzle-orm';
 import { Effect, Layer } from 'effect';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import { makeBetterAuthTestLayer } from '../testing/better-auth-test';
 import {
   getTestDb,

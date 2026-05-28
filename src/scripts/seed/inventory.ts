@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { LocationType } from '@librestock/types/locations';
+import { LocationType } from '@stocket/types/locations';
 import { inventory, type areas, type locations, type products } from '../../effect/platform/db/schema';
 import { SEED_CONFIG } from './config';
 import { buildInventory } from './factories';

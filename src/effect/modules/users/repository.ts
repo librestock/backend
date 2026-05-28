@@ -35,7 +35,7 @@ interface ListTenantUsersOptions {
 }
 
 export class UsersRepository extends Effect.Service<UsersRepository>()(
-  '@librestock/effect/users/UsersRepository',
+  '@stocket/effect/users/UsersRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

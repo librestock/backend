@@ -1,4 +1,4 @@
-import type { ClientResponseDto } from '@librestock/types/clients';
+import type { ClientResponseDto } from '@stocket/types/clients';
 import type { clients } from '../../platform/db/schema';
 
 type Client = typeof clients.$inferSelect;

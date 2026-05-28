@@ -25,7 +25,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * mocked so `readFile`/`stat` don't hit the disk.
  */
 import { Effect } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
+import { Permission, Resource } from '@stocket/types/auth';
 import {
   InvalidPhotoMimeType,
   PhotoFileNotFound,
@@ -79,7 +79,7 @@ vi.mock('./service', async () => {
   const { Context, Layer } =
     await vi.importActual<typeof import('effect')>('effect');
   return {
-    PhotosService: Context.GenericTag('@librestock/test/PhotosService'),
+    PhotosService: Context.GenericTag('@stocket/test/PhotosService'),
     photosLayer: Layer.empty,
   };
 });

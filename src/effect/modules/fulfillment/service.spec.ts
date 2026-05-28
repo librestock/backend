@@ -1,6 +1,6 @@
 import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
-import { OrderStatus } from '@librestock/types/orders';
+import { OrderStatus } from '@stocket/types/orders';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { InventoryRepository } from '../inventory/repository';
 import { OrderItemsRepository, OrdersRepository } from '../orders/repository';

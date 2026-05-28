@@ -26,7 +26,7 @@ importers:
       '@effect/sql':
         specifier: ^0.51.0
         version: 0.51.0(@effect/experimental@0.58.0(@effect/platform@0.96.0(effect@3.21.0))(effect@3.21.0))(@effect/platform@0.96.0(effect@3.21.0))(effect@3.21.0)
-      '@librestock/types':
+      '@stocket/types':
         specifier: workspace:*
         version: link:packages/types
       '@opentelemetry/exporter-trace-otlp-http':
@@ -75,7 +75,7 @@ importers:
       '@faker-js/faker':
         specifier: ^10.4.0
         version: 10.4.0
-      '@librestock/tsconfig':
+      '@stocket/tsconfig':
         specifier: workspace:*
         version: link:packages/tsconfig
       '@stryker-mutator/core':

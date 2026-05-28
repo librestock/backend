@@ -2,7 +2,7 @@ import { HttpRouter, HttpServerRequest } from '@effect/platform';
 import { Effect } from 'effect';
 import { requireSuperAdmin } from '../../platform/authorization';
 import { respondJson } from '../../platform/errors';
-import { CreateSuperAdminTenantSchema } from '@librestock/types/superadmin';
+import { CreateSuperAdminTenantSchema } from '@stocket/types/superadmin';
 import { getRequestContext } from '../../platform/request-context';
 import { SuperAdminService } from './service';
 

@@ -1,6 +1,6 @@
 import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
-import { OrderStatus, type CreateOrder } from '@librestock/types/orders';
+import { OrderStatus, type CreateOrder } from '@stocket/types/orders';
 import { ClientsService } from '../clients/service';
 import { ProductsService } from '../products/service';
 import { OrdersService } from './service';

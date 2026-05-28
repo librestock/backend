@@ -43,7 +43,7 @@ let previousUploadsDir: string | undefined;
 beforeAll(async () => {
   // Create a temp dir BEFORE the service layer is constructed — the service
   // reads `process.env.UPLOADS_DIR` once during layer build in `service.ts`.
-  tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'librestock-photos-it-'));
+  tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'stocket-photos-it-'));
   previousUploadsDir = process.env.UPLOADS_DIR;
   process.env.UPLOADS_DIR = tempDir;
 

@@ -1,7 +1,7 @@
 import { Cache, Duration, Effect } from 'effect';
 import { and, eq } from 'drizzle-orm';
-import { type Permission, type Resource } from '@librestock/types/auth';
-import type { CreateRoleDto, UpdateRoleDto } from '@librestock/types/roles';
+import { type Permission, type Resource } from '@stocket/types/auth';
+import type { CreateRoleDto, UpdateRoleDto } from '@stocket/types/roles';
 import { makeGetOrFail } from '../../platform/from-null-or';
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
@@ -26,7 +26,7 @@ export type { UserPermissions };
 export { defaultRoleSeedDefinitions };
 
 export class RolesService extends Effect.Service<RolesService>()(
-  '@librestock/effect/roles/RolesService',
+  '@stocket/effect/roles/RolesService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* RolesRepository;

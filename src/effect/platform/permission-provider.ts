@@ -1,5 +1,5 @@
 import { Context, type Effect } from 'effect';
-import type { Permission, Resource } from '@librestock/types/auth';
+import type { Permission, Resource } from '@stocket/types/auth';
 
 export interface UserPermissions {
   readonly roleNames: string[];
@@ -7,7 +7,7 @@ export interface UserPermissions {
 }
 
 export class PermissionProvider extends Context.Tag(
-  '@librestock/effect/platform/PermissionProvider',
+  '@stocket/effect/platform/PermissionProvider',
 )<
   PermissionProvider,
   {

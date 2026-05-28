@@ -1,6 +1,6 @@
 import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
+import { Permission, Resource } from '@stocket/types/auth';
 import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
 import { CurrentRequestContext } from '../../platform/request-context';
 import { createChainableMock } from '../../test/utils';

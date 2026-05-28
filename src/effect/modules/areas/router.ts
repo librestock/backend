@@ -1,8 +1,8 @@
 import { HttpRouter, HttpServerRequest } from '@effect/platform';
 import { Effect, Schema } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
-import { AreaIdSchema, AreaQuerySchema } from '@librestock/types/areas';
+import { Permission, Resource } from '@stocket/types/auth';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
+import { AreaIdSchema, AreaQuerySchema } from '@stocket/types/areas';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson, respondJsonOk } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';

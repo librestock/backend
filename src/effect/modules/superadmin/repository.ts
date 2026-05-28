@@ -72,7 +72,7 @@ const rowsOf = <A>(result: unknown): A[] =>
   ((result as { rows?: A[] }).rows ?? (result as A[])) as A[];
 
 export class SuperAdminRepository extends Effect.Service<SuperAdminRepository>()(
-  '@librestock/effect/superadmin/SuperAdminRepository',
+  '@stocket/effect/superadmin/SuperAdminRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

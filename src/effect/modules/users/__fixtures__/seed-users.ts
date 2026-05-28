@@ -3,7 +3,7 @@
  *
  * `UsersService` reads and mutates Better Auth's local tables through
  * `UsersRepository` while tenant membership and role assignments remain in
- * LibreStock tables. Better Auth owns the `user`, `account`, and `session`
+ * Stocket tables. Better Auth owns the `user`, `account`, and `session`
  * tables in production, so this fixture provisions a minimal compatible shape
  * for integration tests.
  *

@@ -1,10 +1,10 @@
 import { type Context, Effect, Layer } from 'effect';
 import { HttpApp, HttpRouter } from '@effect/platform';
-import { Permission, Resource } from '@librestock/types/auth';
+import { Permission, Resource } from '@stocket/types/auth';
 import {
   AuditAction,
   AuditEntityType,
-} from '@librestock/types/audit-logs';
+} from '@stocket/types/audit-logs';
 import { respondCause } from '../../platform/errors';
 import { PermissionProvider } from '../../platform/permission-provider';
 import { makeBetterAuthTestLayer } from '../../testing/better-auth-test';
@@ -19,7 +19,7 @@ vi.mock('./service', async () => {
     await vi.importActual<typeof import('effect')>('effect');
 
   return {
-    AuditLogsService: Context.GenericTag('@librestock/test/AuditLogsService'),
+    AuditLogsService: Context.GenericTag('@stocket/test/AuditLogsService'),
     auditLogsLayer: Layer.empty,
   };
 });

@@ -1,5 +1,5 @@
 import { Schema } from 'effect';
-import { EmailSchema } from '@librestock/types/common';
+import { EmailSchema } from '@stocket/types/common';
 
 const HttpUrlSchema = Schema.Trim.pipe(
   Schema.pattern(/^https?:\/\/\S+$/),

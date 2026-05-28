@@ -1,6 +1,6 @@
 import { type Context, Effect, Layer } from 'effect';
 import { HttpApp, HttpRouter } from '@effect/platform';
-import { Permission, Resource } from '@librestock/types/auth';
+import { Permission, Resource } from '@stocket/types/auth';
 import { respondCause } from '../../platform/errors';
 import { PermissionProvider } from '../../platform/permission-provider';
 import { AuditLogWriter } from '../../platform/audit';
@@ -20,7 +20,7 @@ vi.mock('./service', async () => {
     await vi.importActual<typeof import('effect')>('effect');
 
   return {
-    AreasService: Context.GenericTag('@librestock/test/AreasService'),
+    AreasService: Context.GenericTag('@stocket/test/AreasService'),
     areasLayer: Layer.empty,
   };
 });

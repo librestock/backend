@@ -1,6 +1,6 @@
-# LibreStock API
+# Stocket API
 
-REST API for LibreStock inventory management, built with Effect, Drizzle, Better Auth, and Node.js.
+REST API for Stocket inventory management, built with Effect, Drizzle, Better Auth, and Node.js.
 
 ## Prerequisites
 
@@ -8,7 +8,7 @@ REST API for LibreStock inventory management, built with Effect, Drizzle, Better
 - pnpm 10.28.0 via Corepack
 - PostgreSQL 16
 
-This repo is a pnpm workspace. A single `pnpm install` from the workspace root installs the API and local LibreStock packages under `packages/`.
+This repo is a pnpm workspace. A single `pnpm install` from the workspace root installs the API and local Stocket packages under `packages/`.
 
 ## Getting Started
 
@@ -66,13 +66,13 @@ pnpm seed                # Seed database
 
 ## Shared Types
 
-Shared API contracts live in this workspace as `@librestock/types`.
+Shared API contracts live in this workspace as `@stocket/types`.
 
 When request/response shapes change:
 
 1. update `packages/types`
-2. run `pnpm --filter @librestock/types barrels`
-3. run `pnpm --filter @librestock/types build`
+2. run `pnpm --filter @stocket/types barrels`
+3. run `pnpm --filter @stocket/types build`
 4. use the workspace-linked package directly from the API
 
 ## Authentication

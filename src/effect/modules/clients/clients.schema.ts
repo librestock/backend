@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
-import { EmailSchema } from '@librestock/types/common';
-import { ClientStatus } from '@librestock/types/clients';
+import { EmailSchema } from '@stocket/types/common';
+import { ClientStatus } from '@stocket/types/clients';
 
 const ClientStatusValues = [
   ClientStatus.ACTIVE,

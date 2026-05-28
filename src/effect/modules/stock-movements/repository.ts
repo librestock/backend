@@ -1,6 +1,6 @@
 import { Effect } from 'effect';
 import { eq, or, gte, lte, and, sql, type SQL, desc } from 'drizzle-orm';
-import type { StockMovementQueryDto } from '@librestock/types/stock-movements';
+import type { StockMovementQueryDto } from '@stocket/types/stock-movements';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
@@ -52,7 +52,7 @@ function buildStockMovementFilters(query: StockMovementQueryDto): SQL[] {
 }
 
 export class StockMovementsRepository extends Effect.Service<StockMovementsRepository>()(
-  '@librestock/effect/stock-movements/StockMovementsRepository',
+  '@stocket/effect/stock-movements/StockMovementsRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

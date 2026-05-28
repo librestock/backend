@@ -1,6 +1,6 @@
 import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
-import { StockMovementReason } from '@librestock/types/stock-movements';
+import { StockMovementReason } from '@stocket/types/stock-movements';
 import { ProductsService } from '../products/service';
 import { LocationsService } from '../locations/service';
 import { StockMovementsService } from './service';

@@ -1,5 +1,5 @@
 import { Schema } from 'effect';
-import { StockMovementReason } from '@librestock/types/stock-movements';
+import { StockMovementReason } from '@stocket/types/stock-movements';
 
 const StockMovementReasonValues = [
   StockMovementReason.PURCHASE_RECEIVE,

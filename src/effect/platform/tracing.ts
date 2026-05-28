@@ -4,7 +4,7 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 
 export const TracingLive = NodeSdk.layer(() => ({
   resource: {
-    serviceName: 'librestock-api',
+    serviceName: 'stocket-api',
     attributes: {
       'deployment.environment': process.env.NODE_ENV,
     },

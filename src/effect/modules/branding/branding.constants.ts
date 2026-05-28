@@ -2,7 +2,7 @@
 export const BRANDING_SETTINGS_ID = 1;
 
 export const DEFAULT_BRANDING = {
-  app_name: 'LibreStock',
+  app_name: 'Stocket',
   tagline: 'Inventory management system',
   logo_url: null,
   favicon_url: null,
@@ -10,6 +10,6 @@ export const DEFAULT_BRANDING = {
 };
 
 export const POWERED_BY = {
-  name: 'LibreStock',
-  url: 'https://github.com/maximilianpw/librestock',
+  name: 'Stocket',
+  url: 'https://github.com/maximilianpw/stocket',
 };

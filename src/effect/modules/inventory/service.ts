@@ -1,6 +1,6 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
-import '@librestock/types/inventory';
+import '@stocket/types/inventory';
 import { makeGetOrFail } from '../../platform/from-null-or';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { AreaNotFound, AreasInfrastructureError } from '../areas/areas.errors';
@@ -35,7 +35,7 @@ type UpdateInventoryDto = Schema.Schema.Type<typeof UpdateInventorySchema>;
 type AdjustInventoryDto = Schema.Schema.Type<typeof AdjustInventorySchema>;
 
 export class InventoryService extends Effect.Service<InventoryService>()(
-  '@librestock/effect/inventory/InventoryService',
+  '@stocket/effect/inventory/InventoryService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* InventoryRepository;

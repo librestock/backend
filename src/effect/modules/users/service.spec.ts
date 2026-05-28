@@ -10,8 +10,8 @@ vi.mock('../../platform/better-auth', async () => {
     await vi.importActual<typeof import('effect')>('effect');
 
   return {
-    BetterAuth: Context.GenericTag('@librestock/test/BetterAuth'),
-    BetterAuthHeaders: Context.GenericTag('@librestock/test/BetterAuthHeaders'),
+    BetterAuth: Context.GenericTag('@stocket/test/BetterAuth'),
+    BetterAuthHeaders: Context.GenericTag('@stocket/test/BetterAuthHeaders'),
     betterAuthLayer: Layer.empty,
   };
 });

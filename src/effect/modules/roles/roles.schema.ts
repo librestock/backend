@@ -1,5 +1,5 @@
 import { Schema } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
+import { Permission, Resource } from '@stocket/types/auth';
 
 const ResourceValues = [
   Resource.DASHBOARD,

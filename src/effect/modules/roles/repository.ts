@@ -15,7 +15,7 @@ const tryAsync = makeTryAsync(
 );
 
 export class RolesRepository extends Effect.Service<RolesRepository>()(
-  '@librestock/effect/roles/RolesRepository',
+  '@stocket/effect/roles/RolesRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

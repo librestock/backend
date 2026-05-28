@@ -8,7 +8,7 @@ vi.mock('./service', async () => {
     await vi.importActual<typeof import('effect')>('effect');
 
   return {
-    AuthService: Context.GenericTag('@librestock/test/AuthService'),
+    AuthService: Context.GenericTag('@stocket/test/AuthService'),
     authLayer: Layer.empty,
   };
 });

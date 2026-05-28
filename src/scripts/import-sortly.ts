@@ -3,8 +3,8 @@ import { parse } from 'csv-parse/sync';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { eq, and } from 'drizzle-orm';
 import pg from 'pg';
-import { StockMovementReason } from '@librestock/types/stock-movements';
-import { LocationType } from '@librestock/types/locations';
+import { StockMovementReason } from '@stocket/types/stock-movements';
+import { LocationType } from '@stocket/types/locations';
 import { categories, products, locations, inventory, stockMovements } from '../effect/platform/db/schema';
 
 // Mock user ID for stock movements (you may want to pass this as a parameter)
@@ -55,7 +55,7 @@ async function createDatabase(): Promise<NodePgDatabase> {
           port: Number.parseInt(process.env.PGPORT ?? '5432'),
           user: process.env.PGUSER,
           password: process.env.PGPASSWORD,
-          database: process.env.PGDATABASE ?? 'librestock_inventory',
+          database: process.env.PGDATABASE ?? 'stocket_inventory',
         },
   );
   return drizzle(pool);

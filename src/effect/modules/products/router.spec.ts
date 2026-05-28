@@ -23,8 +23,8 @@
  * explicitly exercised.
  */
 import { Effect } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { Permission, Resource } from '@stocket/types/auth';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import {
   CategoryNotFound,
   PriceBelowCost,
@@ -40,7 +40,7 @@ vi.mock('./service', async () => {
   const { Context, Layer } =
     await vi.importActual<typeof import('effect')>('effect');
   return {
-    ProductsService: Context.GenericTag('@librestock/test/ProductsService'),
+    ProductsService: Context.GenericTag('@stocket/test/ProductsService'),
     productsLayer: Layer.empty,
   };
 });

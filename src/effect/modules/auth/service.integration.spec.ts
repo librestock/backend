@@ -21,7 +21,7 @@
  */
 import { HttpServerRequest } from '@effect/platform';
 import { Effect, Layer, ManagedRuntime } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
+import { Permission, Resource } from '@stocket/types/auth';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { BetterAuthService } from '../../platform/better-auth';
 import type { DrizzleDb } from '../../platform/drizzle';

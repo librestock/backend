@@ -7,7 +7,7 @@ import {
   type OrderQuerySchema,
   type UpdateOrderSchema,
   type UpdateOrderStatusSchema,
-} from '@librestock/types/orders';
+} from '@stocket/types/orders';
 import { fromNullOr } from '../../platform/from-null-or';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { ProductNotFound } from '../products/products.errors';
@@ -30,7 +30,7 @@ type UpdateOrderDto = Schema.Schema.Type<typeof UpdateOrderSchema>;
 type UpdateOrderStatusDto = Schema.Schema.Type<typeof UpdateOrderStatusSchema>;
 
 export class OrdersService extends Effect.Service<OrdersService>()(
-  '@librestock/effect/orders/OrdersService',
+  '@stocket/effect/orders/OrdersService',
   {
     effect: Effect.gen(function* () {
       const ordersRepository = yield* OrdersRepository;

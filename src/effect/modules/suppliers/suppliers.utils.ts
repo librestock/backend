@@ -1,4 +1,4 @@
-import type { SupplierResponseDto } from '@librestock/types/suppliers';
+import type { SupplierResponseDto } from '@stocket/types/suppliers';
 import type { suppliers } from '../../platform/db/schema';
 
 type Supplier = typeof suppliers.$inferSelect;

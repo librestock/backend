@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import type {
   BrandingResponseDto,
   UpdateBrandingDto,
-} from '@librestock/types/branding';
+} from '@stocket/types/branding';
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { brandingSettings } from '../../platform/db/schema';
@@ -31,7 +31,7 @@ const tryAsync = makeTryAsync(
 );
 
 export class BrandingService extends Effect.Service<BrandingService>()(
-  '@librestock/effect/branding/BrandingService',
+  '@stocket/effect/branding/BrandingService',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

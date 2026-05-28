@@ -16,7 +16,7 @@ const tryAsync = makeTryAsync(
 );
 
 export class PhotosRepository extends Effect.Service<PhotosRepository>()(
-  '@librestock/effect/photos/PhotosRepository',
+  '@stocket/effect/photos/PhotosRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

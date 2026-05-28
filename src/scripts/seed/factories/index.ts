@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
-import { ClientStatus } from '@librestock/types/clients';
-import { type LocationType } from '@librestock/types/locations';
+import { ClientStatus } from '@stocket/types/clients';
+import { type LocationType } from '@stocket/types/locations';
 import {
   type suppliers,
   type products,

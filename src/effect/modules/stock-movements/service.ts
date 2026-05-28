@@ -1,4 +1,4 @@
-import type { StockMovementQueryDto } from '@librestock/types/stock-movements';
+import type { StockMovementQueryDto } from '@stocket/types/stock-movements';
 import type { Schema } from 'effect';
 import { Effect } from 'effect';
 import { makeGetOrFail } from '../../platform/from-null-or';
@@ -22,7 +22,7 @@ type CreateStockMovementDto = Schema.Schema.Type<
 >;
 
 export class StockMovementsService extends Effect.Service<StockMovementsService>()(
-  '@librestock/effect/stock-movements/StockMovementsService',
+  '@stocket/effect/stock-movements/StockMovementsService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* StockMovementsRepository;

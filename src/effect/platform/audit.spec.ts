@@ -1,6 +1,6 @@
 import { HttpServerRequest } from '@effect/platform';
 import { Effect, Layer } from 'effect';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import { makeBetterAuthTestLayer } from '../testing/better-auth-test';
 import { DrizzleDatabase } from './drizzle';
 import { CurrentRequestContext, type RequestContext } from './request-context';

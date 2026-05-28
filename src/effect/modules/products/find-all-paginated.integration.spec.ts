@@ -1,6 +1,6 @@
 import { Effect, Layer } from 'effect';
-import { ProductSortField } from '@librestock/types/products';
-import { SortOrder } from '@librestock/types/common';
+import { ProductSortField } from '@stocket/types/products';
+import { SortOrder } from '@stocket/types/common';
 import type { DrizzleDb } from '../../platform/drizzle';
 import {
   getTestDb,

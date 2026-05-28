@@ -16,7 +16,7 @@ type SqlResult = {
   readonly rows?: ReadonlyArray<Record<string, unknown>>;
 };
 
-const MIGRATIONS_TABLE_NAME = 'librestock_committed_migrations';
+const MIGRATIONS_TABLE_NAME = 'stocket_committed_migrations';
 const BASELINE_ONLY_MIGRATIONS = new Set(['0000_initial_schema.sql']);
 
 export const getCommittedSqlMigrations = (
@@ -88,7 +88,7 @@ async function markMigrationApplied(
   await executeSql(
     executor,
     sql`
-      INSERT INTO librestock_committed_migrations (name)
+      INSERT INTO stocket_committed_migrations (name)
       VALUES (${migrationName})
       ON CONFLICT (name) DO NOTHING
     `,

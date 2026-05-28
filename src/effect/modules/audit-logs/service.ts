@@ -3,7 +3,7 @@ import {
   type AuditLogResponseDto,
   type PaginatedAuditLogsResponseDto,
   type AuditEntityType,
-} from '@librestock/types/audit-logs';
+} from '@stocket/types/audit-logs';
 import { makeGetOrFail } from '../../platform/from-null-or';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import type { auditLogs } from '../../platform/db/schema';
@@ -30,7 +30,7 @@ const toAuditLogResponseDto = (auditLog: AuditLog): AuditLogResponseDto => ({
 });
 
 export class AuditLogsService extends Effect.Service<AuditLogsService>()(
-  '@librestock/effect/audit-logs/AuditLogsService',
+  '@stocket/effect/audit-logs/AuditLogsService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* AuditLogsRepository;

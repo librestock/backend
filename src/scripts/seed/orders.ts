@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
-import { ClientStatus } from '@librestock/types/clients';
-import { OrderStatus } from '@librestock/types/orders';
+import { ClientStatus } from '@stocket/types/clients';
+import { OrderStatus } from '@stocket/types/orders';
 import { eq } from 'drizzle-orm';
 import { orders, orderItems, type clients, type products } from '../../effect/platform/db/schema';
 import { MOCK_USER_ID, SEED_CONFIG } from './config';

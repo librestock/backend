@@ -1,4 +1,4 @@
-import type { BrandingResponseDto } from '@librestock/types/branding';
+import type { BrandingResponseDto } from '@stocket/types/branding';
 import type { brandingSettings } from '../../platform/db/schema';
 import { POWERED_BY } from './branding.constants';
 

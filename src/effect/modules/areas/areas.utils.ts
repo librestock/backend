@@ -1,4 +1,4 @@
-import type { AreaResponseDto } from '@librestock/types/areas';
+import type { AreaResponseDto } from '@stocket/types/areas';
 import type { areas } from '../../platform/db/schema';
 
 type AreaRow = typeof areas.$inferSelect;

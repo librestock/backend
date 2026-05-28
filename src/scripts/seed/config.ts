@@ -1,4 +1,4 @@
-import { LocationType } from '@librestock/types/locations';
+import { LocationType } from '@stocket/types/locations';
 import { type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
@@ -99,7 +99,7 @@ export async function createDatabase(): Promise<NodePgDatabase> {
           port: Number.parseInt(process.env.PGPORT ?? '5432'),
           user: process.env.PGUSER,
           password: process.env.PGPASSWORD,
-          database: process.env.PGDATABASE ?? 'librestock_inventory',
+          database: process.env.PGDATABASE ?? 'stocket_inventory',
         },
   );
   return drizzle(pool);

@@ -2,7 +2,7 @@ import { Context, Effect, Layer } from 'effect';
 import {
   type AuditAction,
   type AuditEntityType,
-} from '@librestock/types/audit-logs';
+} from '@stocket/types/audit-logs';
 import { DrizzleDatabase } from './drizzle';
 import { auditLogs } from './db/schema';
 import type { LogPayload } from './messages';
@@ -23,7 +23,7 @@ export interface AuditLogWriter {
 }
 
 export const AuditLogWriter = Context.GenericTag<AuditLogWriter>(
-  '@librestock/effect/platform/AuditLogWriter',
+  '@stocket/effect/platform/AuditLogWriter',
 );
 
 export const makeAuditLogWriter = Effect.gen(function* () {

@@ -12,7 +12,7 @@ import {
 import type {
   AuditAction,
   AuditEntityType,
-} from '@librestock/types/audit-logs';
+} from '@stocket/types/audit-logs';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
@@ -71,7 +71,7 @@ function buildAuditFilters(options: AuditLogQueryOptions): SQL[] {
 }
 
 export class AuditLogsRepository extends Effect.Service<AuditLogsRepository>()(
-  '@librestock/effect/audit-logs/AuditLogsRepository',
+  '@stocket/effect/audit-logs/AuditLogsRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

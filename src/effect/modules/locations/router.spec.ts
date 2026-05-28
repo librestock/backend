@@ -15,9 +15,9 @@
  * downstream effect succeeds.
  */
 import { Effect } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
-import { LocationType } from '@librestock/types/locations';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { Permission, Resource } from '@stocket/types/auth';
+import { LocationType } from '@stocket/types/locations';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import { LocationNotFound, LocationsInfrastructureError } from './locations.errors';
 import { makeLocationsRouterHarness } from './__fixtures__/router-harness';
 import { LocationsService } from './service';
@@ -28,7 +28,7 @@ vi.mock('./service', async () => {
   const { Context, Layer } =
     await vi.importActual<typeof import('effect')>('effect');
   return {
-    LocationsService: Context.GenericTag('@librestock/test/LocationsService'),
+    LocationsService: Context.GenericTag('@stocket/test/LocationsService'),
     locationsLayer: Layer.empty,
   };
 });

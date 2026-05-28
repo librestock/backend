@@ -1,11 +1,11 @@
 import { HttpRouter, HttpServerRequest } from '@effect/platform';
 import { Effect, Schema } from 'effect';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
-import { Permission, Resource } from '@librestock/types/auth';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
+import { Permission, Resource } from '@stocket/types/auth';
 import {
   InventoryIdSchema,
   InventoryQuerySchema,
-} from '@librestock/types/inventory';
+} from '@stocket/types/inventory';
 import { requirePermission } from '../../platform/authorization';
 import { AuditLogWriter } from '../../platform/audit';
 import { respondJson, respondJsonOk } from '../../platform/errors';

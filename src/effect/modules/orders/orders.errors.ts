@@ -1,4 +1,4 @@
-import type { OrderStatus } from '@librestock/types/orders';
+import type { OrderStatus } from '@stocket/types/orders';
 import {
   BadRequestError,
   InternalError,

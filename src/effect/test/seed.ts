@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
-import { LocationType } from '@librestock/types/locations';
-import { ClientStatus } from '@librestock/types/clients';
-import { StockMovementReason } from '@librestock/types/stock-movements';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { LocationType } from '@stocket/types/locations';
+import { ClientStatus } from '@stocket/types/clients';
+import { StockMovementReason } from '@stocket/types/stock-movements';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import * as s from '../platform/db/schema';
 import type { DrizzleDb } from '../platform/drizzle';
 

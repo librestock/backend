@@ -4,7 +4,7 @@ import type {
   SuperAdminCreateTenantResponse,
   SuperAdminMeResponse,
   SuperAdminTenantListResponse,
-} from '@librestock/types/superadmin';
+} from '@stocket/types/superadmin';
 import { hostnameForTenantSlug, isReservedTenantSlug } from '../../platform/host';
 import type { UserSession } from '../../platform/auth/user-session';
 import { makeServiceTracer } from '../../platform/service-tracer';
@@ -75,7 +75,7 @@ const tryAsync = makeTryAsync(
 );
 
 export class SuperAdminService extends Effect.Service<SuperAdminService>()(
-  '@librestock/effect/superadmin/SuperAdminService',
+  '@stocket/effect/superadmin/SuperAdminService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* SuperAdminRepository;

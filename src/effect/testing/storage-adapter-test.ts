@@ -91,7 +91,7 @@ export class StorageNotFound extends Error {
  * it at all.
  */
 export const StorageAdapterTag = Context.GenericTag<StorageAdapter>(
-  '@librestock/effect/platform/StorageAdapter',
+  '@stocket/effect/platform/StorageAdapter',
 );
 
 export interface InMemoryStorageAdapter extends StorageAdapter {

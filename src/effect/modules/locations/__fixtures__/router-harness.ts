@@ -9,7 +9,7 @@
  */
 import { HttpApp, HttpRouter } from '@effect/platform';
 import { type Context, Effect, Layer } from 'effect';
-import type { Permission, Resource } from '@librestock/types/auth';
+import type { Permission, Resource } from '@stocket/types/auth';
 import { AuditLogWriter, type AuditWriteParams } from '../../../platform/audit';
 import { BetterAuth, type BetterAuthService } from '../../../platform/better-auth';
 import { respondCause } from '../../../platform/errors';

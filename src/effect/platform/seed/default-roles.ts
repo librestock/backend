@@ -1,4 +1,4 @@
-import { Permission, Resource } from '@librestock/types/auth';
+import { Permission, Resource } from '@stocket/types/auth';
 
 export interface DefaultRoleSeed {
   readonly name: string;

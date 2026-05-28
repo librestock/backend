@@ -24,7 +24,7 @@ export class DrizzleInitializationError extends InternalError(
 }> {}
 
 export const DrizzleDatabase = Context.GenericTag<DrizzleDb>(
-  '@librestock/effect/platform/DrizzleDatabase',
+  '@stocket/effect/platform/DrizzleDatabase',
 );
 
 function buildPoolConfig(): pg.PoolConfig {

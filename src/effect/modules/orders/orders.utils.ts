@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import type { OrderResponseDto, OrderItemResponseDto } from '@librestock/types/orders';
+import type { OrderResponseDto, OrderItemResponseDto } from '@stocket/types/orders';
 import type { orders, orderItems } from '../../platform/db/schema';
 
 type OrderItemRow = typeof orderItems.$inferSelect;

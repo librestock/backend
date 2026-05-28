@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from '@effect/vitest';
 import { Effect, Layer } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
+import { Permission, Resource } from '@stocket/types/auth';
 import { makeTestLayer } from '../../testing/test-harness';
 import { RolesService, type UserPermissions } from '../roles/service';
 import { AuthService } from './service';
@@ -111,8 +111,8 @@ describe('AuthService', () => {
               email: 'jane@example.com',
               image: 'https://example.com/avatar.png',
               tenantId: '00000000-0000-4000-8000-000000000001',
-              tenantName: 'LibreStock',
-              tenantSlug: 'librestock',
+              tenantName: 'Stocket',
+              tenantSlug: 'stocket',
               roles: ['Admin'],
               permissions: {
                 [Resource.ROLES]: [Permission.READ, Permission.WRITE],

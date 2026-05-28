@@ -1,6 +1,6 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
-import type { SupplierQueryDto } from '@librestock/types/suppliers';
+import type { SupplierQueryDto } from '@stocket/types/suppliers';
 import { makeGetOrFail } from '../../platform/from-null-or';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import type {
@@ -15,7 +15,7 @@ type CreateSupplierDto = Schema.Schema.Type<typeof CreateSupplierSchema>;
 type UpdateSupplierDto = Schema.Schema.Type<typeof UpdateSupplierSchema>;
 
 export class SuppliersService extends Effect.Service<SuppliersService>()(
-  '@librestock/effect/suppliers/SuppliersService',
+  '@stocket/effect/suppliers/SuppliersService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* SuppliersRepository;

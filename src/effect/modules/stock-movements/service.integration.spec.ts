@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect';
-import { StockMovementReason } from '@librestock/types/stock-movements';
+import { StockMovementReason } from '@stocket/types/stock-movements';
 import {
   getTestDb,
   closeTestDb,

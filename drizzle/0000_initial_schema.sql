@@ -361,7 +361,7 @@ CREATE INDEX "user_roles_tenant_user_id_idx" ON "user_roles" USING btree ("tenan
 INSERT INTO tenant_domains (tenant_id, hostname, kind, is_primary, verified_at)
 SELECT
   o.id,
-  lower(trim(trailing '.' from o.slug)) || '.librestock.maximilian.pw',
+  lower(trim(trailing '.' from o.slug)) || '.stocket.fr',
   'subdomain',
   true,
   now()

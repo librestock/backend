@@ -7,10 +7,10 @@ import {
 describe('auth cookie domain', () => {
   it('derives the shared parent domain for sibling production subdomains', () => {
     expect(
-      deriveSharedCookieDomain('https://librestock-api.maximilian.pw', [
-        'https://librestock.maximilian.pw',
+      deriveSharedCookieDomain('https://api.stocket.fr', [
+        'https://stocket.fr',
       ]),
-    ).toBe('maximilian.pw');
+    ).toBe('stocket.fr');
   });
 
   it('uses an explicit cookie domain when configured', () => {

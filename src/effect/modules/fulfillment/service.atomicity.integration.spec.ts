@@ -1,6 +1,6 @@
 import { Effect, Layer } from 'effect';
 import { eq, sql } from 'drizzle-orm';
-import { OrderStatus } from '@librestock/types/orders';
+import { OrderStatus } from '@stocket/types/orders';
 import {
   inventory,
   orderItems,

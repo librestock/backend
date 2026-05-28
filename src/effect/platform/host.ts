@@ -1,8 +1,8 @@
 import type * as HttpServerRequest from '@effect/platform/HttpServerRequest';
 import { Option } from 'effect';
 
-const PRODUCTION_PLATFORM_HOST = 'default.librestock.maximilian.pw';
-const PRODUCTION_TENANT_BASE_DOMAIN = 'librestock.maximilian.pw';
+const PRODUCTION_PLATFORM_HOST = 'default.stocket.fr';
+const PRODUCTION_TENANT_BASE_DOMAIN = 'stocket.fr';
 const LOCAL_PLATFORM_HOST = 'localhost';
 const LOCAL_TENANT_BASE_DOMAIN = 'localhost';
 const DEFAULT_RESERVED_TENANT_SLUGS = [

@@ -14,8 +14,8 @@ import {
 import type {
   InventoryQueryDto,
   InventorySummaryDto,
-} from '@librestock/types/inventory';
-import { InventorySortField } from '@librestock/types/inventory';
+} from '@stocket/types/inventory';
+import { InventorySortField } from '@stocket/types/inventory';
 import { buildOrderBy } from '../../platform/drizzle-sort.utils';
 import {
   resolvePaginationWindow,
@@ -141,7 +141,7 @@ function mapInventoryRow(row: InventoryJoinRow): InventoryWithRelations {
 }
 
 export class InventoryRepository extends Effect.Service<InventoryRepository>()(
-  '@librestock/effect/inventory/InventoryRepository',
+  '@stocket/effect/inventory/InventoryRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

@@ -1,6 +1,6 @@
 import { type Context, Effect, Layer } from 'effect';
 import { HttpApp, HttpRouter } from '@effect/platform';
-import { Permission, Resource } from '@librestock/types/auth';
+import { Permission, Resource } from '@stocket/types/auth';
 import { respondCause } from '../../platform/errors';
 import { PermissionProvider } from '../../platform/permission-provider';
 import { makeBetterAuthTestLayer } from '../../testing/better-auth-test';
@@ -14,7 +14,7 @@ vi.mock('./service', async () => {
     await vi.importActual<typeof import('effect')>('effect');
 
   return {
-    BrandingService: Context.GenericTag('@librestock/test/BrandingService'),
+    BrandingService: Context.GenericTag('@stocket/test/BrandingService'),
     brandingLayer: Layer.empty,
   };
 });
@@ -95,14 +95,14 @@ const makeHandler = ({
 };
 
 const makeBrandingDto = (overrides: Record<string, unknown> = {}) => ({
-  app_name: 'LibreStock',
+  app_name: 'Stocket',
   tagline: 'Inventory management system',
   logo_url: null,
   favicon_url: null,
   primary_color: '#3b82f6',
   powered_by: {
-    name: 'LibreStock',
-    url: 'https://github.com/maximilianpw/librestock',
+    name: 'Stocket',
+    url: 'https://github.com/maximilianpw/stocket',
   },
   updated_at: new Date('2026-01-01T00:00:00.000Z'),
   ...overrides,
@@ -124,7 +124,7 @@ describe('brandingRouter', () => {
 
       expect(response.status).toBe(200);
       await expect(response.json()).resolves.toMatchObject({
-        app_name: 'LibreStock',
+        app_name: 'Stocket',
       });
     });
 

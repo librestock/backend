@@ -14,11 +14,11 @@ import {
   primaryKey,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
-import { ClientStatus } from '@librestock/types/clients';
-import { LocationType } from '@librestock/types/locations';
-import { OrderStatus } from '@librestock/types/orders';
-import { StockMovementReason } from '@librestock/types/stock-movements';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
+import { ClientStatus } from '@stocket/types/clients';
+import { LocationType } from '@stocket/types/locations';
+import { OrderStatus } from '@stocket/types/orders';
+import { StockMovementReason } from '@stocket/types/stock-movements';
 import { DEFAULT_TENANT_ID } from '../tenant-constants';
 
 // ── pgEnums ──────────────────────────────────────────────────────────────

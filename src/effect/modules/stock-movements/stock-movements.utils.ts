@@ -1,4 +1,4 @@
-import type { StockMovementResponseDto } from '@librestock/types/stock-movements';
+import type { StockMovementResponseDto } from '@stocket/types/stock-movements';
 import type { stockMovements } from '../../platform/db/schema';
 
 type StockMovementRow = typeof stockMovements.$inferSelect;

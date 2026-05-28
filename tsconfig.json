@@ -1,5 +1,5 @@
 {
-  "extends": "@librestock/tsconfig/base.json",
+  "extends": "@stocket/tsconfig/base.json",
   "compilerOptions": {
     "outDir": "./dist",
     "baseUrl": "./",

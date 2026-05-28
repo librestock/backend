@@ -1,5 +1,5 @@
 import { Effect } from 'effect';
-import type { CategoryWithChildrenResponseDto, CreateCategoryDto, UpdateCategoryDto } from '@librestock/types/categories';
+import type { CategoryWithChildrenResponseDto, CreateCategoryDto, UpdateCategoryDto } from '@stocket/types/categories';
 import { fromNullOr } from '../../platform/from-null-or';
 import type { categories } from '../../platform/db/schema';
 import {
@@ -46,7 +46,7 @@ const buildTree = (categories: Category[]): CategoryWithChildrenResponseDto[] =>
 };
 
 export class CategoriesService extends Effect.Service<CategoriesService>()(
-  '@librestock/effect/categories/CategoriesService',
+  '@stocket/effect/categories/CategoriesService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* CategoriesRepository;

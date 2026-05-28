@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Effect, Layer, Schedule } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
-import type { CreateRoleDto, UpdateRoleDto } from '@librestock/types/roles';
+import { Permission, Resource } from '@stocket/types/auth';
+import type { CreateRoleDto, UpdateRoleDto } from '@stocket/types/roles';
 import type { DrizzleDb } from '../../platform/drizzle';
 import { userRoles } from '../../platform/db/schema';
 import {

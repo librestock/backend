@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
-import { Permission, Resource } from '@librestock/types/auth';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { Permission, Resource } from '@stocket/types/auth';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import {
   auditLogs,
   brandingSettings,
@@ -219,7 +219,7 @@ describe('buildHttpApp acceptance', () => {
 
       expect(response.status).toBe(200);
       await expect(response.json()).resolves.toMatchObject({
-        app_name: 'LibreStock',
+        app_name: 'Stocket',
       });
     } finally {
       await dispose();

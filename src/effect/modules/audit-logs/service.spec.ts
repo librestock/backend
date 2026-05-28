@@ -1,6 +1,6 @@
 import { type Mock } from 'vitest';
 import { Effect, Layer } from 'effect';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import type { auditLogs } from '../../platform/db/schema';
 import { AuditLogsService } from './service';
 import { AuditLogsRepository } from './repository';

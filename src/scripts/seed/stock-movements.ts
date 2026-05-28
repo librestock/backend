@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
-import { LocationType } from '@librestock/types/locations';
-import { StockMovementReason } from '@librestock/types/stock-movements';
+import { LocationType } from '@stocket/types/locations';
+import { StockMovementReason } from '@stocket/types/stock-movements';
 import { stockMovements, type locations, type orders, type products } from '../../effect/platform/db/schema';
 import { MOCK_USER_ID, SEED_CONFIG } from './config';
 import { registry } from './registry';

@@ -1,4 +1,4 @@
-# Testing guide — `@librestock/api`
+# Testing guide — `@stocket/api`
 
 This is the contributor-facing guide to writing tests for the backend. It covers every test flavor that currently exists on the platform and shows how to add more of them.
 
@@ -46,7 +46,7 @@ pnpm test:duplicates       # jscpd: warns when *.spec.ts files diverge from copy
 pnpm type-check            # tsc --noEmit
 ```
 
-Integration tests require a Postgres instance reachable at the connection params from `src/config/db-connection.utils.ts`. Locally: `docker compose up -d postgres` (or equivalent). The harness creates `librestock_inventory_test`, applies committed migrations once per run, and `TRUNCATE ... CASCADE`s before each test.
+Integration tests require a Postgres instance reachable at the connection params from `src/config/db-connection.utils.ts`. Locally: `docker compose up -d postgres` (or equivalent). The harness creates `stocket_inventory_test`, applies committed migrations once per run, and `TRUNCATE ... CASCADE`s before each test.
 
 ---
 
@@ -138,7 +138,7 @@ vi.mock('./service', async () => {
   const { Context, Layer } =
     await vi.importActual<typeof import('effect')>('effect');
   return {
-    MyService: Context.GenericTag('@librestock/test/MyService'),
+    MyService: Context.GenericTag('@stocket/test/MyService'),
     myLayer: Layer.empty,
   };
 });

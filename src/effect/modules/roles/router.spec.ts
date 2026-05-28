@@ -15,9 +15,9 @@
  * couple to whether its downstream effect succeeds.
  */
 import { Effect } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
-import type { RoleResponseDto } from '@librestock/types/roles';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { Permission, Resource } from '@stocket/types/auth';
+import type { RoleResponseDto } from '@stocket/types/roles';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import {
   RoleNameAlreadyExists,
   RoleNotFound,
@@ -48,7 +48,7 @@ vi.mock('./service', async () => {
     await vi.importActual<typeof import('effect')>('effect');
 
   return {
-    RolesService: Context.GenericTag('@librestock/test/RolesService'),
+    RolesService: Context.GenericTag('@stocket/test/RolesService'),
     rolesLayer: Layer.empty,
   };
 });

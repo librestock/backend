@@ -1,4 +1,4 @@
-# LibreStock API Module
+# Stocket API Module
 
 ## Tooling
 
@@ -10,7 +10,7 @@
 
 - Keep feature work under `src/effect/modules/<feature>/` and follow the existing router/service/repository/schema/error split.
 - Cross-module access should normally go through services, not another module's repository.
-- Shared request/response contracts should come from `@librestock/types`, not backend-local DTO files.
+- Shared request/response contracts should come from `@stocket/types`, not backend-local DTO files.
 - `UsersService` talks to Better Auth admin APIs directly and uses local persistence for role assignment concerns.
 - `AuditLogWriter` is fire-and-forget; do not build correctness around audit writes succeeding synchronously.
 
@@ -36,7 +36,7 @@
 When request/response shapes change:
 
 1. Update `packages/types`.
-2. Run `pnpm --filter @librestock/types barrels && pnpm --filter @librestock/types build`.
+2. Run `pnpm --filter @stocket/types barrels && pnpm --filter @stocket/types build`.
 3. Use the workspace-linked types directly from the backend.
 
 ## Testing
@@ -48,4 +48,4 @@ When request/response shapes change:
 
 ## Issue Tracking
 
-Before starting work on any issue, ensure it is added to the **[LibreStock Improvements Tracker](https://github.com/orgs/librestock/projects/2)** GitHub Project. Move the issue to "In Progress" when starting and "Done" when complete.
+Before starting work on any issue, ensure it is added to the **[Stocket Improvements Tracker](https://github.com/orgs/stocket/projects/2)** GitHub Project. Move the issue to "In Progress" when starting and "Done" when complete.

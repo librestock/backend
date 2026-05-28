@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Effect, Layer } from 'effect';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import {
   getTestDb,
   closeTestDb,

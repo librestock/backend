@@ -10,10 +10,10 @@
  * cases below.
  */
 import { Effect } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
-import { StockMovementReason } from '@librestock/types/stock-movements';
-import type { StockMovementResponseDto } from '@librestock/types/stock-movements';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { Permission, Resource } from '@stocket/types/auth';
+import { StockMovementReason } from '@stocket/types/stock-movements';
+import type { StockMovementResponseDto } from '@stocket/types/stock-movements';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import {
   InvalidStockMovementProduct,
   StockMovementLocationNotFound,
@@ -41,7 +41,7 @@ vi.mock('./service', async () => {
 
   return {
     StockMovementsService: Context.GenericTag(
-      '@librestock/test/StockMovementsService',
+      '@stocket/test/StockMovementsService',
     ),
     stockMovementsLayer: Layer.empty,
   };

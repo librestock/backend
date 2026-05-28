@@ -1,4 +1,4 @@
-import type { LocationResponseDto } from '@librestock/types/locations';
+import type { LocationResponseDto } from '@stocket/types/locations';
 import type { locations } from '../../platform/db/schema';
 
 type Location = typeof locations.$inferSelect;

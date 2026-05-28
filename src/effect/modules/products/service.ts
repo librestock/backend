@@ -43,7 +43,7 @@ type BulkDeleteDto = Schema.Schema.Type<typeof BulkDeleteSchema>;
 type BulkRestoreDto = Schema.Schema.Type<typeof BulkRestoreSchema>;
 
 export class ProductsService extends Effect.Service<ProductsService>()(
-  '@librestock/effect/products/ProductsService',
+  '@stocket/effect/products/ProductsService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* ProductsRepository;

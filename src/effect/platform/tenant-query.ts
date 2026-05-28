@@ -23,7 +23,7 @@ const combineConditions = (
     : and(tenantCondition, ...conditions)!;
 
 export class TenantQuery extends Effect.Service<TenantQuery>()(
-  '@librestock/effect/platform/TenantQuery',
+  '@stocket/effect/platform/TenantQuery',
   {
     effect: Effect.succeed({
       tenantId: requireRequestTenantId,

@@ -1,6 +1,6 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
-import type { ClientResponseDto, ClientQueryDto } from '@librestock/types/clients';
+import type { ClientResponseDto, ClientQueryDto } from '@stocket/types/clients';
 import { makeGetOrFail } from '../../platform/from-null-or';
 import {
   type PaginationMeta,
@@ -23,7 +23,7 @@ type CreateClientDto = Schema.Schema.Type<typeof CreateClientSchema>;
 type UpdateClientDto = Schema.Schema.Type<typeof UpdateClientSchema>;
 
 export class ClientsService extends Effect.Service<ClientsService>()(
-  '@librestock/effect/clients/ClientsService',
+  '@stocket/effect/clients/ClientsService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* ClientsRepository;

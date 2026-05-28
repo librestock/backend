@@ -15,7 +15,7 @@ Use this skill for questions or changes involving Effect APIs, layers, services,
 4. If no local Effect checkout exists and source verification matters, clone `https://github.com/Effect-TS/effect` into `.opencode/references/effect`.
 5. Keep final guidance aligned with root `AGENTS.md` and any closer-scoped AGENTS.md files.
 
-## LibreStock Guardrails
+## Stocket Guardrails
 
 - Keep feature work under `src/effect/modules/<feature>/`.
 - Cross-module calls should normally go through services.

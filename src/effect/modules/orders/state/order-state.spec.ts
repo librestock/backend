@@ -1,4 +1,4 @@
-import { OrderStatus } from '@librestock/types/orders';
+import { OrderStatus } from '@stocket/types/orders';
 import { getOrderState } from './order-state';
 
 describe('OrderState', () => {

@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect';
-import { LocationType } from '@librestock/types/locations';
+import { LocationType } from '@stocket/types/locations';
 import {
   getTestDb,
   closeTestDb,

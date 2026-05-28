@@ -1,6 +1,6 @@
 import { Effect } from 'effect';
 import { eq, ilike, sql, type SQL } from 'drizzle-orm';
-import type { SupplierQueryDto } from '@librestock/types/suppliers';
+import type { SupplierQueryDto } from '@stocket/types/suppliers';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
@@ -32,7 +32,7 @@ const tryAsync = makeTryAsync(
 );
 
 export class SuppliersRepository extends Effect.Service<SuppliersRepository>()(
-  '@librestock/effect/suppliers/SuppliersRepository',
+  '@stocket/effect/suppliers/SuppliersRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

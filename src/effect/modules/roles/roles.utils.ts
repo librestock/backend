@@ -1,5 +1,5 @@
-import { type Permission, type Resource } from '@librestock/types/auth';
-import type { RoleResponseDto } from '@librestock/types/roles';
+import { type Permission, type Resource } from '@stocket/types/auth';
+import type { RoleResponseDto } from '@stocket/types/roles';
 import type { roles, rolePermissions } from '../../platform/db/schema';
 
 type RoleRow = typeof roles.$inferSelect;

@@ -9,8 +9,8 @@ import { HealthApi } from '../modules/health/api';
  */
 export class AppApi extends HttpApi.make('app')
   .add(HealthApi)
-  .annotate(OpenApi.Title, 'LibreStock API')
+  .annotate(OpenApi.Title, 'Stocket API')
   .annotate(
     OpenApi.Description,
-    'LibreStock inventory management API. Only routes migrated to HttpApiBuilder appear here; legacy routes are documented separately.',
+    'Stocket inventory management API. Only routes migrated to HttpApiBuilder appear here; legacy routes are documented separately.',
   ) {}

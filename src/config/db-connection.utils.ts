@@ -45,6 +45,6 @@ export function getDbConnectionParams(): { url: string } | DbConnectionParams {
     ...(isSocket ? {} : { port: Number.parseInt(process.env.PGPORT ?? '5432', 10) }),
     user: process.env.PGUSER ?? process.env.USER ?? '',
     password: process.env.PGPASSWORD ?? '',
-    database: process.env.PGDATABASE ?? 'librestock_inventory',
+    database: process.env.PGDATABASE ?? 'stocket_inventory',
   };
 }

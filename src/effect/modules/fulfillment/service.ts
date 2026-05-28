@@ -3,10 +3,10 @@ import type {
   OrderFulfillmentView,
   PackInput,
   PickInput,
-} from '@librestock/types/fulfillment';
+} from '@stocket/types/fulfillment';
 import { fromNullOr } from '../../platform/from-null-or';
-import { OrderStatus } from '@librestock/types/orders';
-import { StockMovementReason } from '@librestock/types/stock-movements';
+import { OrderStatus } from '@stocket/types/orders';
+import { StockMovementReason } from '@stocket/types/stock-movements';
 import { DrizzleDatabase, type DrizzleDb } from '../../platform/drizzle';
 import { CurrentRequestContext } from '../../platform/request-context';
 import { InventoryRepository } from '../inventory/repository';
@@ -52,7 +52,7 @@ const runEffectAsPromise = async <A, E>(
 };
 
 export class FulfillmentService extends Effect.Service<FulfillmentService>()(
-  '@librestock/effect/fulfillment/FulfillmentService',
+  '@stocket/effect/fulfillment/FulfillmentService',
   {
     effect: Effect.gen(function* () {
       const ordersRepository = yield* OrdersRepository;

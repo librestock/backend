@@ -1,4 +1,4 @@
-import type { CreateProductDto, ProductResponseDto } from '@librestock/types/products';
+import type { CreateProductDto, ProductResponseDto } from '@stocket/types/products';
 import type { products } from '../../platform/db/schema';
 
 export type ProductRow = typeof products.$inferSelect;

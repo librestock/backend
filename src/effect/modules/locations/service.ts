@@ -5,7 +5,7 @@ import type {
   LocationQueryDto,
   LocationResponseDto,
   PaginatedLocationsResponseDto,
-} from '@librestock/types/locations';
+} from '@stocket/types/locations';
 import { makeGetOrFail } from '../../platform/from-null-or';
 import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { toLocationResponseDto } from './locations.utils';
@@ -17,7 +17,7 @@ import type { TenantNotResolved } from '../../platform/tenant-context';
 import { LocationsRepository } from './repository';
 
 export class LocationsService extends Effect.Service<LocationsService>()(
-  '@librestock/effect/locations/LocationsService',
+  '@stocket/effect/locations/LocationsService',
   {
     effect: Effect.gen(function* () {
       const repository = yield* LocationsRepository;

@@ -6,7 +6,7 @@ import type { DrizzleDb } from '../platform/drizzle';
 import * as relations from '../platform/db/relations';
 import * as schema from '../platform/db/schema';
 
-const TEST_DB_NAME = 'librestock_inventory_test';
+const TEST_DB_NAME = 'stocket_inventory_test';
 
 const PROJECT_ROOT = path.resolve(import.meta.dirname, '..', '..', '..');
 const MIGRATIONS_DIR = path.join(PROJECT_ROOT, 'drizzle');

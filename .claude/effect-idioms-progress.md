@@ -8,7 +8,7 @@ Source of truth for the ralph-loop task: extract Effect-TS idioms from the vendo
 - `Effect.Service<Self>()("identifier", { effect | scoped | sync, dependencies?, accessors? })` is the app-code pattern.
 - `dependencies: [OtherService.Default, ...]` auto-bundles transitive layers into `.Default`.
 - `accessors: true` generates static method helpers on the class (e.g. `Logger.info(...)` vs `yield* Logger; logger.info(...)`).
-- Identifiers follow reverse-domain: `@librestock/effect/<Module>/<Service>` (current code uses `@librestock/effect/<Service>` without module segment — consider adding hierarchy).
+- Identifiers follow reverse-domain: `@stocket/effect/<Module>/<Service>` (current code uses `@stocket/effect/<Service>` without module segment — consider adding hierarchy).
 - Context.Tag / Context.GenericTag are for library-level code; `Effect.Service` is preferred for app services.
 
 ### Errors
@@ -58,7 +58,7 @@ Source of truth for the ralph-loop task: extract Effect-TS idioms from the vendo
 1. **Routers use `HttpRouter` not `HttpApi`** — Health is the only one migrated. Big but risky; multi-iteration effort.
 2. **`HealthService` and `BrandingService` miss `dependencies:`** — they `yield*` `DrizzleDatabase` / `BetterAuth` directly. Can declare `drizzleLayer` / `betterAuthLayer` as deps to simplify `main.ts`.
 3. **`Effect.catchAll(f => Effect.succeed(f))` in `health/service.ts`** → `Effect.merge`. ✅ DONE (commit 413fa583).
-4. **Service identifiers lack module segment** — `@librestock/effect/ProductsService` → `@librestock/effect/products/ProductsService`. Cheap rename; no external consumers in-tree.
+4. **Service identifiers lack module segment** — `@stocket/effect/ProductsService` → `@stocket/effect/products/ProductsService`. Cheap rename; no external consumers in-tree.
 5. **`makeTryAsync`** — thin wrapper over `Effect.tryPromise`. Not wrong, not worth ripping out.
 6. **No `Effect.catchTag` usage** — broad `catchAll` in photos/audit/http/app. Check whether errors are typed well enough to migrate.
 7. **`Schema.TaggedError` vs custom factory** — architectural; defer until HttpApi migration forces the issue.
@@ -67,7 +67,7 @@ Source of truth for the ralph-loop task: extract Effect-TS idioms from the vendo
 ## Iteration log
 
 - **Iteration 1**: extracted idioms; audited code; scoped punch list; landed `Effect.merge` refactor in `health/service.ts` (#3).
-- **Iteration 2**: (#4) namespaced all service identifiers by module (`@librestock/effect/<module>/Name`); (#6) photos/service.ts: replaced inline `catchAll(e => cleanup, refail)` with `Effect.tapError + Effect.ignore`, and `catchAll(e => Effect.fail(new X))` with `Effect.mapError`. Investigated remaining `catchAll*` sites — all legitimate HTTP-boundary `catchAllCause(respondCause)` or fire-and-forget audit log-and-swallow. Rejected declaring `drizzleLayer`/`betterAuthLayer` as service deps — in-code comment warns this creates duplicate connections.
+- **Iteration 2**: (#4) namespaced all service identifiers by module (`@stocket/effect/<module>/Name`); (#6) photos/service.ts: replaced inline `catchAll(e => cleanup, refail)` with `Effect.tapError + Effect.ignore`, and `catchAll(e => Effect.fail(new X))` with `Effect.mapError`. Investigated remaining `catchAll*` sites — all legitimate HTTP-boundary `catchAllCause(respondCause)` or fire-and-forget audit log-and-swallow. Rejected declaring `drizzleLayer`/`betterAuthLayer` as service deps — in-code comment warns this creates duplicate connections.
 - **Iteration 3**: collapsed existence-guard patterns to `Effect.filterOrFail(Boolean, () => err)` across `products`, `inventory`, and `stock-movements` services (was `yield* check; if (!check) yield* Effect.fail(...)` or `Effect.flatMap(check, e => e ? Effect.void : Effect.fail(...))`).
 - **Iteration 4**: replaced 34 `Effect.succeed(undefined)` → `Effect.void` across `*.spec.ts`. Consolidated `roles/service.ts` `fetchPermissionsFromDb` raw `Effect.tryPromise` onto the shared `makeTryAsync` helper.
 - **Iteration 5**: `fulfillment/service.ts` pick loop — inlined the `=== 0` row-count guards as `Effect.filterOrFail` steps in the same pipe, dropping the intermediate bindings. Investigated photos/router.ts raw `tryPromise` calls (each has a distinct `MessageKey` that's hand-typed — per CLAUDE.md's structured-logging invariant, collapsing onto a dynamic-key helper would break Datadog indexing; left as-is).

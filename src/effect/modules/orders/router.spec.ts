@@ -15,9 +15,9 @@
  * downstream effect succeeds.
  */
 import { Effect } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
-import { OrderStatus } from '@librestock/types/orders';
-import { AuditAction, AuditEntityType } from '@librestock/types/audit-logs';
+import { Permission, Resource } from '@stocket/types/auth';
+import { OrderStatus } from '@stocket/types/orders';
+import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import {
   CannotDeleteNonDraftOrder,
   ClientNotFound,
@@ -32,7 +32,7 @@ vi.mock('./service', async () => {
   const { Context, Layer } =
     await vi.importActual<typeof import('effect')>('effect');
   return {
-    OrdersService: Context.GenericTag('@librestock/test/OrdersService'),
+    OrdersService: Context.GenericTag('@stocket/test/OrdersService'),
     ordersLayer: Layer.empty,
   };
 });

@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect';
-import { OrderStatus } from '@librestock/types/orders';
+import { OrderStatus } from '@stocket/types/orders';
 import {
   getTestDb,
   closeTestDb,

@@ -1,8 +1,8 @@
 ---
-description: Search LibreStock Linear issues for related work
+description: Search Stocket Linear issues for related work
 ---
 
-Search Linear issues for LibreStock work related to this query:
+Search Linear issues for Stocket work related to this query:
 
 $ARGUMENTS
 

@@ -1,5 +1,5 @@
 import { Schema } from 'effect';
-import { LocationType } from '@librestock/types/locations';
+import { LocationType } from '@stocket/types/locations';
 
 const LocationTypeValues = [
   LocationType.WAREHOUSE,

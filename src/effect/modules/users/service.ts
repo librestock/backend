@@ -4,7 +4,7 @@ import type {
   UserQueryDto,
   UserResponseDto,
   BanUserDto,
-} from '@librestock/types/users';
+} from '@stocket/types/users';
 import { makeTryAsync } from '../../platform/try-async';
 import { BetterAuth } from '../../platform/better-auth';
 import { makeServiceTracer } from '../../platform/service-tracer';
@@ -62,7 +62,7 @@ const toUserResponse = (
 });
 
 export class UsersService extends Effect.Service<UsersService>()(
-  '@librestock/effect/users/UsersService',
+  '@stocket/effect/users/UsersService',
   {
     effect: Effect.gen(function* () {
       const betterAuth = yield* BetterAuth;

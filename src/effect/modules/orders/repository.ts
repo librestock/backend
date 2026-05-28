@@ -12,7 +12,7 @@ import {
   sql,
   type SQL,
 } from 'drizzle-orm';
-import { type OrderQuerySchema } from '@librestock/types/orders';
+import { type OrderQuerySchema } from '@stocket/types/orders';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
@@ -40,7 +40,7 @@ const tryAsync = makeTryAsync(
 );
 
 export class OrdersRepository extends Effect.Service<OrdersRepository>()(
-  '@librestock/effect/orders/OrdersRepository',
+  '@stocket/effect/orders/OrdersRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;
@@ -232,7 +232,7 @@ export class OrdersRepository extends Effect.Service<OrdersRepository>()(
 ) {}
 
 export class OrderItemsRepository extends Effect.Service<OrderItemsRepository>()(
-  '@librestock/effect/orders/OrderItemsRepository',
+  '@stocket/effect/orders/OrderItemsRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

@@ -14,8 +14,8 @@
  *   - service failure on unknown role id → propagated status
  */
 import { Effect } from 'effect';
-import { Permission, Resource } from '@librestock/types/auth';
-import type { UserResponseDto } from '@librestock/types/users';
+import { Permission, Resource } from '@stocket/types/auth';
+import type { UserResponseDto } from '@stocket/types/users';
 import { BetterAuthHeaders } from '../../platform/better-auth';
 import { UserNotFound, UsersInfrastructureError } from './users.errors';
 import { makeUsersRouterHarness } from './__fixtures__/router-harness';
@@ -46,7 +46,7 @@ vi.mock('./service', async () => {
     await vi.importActual<typeof import('effect')>('effect');
 
   return {
-    UsersService: Context.GenericTag('@librestock/test/UsersService'),
+    UsersService: Context.GenericTag('@stocket/test/UsersService'),
     usersLayer: Layer.empty,
   };
 });

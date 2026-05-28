@@ -1,6 +1,6 @@
 import { Effect } from 'effect';
 import { eq, or, ilike, sql, type SQL } from 'drizzle-orm';
-import type { ClientQueryDto } from '@librestock/types/clients';
+import type { ClientQueryDto } from '@stocket/types/clients';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
@@ -39,7 +39,7 @@ function buildClientFilters(query: ClientQueryDto): SQL[] {
 }
 
 export class ClientsRepository extends Effect.Service<ClientsRepository>()(
-  '@librestock/effect/clients/ClientsRepository',
+  '@stocket/effect/clients/ClientsRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

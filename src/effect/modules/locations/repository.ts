@@ -1,8 +1,8 @@
 import { Effect } from 'effect';
 import { eq, ilike, sql, type SQL } from 'drizzle-orm';
-import type { LocationQueryDto } from '@librestock/types/locations';
-import { LocationSortField } from '@librestock/types/locations';
-import type { SortOrder } from '@librestock/types/common';
+import type { LocationQueryDto } from '@stocket/types/locations';
+import { LocationSortField } from '@stocket/types/locations';
+import type { SortOrder } from '@stocket/types/common';
 import { buildOrderBy } from '../../platform/drizzle-sort.utils';
 import {
   resolvePaginationWindow,
@@ -53,7 +53,7 @@ function getLocationOrderBy(sortBy?: LocationSortField, sortOrder?: SortOrder) {
 }
 
 export class LocationsRepository extends Effect.Service<LocationsRepository>()(
-  '@librestock/effect/locations/LocationsRepository',
+  '@stocket/effect/locations/LocationsRepository',
   {
     effect: Effect.gen(function* () {
       const db = yield* DrizzleDatabase;

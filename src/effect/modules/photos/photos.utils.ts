@@ -1,4 +1,4 @@
-import type { PhotoResponseDto } from '@librestock/types/photos';
+import type { PhotoResponseDto } from '@stocket/types/photos';
 import type { photos } from '../../platform/db/schema';
 
 type Photo = typeof photos.$inferSelect;
