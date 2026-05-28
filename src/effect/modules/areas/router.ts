@@ -2,15 +2,16 @@ import { HttpRouter, HttpServerRequest } from '@effect/platform';
 import { Effect, Schema } from 'effect';
 import { Permission, Resource } from '@stocket/types/auth';
 import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
-import { AreaIdSchema, AreaQuerySchema } from '@stocket/types/areas';
+import {
+  AreaIdSchema,
+  AreaQuerySchema,
+  CreateAreaSchema,
+  UpdateAreaSchema,
+} from '@stocket/types/areas';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson, respondJsonOk } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
 import { makeMessageResponse } from '../../platform/messages';
-import {
-  CreateAreaSchema,
-  UpdateAreaSchema,
-} from './areas.schema';
 import { AreasService } from './service';
 
 const AreaPathParams = Schema.Struct({ id: AreaIdSchema });

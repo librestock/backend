@@ -5,7 +5,7 @@ import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
   type RepositoryPaginatedResult,
-} from '../../platform/drizzle-query.utils';
+} from '@stocket/types/common';
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { clients } from '../../platform/db/schema';

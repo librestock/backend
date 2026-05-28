@@ -1,15 +1,13 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
-import type { ClientResponseDto, ClientQueryDto } from '@stocket/types/clients';
-import { makeGetOrFail } from '../../platform/from-null-or';
-import {
-  type PaginationMeta,
-  toPaginatedResponse,
-} from '../../platform/pagination.utils';
 import type {
+  ClientResponseDto,
+  ClientQueryDto,
   CreateClientSchema,
   UpdateClientSchema,
-} from './clients.schema';
+} from '@stocket/types/clients';
+import { toPaginatedResponse, type PaginationMeta } from '@stocket/types/common';
+import { makeGetOrFail } from '../../platform/from-null-or';
 import { toClientResponseDto } from './clients.utils';
 import {
   ClientEmailAlreadyExists,

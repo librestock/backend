@@ -10,7 +10,7 @@ import {
   CategoryIdSchema,
   CreateCategorySchema,
   UpdateCategorySchema,
-} from './categories.schema';
+} from '@stocket/types/categories';
 import { CategoriesService } from './service';
 
 const CategoryPathParams = Schema.Struct({ id: CategoryIdSchema });

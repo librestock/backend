@@ -5,15 +5,13 @@ import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import {
   ClientIdSchema,
   ClientQuerySchema,
+  CreateClientSchema,
+  UpdateClientSchema,
 } from '@stocket/types/clients';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson, respondJsonOk } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
 import { makeMessageResponse } from '../../platform/messages';
-import {
-  CreateClientSchema,
-  UpdateClientSchema,
-} from './clients.schema';
 import { ClientsService } from './service';
 
 const ClientPathParams = Schema.Struct({ id: ClientIdSchema });

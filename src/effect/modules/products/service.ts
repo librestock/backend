@@ -1,12 +1,12 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
 import { fromNullOr } from '../../platform/from-null-or';
-import { toPaginatedResponse } from '../../platform/pagination.utils';
 import {
   createBulkResultBuilder,
   findDuplicates,
   partitionByExistence,
-} from '../../platform/bulk-operation.utils';
+  toPaginatedResponse,
+} from '@stocket/types/common';
 import { CategoriesService } from '../categories/service';
 import type {
   ProductQuerySchema,

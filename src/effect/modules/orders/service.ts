@@ -1,6 +1,7 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
 import { makeServiceTracer } from '../../platform/service-tracer';
+import { toPaginatedResponse } from '@stocket/types/common';
 import {
   type CreateOrderSchema,
   OrderStatus,
@@ -9,7 +10,6 @@ import {
   type UpdateOrderStatusSchema,
 } from '@stocket/types/orders';
 import { fromNullOr } from '../../platform/from-null-or';
-import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { ProductNotFound } from '../products/products.errors';
 import { ClientsService } from '../clients/service';
 import { ProductsService } from '../products/service';

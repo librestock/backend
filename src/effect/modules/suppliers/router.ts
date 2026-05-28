@@ -3,17 +3,15 @@ import { Effect, Schema } from 'effect';
 import { Permission, Resource } from '@stocket/types/auth';
 import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import {
+  CreateSupplierSchema,
   SupplierIdSchema,
   SupplierQuerySchema,
+  UpdateSupplierSchema,
 } from '@stocket/types/suppliers';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson, respondJsonOk } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
 import { makeMessageResponse } from '../../platform/messages';
-import {
-  CreateSupplierSchema,
-  UpdateSupplierSchema,
-} from './suppliers.schema';
 import { SuppliersService } from './service';
 
 const SupplierPathParams = Schema.Struct({ id: SupplierIdSchema });

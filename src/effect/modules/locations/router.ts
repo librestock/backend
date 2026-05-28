@@ -3,17 +3,15 @@ import { Effect, Schema } from 'effect';
 import { Permission, Resource } from '@stocket/types/auth';
 import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import {
+  CreateLocationSchema,
   LocationIdSchema,
   LocationQuerySchema,
+  UpdateLocationSchema,
 } from '@stocket/types/locations';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson, respondJsonOk } from '../../platform/errors';
 import { AuditLogWriter } from '../../platform/audit';
 import { makeMessageResponse } from '../../platform/messages';
-import {
-  CreateLocationSchema,
-  UpdateLocationSchema,
-} from './locations.schema';
 import { LocationsService } from './service';
 
 const LocationPathParams = Schema.Struct({ id: LocationIdSchema });

@@ -4,8 +4,8 @@ import {
   type PaginatedAuditLogsResponseDto,
   type AuditEntityType,
 } from '@stocket/types/audit-logs';
+import { toPaginatedResponse } from '@stocket/types/common';
 import { makeGetOrFail } from '../../platform/from-null-or';
-import { toPaginatedResponse } from '../../platform/pagination.utils';
 import type { auditLogs } from '../../platform/db/schema';
 import type { AuditLogQueryOptions, AuditLogRowWithUser } from './repository';
 import {

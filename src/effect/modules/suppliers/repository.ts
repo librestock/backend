@@ -4,7 +4,7 @@ import type { SupplierQueryDto } from '@stocket/types/suppliers';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
-} from '../../platform/drizzle-query.utils';
+} from '@stocket/types/common';
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import { suppliers } from '../../platform/db/schema';

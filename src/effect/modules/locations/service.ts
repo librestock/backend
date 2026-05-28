@@ -1,4 +1,5 @@
 import { Effect } from 'effect';
+import { toPaginatedResponse } from '@stocket/types/common';
 import type {
   CreateLocationDto,
   UpdateLocationDto,
@@ -7,7 +8,6 @@ import type {
   PaginatedLocationsResponseDto,
 } from '@stocket/types/locations';
 import { makeGetOrFail } from '../../platform/from-null-or';
-import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { toLocationResponseDto } from './locations.utils';
 import {
   LocationNotFound,

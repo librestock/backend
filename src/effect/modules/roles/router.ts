@@ -2,15 +2,15 @@ import { HttpRouter, HttpServerRequest } from '@effect/platform';
 import { Effect, Schema } from 'effect';
 import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import { Permission, Resource } from '@stocket/types/auth';
-import type { UpdateRoleDto } from '@stocket/types/roles';
-import { requirePermission } from '../../platform/authorization';
-import { respondEmpty, respondJson } from '../../platform/errors';
-import { AuditLogWriter } from '../../platform/audit';
 import {
   CreateRoleSchema,
   RoleIdSchema,
   UpdateRoleSchema,
-} from './roles.schema';
+  type UpdateRoleDto,
+} from '@stocket/types/roles';
+import { requirePermission } from '../../platform/authorization';
+import { respondEmpty, respondJson } from '../../platform/errors';
+import { AuditLogWriter } from '../../platform/audit';
 import { RolesService } from './service';
 
 const RolePathParamsSchema = Schema.Struct({

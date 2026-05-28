@@ -3,6 +3,7 @@ import { Effect, Schema } from 'effect';
 import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import { Permission, Resource } from '@stocket/types/auth';
 import {
+  CreateStockMovementSchema,
   StockMovementIdSchema,
   StockMovementQuerySchema,
 } from '@stocket/types/stock-movements';
@@ -10,7 +11,6 @@ import { requirePermission } from '../../platform/authorization';
 import { AuditLogWriter } from '../../platform/audit';
 import { respondJson, respondJsonOk } from '../../platform/errors';
 import { requireSession } from '../../platform/session';
-import { CreateStockMovementSchema } from './stock-movements.schema';
 import { StockMovementsService } from './service';
 
 const StockMovementPathParams = Schema.Struct({ id: StockMovementIdSchema });

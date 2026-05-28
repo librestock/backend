@@ -1,12 +1,12 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
 import type { SupplierQueryDto } from '@stocket/types/suppliers';
-import { makeGetOrFail } from '../../platform/from-null-or';
-import { toPaginatedResponse } from '../../platform/pagination.utils';
 import type {
   CreateSupplierSchema,
   UpdateSupplierSchema,
-} from './suppliers.schema';
+} from '@stocket/types/suppliers';
+import { toPaginatedResponse } from '@stocket/types/common';
+import { makeGetOrFail } from '../../platform/from-null-or';
 import { toSupplierResponseDto } from './suppliers.utils';
 import { SupplierNotFound } from './suppliers.errors';
 import { SuppliersRepository } from './repository';

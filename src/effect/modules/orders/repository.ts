@@ -16,7 +16,7 @@ import { type OrderQuerySchema } from '@stocket/types/orders';
 import {
   resolvePaginationWindow,
   toRepositoryPaginatedResult,
-} from '../../platform/drizzle-query.utils';
+} from '@stocket/types/common';
 import { makeTryAsync } from '../../platform/try-async';
 import { DrizzleDatabase } from '../../platform/drizzle';
 import {

@@ -7,14 +7,14 @@ import {
 } from '@effect/platform';
 import { Effect, Schema } from 'effect';
 import { Permission, Resource } from '@stocket/types/auth';
+import {
+  PhotoIdSchema,
+  PhotoProductIdSchema,
+} from '@stocket/types/photos';
 import { requirePermission } from '../../platform/authorization';
 import { respondJson, respondJsonOk, respondCause } from '../../platform/errors';
 import { makeMessageResponse } from '../../platform/messages';
 import { getOptionalSession } from '../../platform/session';
-import {
-  PhotoIdSchema,
-  PhotoProductIdSchema,
-} from './photos.schema';
 import { PhotosInfrastructureError } from './photos.errors';
 import { PhotosService } from './service';
 

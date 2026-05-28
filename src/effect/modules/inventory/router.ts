@@ -3,18 +3,16 @@ import { Effect, Schema } from 'effect';
 import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
 import { Permission, Resource } from '@stocket/types/auth';
 import {
+  AdjustInventorySchema,
+  CreateInventorySchema,
   InventoryIdSchema,
   InventoryQuerySchema,
+  UpdateInventorySchema,
 } from '@stocket/types/inventory';
 import { requirePermission } from '../../platform/authorization';
 import { AuditLogWriter } from '../../platform/audit';
 import { respondJson, respondJsonOk } from '../../platform/errors';
 import { makeMessageResponse } from '../../platform/messages';
-import {
-  AdjustInventorySchema,
-  CreateInventorySchema,
-  UpdateInventorySchema,
-} from './inventory.schema';
 import { InventoryService } from './service';
 
 const InventoryPathParams = Schema.Struct({ id: InventoryIdSchema });

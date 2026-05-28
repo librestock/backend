@@ -1,8 +1,13 @@
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
-import '@stocket/types/inventory';
+import type {
+  AdjustInventorySchema,
+  CreateInventorySchema,
+  InventoryQuerySchema,
+  UpdateInventorySchema,
+} from '@stocket/types/inventory';
+import { toPaginatedResponse } from '@stocket/types/common';
 import { makeGetOrFail } from '../../platform/from-null-or';
-import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { AreaNotFound, AreasInfrastructureError } from '../areas/areas.errors';
 import { AreasService } from '../areas/service';
 import { LocationsService } from '../locations/service';
@@ -19,12 +24,6 @@ import {
   InventoryProductNotFound,
   InventoryQuantityAdjustmentFailed,
 } from './inventory.errors';
-import type {
-  AdjustInventorySchema,
-  CreateInventorySchema,
-  InventoryQuerySchema,
-  UpdateInventorySchema,
-} from './inventory.schema';
 import type { TenantNotResolved } from '../../platform/tenant-context';
 import { InventoryRepository } from './repository';
 import { toInventoryResponseDto, type Inventory } from './inventory.utils';

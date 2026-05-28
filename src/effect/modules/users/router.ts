@@ -1,5 +1,6 @@
 import { HttpRouter, HttpServerRequest } from '@effect/platform';
 import { Effect, Schema } from 'effect';
+import { toPaginatedResponse } from '@stocket/types/common';
 import type { CreateUserDto, UserQueryDto } from '@stocket/types/users';
 import { Permission, Resource } from '@stocket/types/auth';
 import {
@@ -9,7 +10,6 @@ import {
   UserIdSchema,
   UserQuerySchema,
 } from '@stocket/types/users';
-import { toPaginatedResponse } from '../../platform/pagination.utils';
 import { requirePermission } from '../../platform/authorization';
 import { respondEmpty, respondJson } from '../../platform/errors';
 import { BetterAuthHeaders } from '../../platform/better-auth';
