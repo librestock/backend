@@ -1,4 +1,4 @@
-import { and, eq, isNotNull } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import type { DrizzleDb } from '../drizzle';
 import { members, organizations, tenantDomains } from './schema';
 
@@ -28,6 +28,14 @@ export const findTenantMembership = (
     )
     .limit(1);
 
+const localTenantHostnameCandidates = (hostname: string) => {
+  if (process.env.NODE_ENV === 'production' || !hostname.endsWith('.localhost')) {
+    return [hostname];
+  }
+
+  return [hostname, `${hostname}:3000`];
+};
+
 export const findTenantByHostname = (db: DrizzleDb, hostname: string) =>
   db
     .select(tenantSelection)
@@ -35,7 +43,7 @@ export const findTenantByHostname = (db: DrizzleDb, hostname: string) =>
     .innerJoin(tenantDomains, eq(tenantDomains.tenant_id, organizations.id))
     .where(
       and(
-        eq(tenantDomains.hostname, hostname),
+        inArray(tenantDomains.hostname, localTenantHostnameCandidates(hostname)),
         isNotNull(tenantDomains.verified_at),
       ),
     )

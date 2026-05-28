@@ -5,7 +5,11 @@ import type {
   SuperAdminMeResponse,
   SuperAdminTenantListResponse,
 } from '@stocket/types/superadmin';
-import { hostnameForTenantSlug, isReservedTenantSlug } from '../../platform/host';
+import {
+  hostnameForTenantSlug,
+  isReservedTenantSlug,
+  isValidTenantSlug,
+} from '../../platform/host';
 import type { UserSession } from '../../platform/auth/user-session';
 import { makeServiceTracer } from '../../platform/service-tracer';
 import { makeTryAsync } from '../../platform/try-async';
@@ -19,8 +23,6 @@ import {
   TenantSlugAlreadyExists,
 } from './superadmin.errors';
 import { SuperAdminRepository } from './repository';
-
-const TENANT_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
 interface BetterAuthCreateUserResponse {
   readonly user: { readonly id: string };
@@ -125,7 +127,7 @@ export class SuperAdminService extends Effect.Service<SuperAdminService>()(
         ) =>
           Effect.gen(function* () {
             const slug = input.slug.trim().toLowerCase();
-            if (!TENANT_SLUG_PATTERN.test(slug)) {
+            if (!isValidTenantSlug(slug)) {
               return yield* Effect.fail(
                 new InvalidTenantSlug({
                   slug: input.slug,

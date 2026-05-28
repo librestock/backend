@@ -31,6 +31,7 @@ import {
   drizzleLayer,
 } from './platform/drizzle';
 import { applyCommittedSqlMigrations } from './platform/db/committed-sql-migrations';
+import { normalizeDevelopmentTenantDomains } from './platform/db/dev-tenant-domain-cleanup';
 import { TracingLive } from './platform/tracing';
 
 const VALID_NODE_ENVS = ['development', 'staging', 'production'] as const;
@@ -42,6 +43,7 @@ if (!VALID_NODE_ENVS.includes(nodeEnv as (typeof VALID_NODE_ENVS)[number])) {
 }
 process.env.NODE_ENV = nodeEnv;
 const isProduction = nodeEnv === 'production';
+const isDevelopment = nodeEnv === 'development';
 
 const port = Number(process.env.PORT ?? 8080);
 
@@ -98,6 +100,24 @@ const runBetterAuthMigrations = Effect.gen(function* () {
   });
 });
 
+const runDevelopmentTenantDomainCleanup = Effect.gen(function* () {
+  if (!isDevelopment) {
+    return;
+  }
+
+  const db = yield* DrizzleDatabase;
+  yield* Effect.tryPromise({
+    try: async () => {
+      await normalizeDevelopmentTenantDomains(db);
+    },
+    catch: (cause) =>
+      new DrizzleInitializationError({
+        messageKey: 'drizzle.migrationsFailed',
+        cause,
+      }),
+  });
+});
+
 const startupMigrations = Effect.gen(function* () {
   if (!shouldRunStartupMigrations()) {
     return;
@@ -105,6 +125,7 @@ const startupMigrations = Effect.gen(function* () {
 
   yield* runCommittedSqlMigrations;
   yield* runBetterAuthMigrations;
+  yield* runDevelopmentTenantDomainCleanup;
 });
 
 const foundationalServicesLayer = Layer.mergeAll(

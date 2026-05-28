@@ -23,6 +23,14 @@ const normalizeForwardedProto = (proto: string | null | undefined) => {
     : null;
 };
 
+const localTenantHostCandidates = (hostname: string) => {
+  if (process.env.NODE_ENV === 'production' || !hostname.endsWith('.localhost')) {
+    return [hostname];
+  }
+
+  return [hostname, `${hostname}:3000`];
+};
+
 async function isTrustedAuthHost(host: string | null | undefined) {
   const normalizedHost = normalizeHost(host);
   if (!normalizedHost) return false;
@@ -33,10 +41,10 @@ async function isTrustedAuthHost(host: string | null | undefined) {
       `
         SELECT 1
         FROM tenant_domains
-        WHERE hostname = $1 AND verified_at IS NOT NULL
+        WHERE hostname = ANY($1::text[]) AND verified_at IS NOT NULL
         LIMIT 1
       `,
-      [normalizedHost],
+      [localTenantHostCandidates(normalizedHost)],
     );
 
     return result.rowCount !== null && result.rowCount > 0;
