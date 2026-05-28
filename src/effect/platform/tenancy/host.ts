@@ -1,8 +1,8 @@
 import type * as HttpServerRequest from '@effect/platform/HttpServerRequest';
 import { Option } from 'effect';
-import { isValidTenantSlug } from '@librestock/types/common';
+import { isValidTenantSlug } from '@stocket/types/common';
 
-export { isValidTenantSlug } from '@librestock/types/common';
+export { isValidTenantSlug } from '@stocket/types/common';
 
 const DEFAULT_PRODUCTION_TENANT_BASE_DOMAIN = 'librestock.maximilian.pw';
 const PRODUCTION_PLATFORM_SUBDOMAIN = 'default';

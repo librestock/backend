@@ -1,14 +1,14 @@
 import { Effect, Layer } from 'effect';
 import { asc, eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { categories } from './db/schema';
-import { CurrentRequestContext, type RequestContext } from './request-context';
-import { TenantQuery } from './tenant-query';
+import { categories } from '../db/schema';
+import { CurrentRequestContext, type RequestContext } from '../request-context';
+import { TenantQuery } from '../tenant-query';
 import {
   getTestDb,
   makeTestRequestContext,
   withTestDb,
-} from '../testing/test-harness';
+} from '../../testing/test-harness';
 
 withTestDb();
 

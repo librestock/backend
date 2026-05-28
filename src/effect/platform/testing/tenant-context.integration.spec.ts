@@ -1,20 +1,20 @@
 import { Effect, Layer } from 'effect';
 import { sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { UserSession } from './auth/user-session';
-import { members, organizations } from './db/schema';
-import { DrizzleDatabase } from './drizzle';
-import { CurrentRequestContext, type RequestContext } from './request-context';
+import type { UserSession } from '../auth/user-session';
+import { members, organizations } from '../db/schema';
+import { DrizzleDatabase } from '../drizzle';
+import { CurrentRequestContext, type RequestContext } from '../request-context';
 import {
   resolveTenantForSession,
   TenantMembershipRejected,
   TenantNotResolved,
-} from './tenant-context';
+} from '../tenant-context';
 import {
   getTestDb,
   seedBetterAuthUser,
   withTestDb,
-} from '../testing/test-harness';
+} from '../../testing/test-harness';
 
 withTestDb();
 

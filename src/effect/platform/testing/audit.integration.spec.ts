@@ -2,18 +2,18 @@ import { HttpServerRequest } from '@effect/platform';
 import { and, eq } from 'drizzle-orm';
 import { Effect, Layer } from 'effect';
 import { AuditAction, AuditEntityType } from '@stocket/types/audit-logs';
-import { makeBetterAuthTestLayer } from '../testing/better-auth-test';
+import { makeBetterAuthTestLayer } from '../../testing/better-auth-test';
 import {
   getTestDb,
   makeTestDrizzleLayer,
   TEST_USER_ID,
   withTestDb,
-} from '../testing/test-harness';
-import { auditLogs } from './db/schema';
-import type { DrizzleDb } from './drizzle';
-import { CurrentRequestContext, type RequestContext } from './request-context';
-import { DEFAULT_TENANT_ID } from './tenant-constants';
-import { makeAuditLogWriter } from './audit';
+} from '../../testing/test-harness';
+import { auditLogs } from '../db/schema';
+import type { DrizzleDb } from '../drizzle';
+import { CurrentRequestContext, type RequestContext } from '../request-context';
+import { DEFAULT_TENANT_ID } from '../tenant-constants';
+import { makeAuditLogWriter } from '../audit';
 
 const TEST_ENTITY_ID = '00000000-0000-4000-b000-000000000101';
 

@@ -1,0 +1,19 @@
+import { Context, type Effect } from 'effect';
+import type { Permission, Resource } from '@stocket/types/auth';
+
+export interface UserPermissions {
+  readonly roleNames: string[];
+  readonly permissions: Partial<Record<Resource, Permission[]>>;
+}
+
+export class PermissionProvider extends Context.Tag(
+  '@stocket/effect/platform/PermissionProvider',
+)<
+  PermissionProvider,
+  {
+    readonly getPermissionsForUser: (
+      userId: string,
+      tenantId?: string,
+    ) => Effect.Effect<UserPermissions, unknown>;
+  }
+>() {}

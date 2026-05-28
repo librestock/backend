@@ -1,8 +1,8 @@
 import { HttpServerRequest } from '@effect/platform';
 import { Effect, Layer } from 'effect';
 import { Permission, Resource } from '@stocket/types/auth';
-import { DrizzleDatabase } from './drizzle';
-import { PermissionProvider } from './permission-provider';
+import { DrizzleDatabase } from '../drizzle';
+import { PermissionProvider } from '../permission-provider';
 import {
   requirePermission,
   requireSuperAdmin,
@@ -10,7 +10,7 @@ import {
   PlatformHostRequired,
   SuperAdminDenied,
   SuperAdminInfrastructureError,
-} from './authorization';
+} from '../authorization';
 
 const mockRequireSession = vi.fn();
 const run = <A, E>(effect: Effect.Effect<A, E, any>) =>
@@ -18,7 +18,7 @@ const run = <A, E>(effect: Effect.Effect<A, E, any>) =>
 const fail = <A, E>(effect: Effect.Effect<A, E, any>) =>
   Effect.runPromise(Effect.flip(effect as Effect.Effect<A, E, never>));
 
-vi.mock('./session', async () => {
+vi.mock('../session', async () => {
   const { Effect } = await vi.importActual<typeof import('effect')>('effect');
 
   return {
@@ -186,7 +186,7 @@ describe('requireSuperAdmin', () => {
     await expect(
       fail(
         requireSuperAdmin.pipe(
-          Effect.provide(makeRequestLayer('tenant.stocket.fr')),
+          Effect.provide(makeRequestLayer('tenant.librestock.maximilian.pw')),
           Effect.provide(makeDbLayer([{ user_id: 'user-1' }])),
         ),
       ),
@@ -203,7 +203,7 @@ describe('requireSuperAdmin', () => {
       fail(
         requireSuperAdmin.pipe(
           Effect.provide(
-            makeRequestLayer('default.stocket.fr'),
+            makeRequestLayer('default.librestock.maximilian.pw'),
           ),
           Effect.provide(makeDbLayer([])),
         ),
@@ -220,7 +220,7 @@ describe('requireSuperAdmin', () => {
       fail(
         requireSuperAdmin.pipe(
           Effect.provide(
-            makeRequestLayer('default.stocket.fr'),
+            makeRequestLayer('default.librestock.maximilian.pw'),
           ),
           Effect.provide(makeFailingDbLayer()),
         ),
@@ -237,7 +237,7 @@ describe('requireSuperAdmin', () => {
       run(
         requireSuperAdmin.pipe(
           Effect.provide(
-            makeRequestLayer('default.stocket.fr'),
+            makeRequestLayer('default.librestock.maximilian.pw'),
           ),
           Effect.provide(makeDbLayer([{ user_id: 'user-1' }])),
         ),

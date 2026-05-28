@@ -1,7 +1,7 @@
 import { Data, Effect, Layer } from 'effect';
-import { CurrentRequestContext } from './request-context';
-import { makeInMemoryTracer } from './testing/in-memory-tracer';
-import { makeServiceTracer } from './service-tracer';
+import { CurrentRequestContext } from '../request-context';
+import { makeInMemoryTracer } from './in-memory-tracer';
+import { makeServiceTracer } from '../service-tracer';
 
 class TestNotFound extends Data.TaggedError('TestNotFound')<{
   readonly statusCode: 404;
