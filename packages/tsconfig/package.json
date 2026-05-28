@@ -5,7 +5,7 @@
   "license": "AGPL-3.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/stocket/packages.git",
+    "url": "https://github.com/stocketfr/packages.git",
     "directory": "tsconfig"
   },
   "publishConfig": {

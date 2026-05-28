@@ -48,4 +48,4 @@ When request/response shapes change:
 
 ## Issue Tracking
 
-Before starting work on any issue, ensure it is added to the **[Stocket Improvements Tracker](https://github.com/orgs/stocket/projects/2)** GitHub Project. Move the issue to "In Progress" when starting and "Done" when complete.
+Before starting work on any issue, ensure it is added to the **[Stocket Improvements Tracker](https://github.com/orgs/stocketfr/projects/2)** GitHub Project. Move the issue to "In Progress" when starting and "Done" when complete.
