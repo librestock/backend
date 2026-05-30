@@ -1,6 +1,7 @@
 packages:
   - .
-  - packages/*
+  - ../packages/types
+  - ../packages/tsconfig
 
 minimumReleaseAge: 1440
 

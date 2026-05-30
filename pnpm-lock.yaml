@@ -26,9 +26,6 @@ importers:
       '@effect/sql':
         specifier: ^0.51.0
         version: 0.51.0(@effect/experimental@0.58.0(@effect/platform@0.96.0(effect@3.21.0))(effect@3.21.0))(@effect/platform@0.96.0(effect@3.21.0))(effect@3.21.0)
-      '@stocket/types':
-        specifier: workspace:*
-        version: link:packages/types
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: ^0.214.0
         version: 0.214.0(@opentelemetry/api@1.9.1)
@@ -41,6 +38,9 @@ importers:
       '@opentelemetry/semantic-conventions':
         specifier: ^1.40.0
         version: 1.40.0
+      '@stocket/types':
+        specifier: workspace:*
+        version: link:../packages/types
       better-auth:
         specifier: 1.5.6
         version: 1.5.6(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(kysely@0.28.16)(pg@8.20.0)(sql.js@1.14.1))(pg@8.20.0)(react@19.2.0)(vitest@4.1.2(@opentelemetry/api@1.9.1)(@types/node@22.19.19)(vite@8.0.8(@types/node@22.19.19)(esbuild@0.27.7)(tsx@4.21.0)))
@@ -77,7 +77,7 @@ importers:
         version: 10.4.0
       '@stocket/tsconfig':
         specifier: workspace:*
-        version: link:packages/tsconfig
+        version: link:../packages/tsconfig
       '@stryker-mutator/core':
         specifier: 9.6.1
         version: 9.6.1(@types/node@22.19.19)
@@ -115,9 +115,9 @@ importers:
         specifier: 4.1.2
         version: 4.1.2(@opentelemetry/api@1.9.1)(@types/node@22.19.19)(vite@8.0.8(@types/node@22.19.19)(esbuild@0.27.7)(tsx@4.21.0))
 
-  packages/tsconfig: {}
+  ../packages/tsconfig: {}
 
-  packages/types:
+  ../packages/types:
     dependencies:
       zod:
         specifier: ^4.3.6
